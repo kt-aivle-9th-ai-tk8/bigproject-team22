@@ -1,0 +1,18 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+  background: #f9fafb;
+}
+
+header {
+  text-align: center;
+  padding: 24px 0;
+}
