@@ -1,0 +1,14 @@
+.main-bar {
+  grid-area: main;
+  background-color: #28ff00;
+}
+
+.under-bar {
+  grid-area: under;
+  background-color: #0047ff;
+}
+
+.side-bar {
+  grid-area: sidebar;
+  background-color: #ff0800;
+}

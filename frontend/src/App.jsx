@@ -1,12 +1,8 @@
-import './App.css';
+import MainScreen from "./screens/MainScreen";
+import "./App.css";
 
 function App() {
-
-  return (
-    <>
-      
-    </>
-  );
+  return <MainScreen />;
 }
 
 export default App;
