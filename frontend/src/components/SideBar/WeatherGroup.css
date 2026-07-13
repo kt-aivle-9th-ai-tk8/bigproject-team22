@@ -1,0 +1,20 @@
+.weather-group {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--weather-count), 1fr);
+}
+
+.weather-group-item {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.weather-divider {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  width: 1px;
+  height: 110px;
+  background-color: #AEAEB2;
+}
