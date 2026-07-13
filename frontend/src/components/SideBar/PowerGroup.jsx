@@ -1,7 +1,7 @@
 import PowerItem from "./PowerItem";
 import "./PowerGroup.css";
 
-function PowerGroup({ items }) {
+function PowerGroup({ items, onSelectPlant }) {
   return (
     <div
       className="power-group"
@@ -9,12 +9,13 @@ function PowerGroup({ items }) {
     >
       {items.map((item) => (
         <PowerItem
-          key={item.title}
+          key={item.id}
           title={item.title}
           currentOutput={item.currentOutput}
           currentPower={item.currentPower}
           monthPower={item.monthPower}
           yearPower={item.yearPower}
+          onClick={() => onSelectPlant(item)}
         />
       ))}
     </div>

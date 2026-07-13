@@ -5,20 +5,22 @@ function PowerItem({
   title = "장흥 발전소",
   currentOutput = 1005.4,
   currentPower = 412,
-  todayPower = 8.7,
   monthPower = 8.7,
   yearPower = 96.4,
+  onClick,
 }) {
   return (
-    <div className="power-item">
+    <div className="power-item" onClick={onClick}>
       <div className="power-item-title">{title}</div>
 
-      <div className="power-item-label power-item-output-label">현재 출력</div>
+      <div className="power-item-label power-item-output-label">
+        현재 출력
+      </div>
 
       <PressureGauge value={currentOutput} />
 
       <div className="power-item-output-value">
-        {currentOutput.toFixed(1)} MWh
+        {currentOutput.toFixed(1)} hPa
       </div>
 
       <div className="power-item-data">

@@ -2,6 +2,11 @@
   width: 100%;
   display: grid;
   grid-template-columns: repeat(var(--weather-count), 1fr);
+
+  padding: 10px 20px;
+  box-sizing: border-box;
+
+  column-gap: 20px;
 }
 
 .weather-group-item {
@@ -13,8 +18,8 @@
 .weather-divider {
   position: absolute;
   top: 36px;
-  right: 0;
+  right: -10px;
   width: 1px;
-  height: 110px;
+  height: 100px;
   background-color: var(--color-divider);
 }

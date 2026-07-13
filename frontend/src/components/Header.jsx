@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import "./Header.css";
 
-function Header({onLogout}) {
-
+function Header({ onLogout, onTitleClick }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -13,27 +12,29 @@ function Header({onLogout}) {
 
     return () => clearInterval(timer);
   }, []);
-  
+
   const formattedDate = now
     .toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     })
     .replaceAll(". ", ".")
     .replace(/\.$/, "");
 
-    const formattedTime = now.toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-    });
+  const formattedTime = now.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 
   return (
     <header className="header">
       <div className="header-left">
-        <h1 className="header-title">발전소 통합 관제 시스템</h1>
+        <h1 className="header-title" onClick={onTitleClick}>
+          발전소 통합 관제 시스템
+        </h1>
 
         <span className="header-datetime">
           {formattedDate} &nbsp;{formattedTime}
