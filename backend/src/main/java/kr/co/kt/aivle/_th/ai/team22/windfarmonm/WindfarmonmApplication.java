@@ -1,13 +1,13 @@
-package com.team22.windfarm_monitoring;
+package kr.co.kt.aivle._th.ai.team22.windfarmonm;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class WindfarmMonitoringApplication {
+public class WindfarmonmApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(WindfarmMonitoringApplication.class, args);
+		SpringApplication.run(WindfarmonmApplication.class, args);
 	}
 
 }
