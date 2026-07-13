@@ -1,7 +1,14 @@
 import MapSideBar from "./SideBar/MapSideBar";
 import PlantSideBar from "./SideBar/PlantSideBar";
+import TurbineSideBar from "./SideBar/TurbineSideBar";
 
-function SideBar({ mode, selectedPlant, onSelectPlant }) {
+function SideBar({
+  mode,
+  selectedPlant,
+  selectedTurbine,
+  onSelectPlant,
+  onSelectTurbine,
+}) {
   return (
     <aside className="side-bar">
       {mode === "map" && (
@@ -9,11 +16,16 @@ function SideBar({ mode, selectedPlant, onSelectPlant }) {
       )}
 
       {mode === "plant" && (
-        <PlantSideBar selectedPlant={selectedPlant} />
+        <PlantSideBar
+          selectedPlant={selectedPlant}
+          onSelectTurbine={onSelectTurbine}
+        />
       )}
+
       {mode === "turbine" && (
         <TurbineSideBar
           selectedPlant={selectedPlant}
+          selectedTurbine={selectedTurbine}
         />
       )}
     </aside>

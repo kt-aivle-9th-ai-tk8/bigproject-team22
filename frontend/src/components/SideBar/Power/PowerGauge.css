@@ -1,4 +1,4 @@
-.pressure-gauge {
+.power-gauge {
   position: relative;
 
   width: 90px;
@@ -14,12 +14,12 @@
   overflow: visible;
 }
 
-.pressure-gauge svg {
+.power-gauge svg {
   width: 90px;
   height: 70px;
 }
 
-.pressure-gauge-label {
+.power-gauge-label {
   position: absolute;
 
   /* 글자 위치 아래로 이동 */
@@ -43,14 +43,14 @@
   pointer-events: none;
 }
 
-.pressure-gauge-label span {
+.power-gauge-label span {
   color: #000;
   text-shadow: none;
 }
-.pressure-gauge text {
+.power-gauge text {
   display: none;
 }
 
-.pressure-gauge-label {
+.power-gauge-label {
   display: flex;
 }
