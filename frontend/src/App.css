@@ -1,8 +1,8 @@
 :root {
   --color-text-point-dark: #0B50D1;
   --color-dark-gray: #4F4F4F;
+  --color-divider: #AEAEB2;
 }
-
 * {
   margin: 0;
   padding: 0;

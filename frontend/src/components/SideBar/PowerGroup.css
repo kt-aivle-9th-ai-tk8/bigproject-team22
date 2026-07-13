@@ -1,0 +1,6 @@
+.power-group {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--power-count), 1fr);
+  align-items: start;
+}

@@ -1,6 +1,8 @@
 import WeatherGroup from "./WeatherGroup";
-import { WEATHER_TYPE } from "./WeatherItem";
+import PowerGroup from "./PowerGroup";
 import SideTitle from "./SideTitle";
+
+import { WEATHER_TYPE } from "./WeatherItem";
 
 function MapSideBar() {
   const weatherItems = [
@@ -24,13 +26,47 @@ function MapSideBar() {
     },
   ];
 
+  const powerItems = [
+    {
+      title: "장흥 발전소",
+      currentOutput: 18,
+      currentPower: 412,
+      monthPower: 8.7,
+      yearPower: 96.4,
+    },
+    {
+      title: "경주 발전소",
+      currentOutput: 19.4,
+      currentPower: 412,
+      monthPower: 8.7,
+      yearPower: 96.4,
+    },
+    {
+      title: "대구 발전소",
+      currentOutput: 40,
+      currentPower: 412,
+      monthPower: 8.7,
+      yearPower: 96.4,
+    },
+  ];
+
   return (
     <div className="sidebar-content">
-      <section className="sidebar-panel">
-        <SideTitle>주요 발전소 날씨</SideTitle>
+      <div className="sidebar-content">
+        <section className="sidebar-panel">
+          <SideTitle>주요 발전소 날씨</SideTitle>
+          <WeatherGroup items={weatherItems} />
+        </section>
 
-        <WeatherGroup items={weatherItems} />
-      </section>
+        <div className="sidebar-divider-wrap">
+          <div className="sidebar-divider" />
+        </div>
+
+        <section className="sidebar-panel">
+          <SideTitle>주요 발전소 발전량</SideTitle>
+          <PowerGroup items={powerItems} />
+        </section>
+      </div>
     </div>
   );
 }

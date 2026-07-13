@@ -16,5 +16,5 @@
   right: 0;
   width: 1px;
   height: 110px;
-  background-color: #AEAEB2;
+  background-color: var(--color-divider);
 }
