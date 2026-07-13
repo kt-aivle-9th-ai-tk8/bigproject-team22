@@ -20,7 +20,7 @@ function PowerItem({
       <PressureGauge value={currentOutput} />
 
       <div className="power-item-output-value">
-        {currentOutput.toFixed(1)} hPa
+        {currentOutput.toFixed(1)} MWh
       </div>
 
       <div className="power-item-data">

@@ -1,10 +1,10 @@
 import "./WeatherItem.css";
 
-import rainIcon from "../../assets/weather/rain.png";
-import cloudyIcon from "../../assets/weather/cloudy.png";
-import partlyCloudyIcon from "../../assets/weather/partly-cloudy.png";
-import sunnyIcon from "../../assets/weather/sunny.png";
-import windyIcon from "../../assets/icon/windy.png";
+import rainIcon from "../../../assets/weather/rain.png";
+import cloudyIcon from "../../../assets/weather/cloudy.png";
+import partlyCloudyIcon from "../../../assets/weather/partly-cloudy.png";
+import sunnyIcon from "../../../assets/weather/sunny.png";
+import windyIcon from "../../../assets/icon/windy.png";
 
 export const WEATHER_TYPE = {
   RAIN: "RAIN",

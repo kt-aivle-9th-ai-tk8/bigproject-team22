@@ -1,0 +1,86 @@
+.turbine-item {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background-color: var(--color-point-bright);
+  border: 1px solid var(--color-text-point-dark);
+  border-radius: 5px;
+
+  cursor: pointer;
+}
+
+.turbine-item:hover {
+  opacity: 0.85;
+}
+
+.turbine-item-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.turbine-item-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+}
+
+.turbine-status-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: inline-block;
+
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.turbine-status-dot.red {
+  background: radial-gradient(
+    circle at 35% 30%,
+    #ff9a9a 0%,
+    #ff3b3b 35%,
+    #d60000 100%
+  );
+}
+
+.turbine-status-dot.yellow {
+  background: radial-gradient(
+    circle at 35% 30%,
+    #fff3a0 0%,
+    #ffd21c 40%,
+    #d8a900 100%
+  );
+}
+
+.turbine-status-dot.green {
+  background: radial-gradient(
+    circle at 35% 30%,
+    #9cffad 0%,
+    #18c735 40%,
+    #0a8f20 100%
+  );
+}
+
+.turbine-item-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: 15px;
+  font-weight: 700;
+  color: #000;
+}
+
+.turbine-emergency-icon {
+  font-size: 13px;
+}

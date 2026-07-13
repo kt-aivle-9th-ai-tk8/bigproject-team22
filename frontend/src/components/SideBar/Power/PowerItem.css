@@ -1,5 +1,7 @@
 .power-item {
-  width: 100%;
+  width: fit-content;
+  min-width: 90px;
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -13,18 +15,18 @@
 }
 
 .power-item-title {
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 600;
   margin-bottom: 6px;
 }
 
 .power-item-label {
   width: 100%;
   text-align: right;
-  padding-right: 40px;
+  padding-right: 3px;
   box-sizing: border-box;
 
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 600;
   color: #000;
   margin-bottom: 3px;
@@ -38,7 +40,7 @@
 
 .power-item-value {
   color: var(--color-text-point-dark);
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 550;
   line-height: 1;
   text-align: center;
@@ -46,8 +48,8 @@
 
 .power-item-output-value {
   color: #000;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 550;
   line-height: 1;
   margin-top: -6px;
   margin-bottom: 8px;

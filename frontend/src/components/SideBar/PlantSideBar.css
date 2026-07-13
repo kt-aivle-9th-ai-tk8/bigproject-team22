@@ -1,0 +1,21 @@
+.plant-sidebar-content {
+  padding-top: 8px;
+}
+
+.plant-weather-panel {
+  padding-bottom: 4px;
+}
+
+.plant-divider {
+  padding: 15px 31px 5px 31px;
+}
+
+.plant-turbine-panel {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.plant-report-panel {
+  padding-top: 4px;
+  padding-bottom: 20px;
+}

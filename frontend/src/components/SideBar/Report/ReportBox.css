@@ -1,0 +1,106 @@
+.report-box {
+  width: 100%;
+  padding: 10px 31px 0;
+  box-sizing: border-box;
+}
+
+.report-date-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.report-date-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.report-date-field label {
+  width: 100%;
+  text-align: right;
+
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--color-dark-gray);
+  margin-bottom: 4px;
+}
+
+.report-date-field input {
+  width: 120px;
+  height: 28px;
+  border: 1px solid #000;
+  border-radius: 4px;
+  background-color: #ffffff;
+
+  text-align: center;
+  font-size: 12px;
+  color: #000;
+  cursor: pointer;
+}
+
+.report-date-separator {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #000;
+}
+
+.report-type-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.report-type-row button {
+  width: 54px;
+  height: 26px;
+
+  border: 1px solid var(--color-text-point-dark);
+  border-radius: 5px;
+  background-color: var(--color-point-bright);
+
+  font-size: 12px;
+  font-weight: 500;
+  color: #000;
+  cursor: pointer;
+}
+
+.report-type-row button.active {
+  background-color: var(--color-point);
+}
+
+.report-create-button {
+  width: 100%;
+  height: 44px;
+
+  border: 2px solid var(--color-text-point-dark);
+  border-radius: 8px;
+  background-color: var(--color-point);
+
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+}
+
+.report-list-button {
+  display: block;
+  margin-left: auto;
+  margin-top: 10px;
+
+  border: none;
+  background: none;
+
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-dark-gray);
+  text-decoration: underline;
+  cursor: pointer;
+}
