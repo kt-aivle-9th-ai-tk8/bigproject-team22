@@ -1,7 +1,9 @@
 :root {
   --color-text-point-dark: #0B50D1;
+  --color-point-bright: #ECF2FE;
   --color-dark-gray: #4F4F4F;
   --color-divider: #AEAEB2;
+  --color-point: #85AFF9;
 }
 * {
   margin: 0;

@@ -1,10 +1,12 @@
-import WeatherGroup from "./WeatherGroup";
-import PowerGroup from "./PowerGroup";
-import FaultList from "./FaultList";
+import WeatherGroup from "./Weather/WeatherGroup";
+import PowerGroup from "./Power/PowerGroup";
+import FaultList from "./Fault/FaultList";
 import SideTitle from "./SideTitle";
 
-import { WEATHER_TYPE } from "./WeatherItem";
-import { FAULT_STATUS } from "./FaultItem";
+import { WEATHER_TYPE } from "./Weather/WeatherItem";
+import { FAULT_STATUS } from "./Fault/FaultItem";
+
+import "./MapSideBar.css";
 
 function MapSideBar({ onSelectPlant }) {
   const weatherItems = [
@@ -74,8 +76,8 @@ function MapSideBar({ onSelectPlant }) {
   ];
 
   return (
-    <div className="sidebar-content">
-      <section className="sidebar-panel">
+    <div className="sidebar-content map-sidebar-content">
+      <section className="sidebar-panel map-weather-panel">
         <SideTitle>주요 발전소 날씨</SideTitle>
         <WeatherGroup
           items={weatherItems}
@@ -83,11 +85,11 @@ function MapSideBar({ onSelectPlant }) {
         />
       </section>
 
-      <div className="sidebar-divider-wrap">
+      <div className="sidebar-divider-wrap map-divider">
         <div className="sidebar-divider" />
       </div>
 
-      <section className="sidebar-panel">
+      <section className="sidebar-panel map-power-panel">
         <SideTitle>주요 발전소 발전량</SideTitle>
         <PowerGroup
           items={powerItems}
@@ -95,11 +97,11 @@ function MapSideBar({ onSelectPlant }) {
         />
       </section>
 
-      <div className="sidebar-divider-wrap">
+      <div className="sidebar-divider-wrap map-divider">
         <div className="sidebar-divider" />
       </div>
 
-      <section className="sidebar-panel fault-panel">
+      <section className="sidebar-panel map-fault-panel">
         <SideTitle>실시간 결함 내역</SideTitle>
         <FaultList items={faultItems} />
       </section>

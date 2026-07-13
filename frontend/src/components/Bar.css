@@ -13,6 +13,21 @@
   background-color: #ffffff;
   overflow-y: auto;
 }
+.main-bar {
+  grid-area: main;
+  background-color: #28ff00;
+}
+
+.under-bar {
+  grid-area: under;
+  background-color: #0047ff;
+}
+
+.side-bar {
+  grid-area: sidebar;
+  background-color: #ffffff;
+  overflow-y: auto;
+}
 
 .sidebar-content {
   width: 100%;
@@ -42,12 +57,4 @@
   height: 3px;
   background-color: var(--color-divider);
   border-radius: 5px;
-}
-
-.fault-panel {
-  padding-bottom: 20px;
-}
-
-.compact-divider {
-  padding: 8px 31px;
 }
