@@ -1,0 +1,39 @@
+.weather-item {
+  width: 100%;
+  text-align: center;
+  color: #000;
+}
+
+.weather-item-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.weather-item-icon {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  margin-bottom: 14px;
+}
+
+.weather-item-temperature {
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+
+.weather-item-wind {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.weather-item-wind-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}

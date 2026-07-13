@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
+
 import "./Header.css";
 
-function Header() {
+function Header({onLogout}) {
+
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -38,7 +40,7 @@ function Header() {
         </span>
       </div>
 
-      <button className="logout-button">
+      <button className="logout-button" onClick={onLogout}>
         로그아웃
       </button>
     </header>
