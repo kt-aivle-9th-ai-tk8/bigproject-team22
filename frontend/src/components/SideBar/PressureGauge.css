@@ -1,0 +1,56 @@
+.pressure-gauge {
+  position: relative;
+
+  width: 90px;
+  height: 70px;
+  margin: 0 auto;
+
+  background: transparent;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: visible;
+}
+
+.pressure-gauge svg {
+  width: 90px;
+  height: 70px;
+}
+
+.pressure-gauge-label {
+  position: absolute;
+
+  /* 글자 위치 아래로 이동 */
+  top: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  color: #000;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.1;
+
+  /* 그림자 제거 */
+  text-shadow: none;
+  filter: none;
+
+  pointer-events: none;
+}
+
+.pressure-gauge-label span {
+  color: #000;
+  text-shadow: none;
+}
+.pressure-gauge text {
+  display: none;
+}
+
+.pressure-gauge-label {
+  display: flex;
+}

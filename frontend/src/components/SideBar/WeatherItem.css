@@ -4,6 +4,14 @@
   color: #000;
 }
 
+.weather-item-clickable {
+  cursor: pointer;
+}
+
+.weather-item-clickable:hover {
+  opacity: 0.85;
+}
+
 .weather-item-title {
   font-size: 12px;
   font-weight: 700;

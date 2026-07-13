@@ -1,11 +1,11 @@
 .side-title {
   width: 100%;
-  padding: 7px 20px 7px;
+  padding: 7px 20px 15px;
   box-sizing: border-box;
 
   text-align: right;
 
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 750;
   color: #000;
 }

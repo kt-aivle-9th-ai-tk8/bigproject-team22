@@ -1,0 +1,58 @@
+.power-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #000;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.power-item:hover {
+  opacity: 0.85;
+}
+
+.power-item-title {
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.power-item-label {
+  width: 100%;
+  text-align: right;
+  padding-right: 40px;
+  box-sizing: border-box;
+
+  font-size: 8px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 3px;
+}
+
+.power-item-data {
+  width: 100%;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.power-item-value {
+  color: var(--color-text-point-dark);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1;
+  text-align: center;
+}
+
+.power-item-output-value {
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  margin-top: -6px;
+  margin-bottom: 8px;
+}
+
+.power-item-output-label {
+  margin-bottom: -6px;
+}

@@ -25,11 +25,15 @@ function WeatherItem({
   weatherType = WEATHER_TYPE.RAIN,
   temperature = 32.0,
   windSpeed = 5.0,
+  onClick,
 }) {
   const weatherIcon = WEATHER_ICON_MAP[weatherType] || rainIcon;
 
   return (
-    <div className="weather-item">
+    <div
+      className={`weather-item ${onClick ? "weather-item-clickable" : ""}`}
+      onClick={onClick}
+    >
       {title && <div className="weather-item-title">{title}</div>}
 
       <img

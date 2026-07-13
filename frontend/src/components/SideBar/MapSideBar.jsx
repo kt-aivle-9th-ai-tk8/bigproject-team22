@@ -1,22 +1,29 @@
 import WeatherGroup from "./WeatherGroup";
-import { WEATHER_TYPE } from "./WeatherItem";
+import PowerGroup from "./PowerGroup";
+import FaultList from "./FaultList";
 import SideTitle from "./SideTitle";
 
-function MapSideBar() {
+import { WEATHER_TYPE } from "./WeatherItem";
+import { FAULT_STATUS } from "./FaultItem";
+
+function MapSideBar({ onSelectPlant }) {
   const weatherItems = [
     {
+      id: 1,
       title: "장흥 발전소",
       weatherType: WEATHER_TYPE.RAIN,
       temperature: 32.0,
       windSpeed: 5.0,
     },
     {
+      id: 2,
       title: "경주 발전소",
       weatherType: WEATHER_TYPE.CLOUDY,
       temperature: 28.0,
       windSpeed: 10.0,
     },
     {
+      id: 3,
       title: "대구 발전소",
       weatherType: WEATHER_TYPE.PARTLY_CLOUDY,
       temperature: 30.0,
@@ -24,12 +31,77 @@ function MapSideBar() {
     },
   ];
 
+  const powerItems = [
+    {
+      id: 1,
+      title: "장흥 발전소",
+      currentOutput: 18.4,
+      currentPower: 412,
+      monthPower: 8.7,
+      yearPower: 96.4,
+    },
+    {
+      id: 2,
+      title: "경주 발전소",
+      currentOutput: 19,
+      currentPower: 412,
+      monthPower: 8.7,
+      yearPower: 96.4,
+    },
+    {
+      id: 3,
+      title: "대구 발전소",
+      currentOutput: 40,
+      currentPower: 412,
+      monthPower: 8.7,
+      yearPower: 96.4,
+    },
+  ];
+
+  const faultItems = [
+    {
+      plantName: "장흥 발전소",
+      date: "07.08",
+      time: "12:00",
+      status: FAULT_STATUS.ALERT,
+    },
+    {
+      plantName: "대구 발전소",
+      date: "07.08",
+      time: "11:00",
+      status: FAULT_STATUS.WARNING,
+    },
+  ];
+
   return (
     <div className="sidebar-content">
       <section className="sidebar-panel">
         <SideTitle>주요 발전소 날씨</SideTitle>
+        <WeatherGroup
+          items={weatherItems}
+          onSelectPlant={onSelectPlant}
+        />
+      </section>
 
-        <WeatherGroup items={weatherItems} />
+      <div className="sidebar-divider-wrap">
+        <div className="sidebar-divider" />
+      </div>
+
+      <section className="sidebar-panel">
+        <SideTitle>주요 발전소 발전량</SideTitle>
+        <PowerGroup
+          items={powerItems}
+          onSelectPlant={onSelectPlant}
+        />
+      </section>
+
+      <div className="sidebar-divider-wrap">
+        <div className="sidebar-divider" />
+      </div>
+
+      <section className="sidebar-panel fault-panel">
+        <SideTitle>실시간 결함 내역</SideTitle>
+        <FaultList items={faultItems} />
       </section>
     </div>
   );
