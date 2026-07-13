@@ -3,6 +3,7 @@
   height: 40px;
   padding: 0 10px;
   box-sizing: border-box;
+  flex-shrink: 0;
 
   display: flex;
   align-items: center;
@@ -79,8 +80,4 @@
   font-size: 15px;
   font-weight: 700;
   color: #000;
-}
-
-.turbine-emergency-icon {
-  font-size: 13px;
 }

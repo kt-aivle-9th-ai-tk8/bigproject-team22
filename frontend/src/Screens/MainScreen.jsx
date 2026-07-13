@@ -21,6 +21,11 @@ function MainScreen() {
     return savedPlant ? JSON.parse(savedPlant) : null;
   });
 
+  const [selectedTurbine, setSelectedTurbine] = useState(() => {
+    const savedTurbine = localStorage.getItem("selectedTurbine");
+    return savedTurbine ? JSON.parse(savedTurbine) : null;
+  });
+
   useEffect(() => {
     localStorage.setItem("screenMode", screenMode);
   }, [screenMode]);
@@ -33,33 +38,47 @@ function MainScreen() {
     }
   }, [selectedPlant]);
 
+  useEffect(() => {
+    if (selectedTurbine) {
+      localStorage.setItem("selectedTurbine", JSON.stringify(selectedTurbine));
+    } else {
+      localStorage.removeItem("selectedTurbine");
+    }
+  }, [selectedTurbine]);
+
   const handleLogout = () => {
     localStorage.removeItem("screenMode");
     localStorage.removeItem("selectedPlant");
+    localStorage.removeItem("selectedTurbine");
     navigate("/login");
   };
 
   const handleSelectPlant = (plant) => {
     setSelectedPlant(plant);
+    setSelectedTurbine(null);
     setScreenMode("plant");
+  };
+
+  const handleSelectTurbine = (turbine) => {
+    setSelectedTurbine(turbine);
+    setScreenMode("turbine");
   };
 
   const handleBackToMap = () => {
     setSelectedPlant(null);
+    setSelectedTurbine(null);
     setScreenMode("map");
   };
 
   return (
     <div className="main-screen">
-      <Header
-        onLogout={handleLogout}
-        onTitleClick={handleBackToMap}
-      />
+      <Header onLogout={handleLogout} onTitleClick={handleBackToMap} />
 
       <div className="dashboard-layout">
         <MainBar
           mode={screenMode}
           selectedPlant={selectedPlant}
+          selectedTurbine={selectedTurbine}
           onSelectPlant={handleSelectPlant}
           onBackToMap={handleBackToMap}
         />
@@ -67,12 +86,15 @@ function MainScreen() {
         <SideBar
           mode={screenMode}
           selectedPlant={selectedPlant}
+          selectedTurbine={selectedTurbine}
           onSelectPlant={handleSelectPlant}
+          onSelectTurbine={handleSelectTurbine}
         />
 
         <UnderBar
           mode={screenMode}
           selectedPlant={selectedPlant}
+          selectedTurbine={selectedTurbine}
         />
       </div>
     </div>

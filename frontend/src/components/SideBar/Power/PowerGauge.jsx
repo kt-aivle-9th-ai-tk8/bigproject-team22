@@ -1,15 +1,25 @@
 import GaugeComponent from "react-gauge-component";
-import "./PressureGauge.css";
+import "./PowerGauge.css";
 
 const POINT_COLOR = "#0B50D1";
 
-function PressureGauge({ value = 1005.4 }) {
+function PowerGauge({
+  value = 18.4,
+  minValue = 0,
+  maxValue = 60,
+  subArcLimits = [15, 24, 60],
+}) {
+  const subArcs = subArcLimits.map((limit) => ({
+    limit,
+    color: POINT_COLOR,
+  }));
+
   return (
-    <div className="pressure-gauge">
+    <div className="power-gauge">
       <GaugeComponent
         value={value}
-        minValue={0}
-        maxValue={60}
+        minValue={minValue}
+        maxValue={maxValue}
         type="semicircle"
         labels={{
           valueLabel: {
@@ -24,11 +34,7 @@ function PressureGauge({ value = 1005.4 }) {
           width: 0.18,
           padding: 0.02,
           cornerRadius: 1,
-          subArcs: [
-            { limit: 15, color: POINT_COLOR },
-            { limit: 24, color: POINT_COLOR },
-            { limit: 60, color: POINT_COLOR },
-          ],
+          subArcs,
         }}
         pointer={{
           type: "needle",
@@ -39,4 +45,4 @@ function PressureGauge({ value = 1005.4 }) {
   );
 }
 
-export default PressureGauge;
+export default PowerGauge;

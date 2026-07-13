@@ -1,4 +1,4 @@
-import PressureGauge from "./PressureGauge";
+import PowerGauge from "./PowerGauge";
 import "./PowerItem.css";
 
 function PowerItem({
@@ -17,7 +17,7 @@ function PowerItem({
         현재 출력
       </div>
 
-      <PressureGauge value={currentOutput} />
+      <PowerGauge value={currentOutput} />
 
       <div className="power-item-output-value">
         {currentOutput.toFixed(1)} MWh
