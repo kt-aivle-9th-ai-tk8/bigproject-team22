@@ -9,7 +9,7 @@ import { TURBINE_STATUS } from "./Turbine/TurbineItem";
 import "./PlantSideBar.css";
 
 function PlantSideBar({ selectedPlant, onSelectTurbine }) {
-  const plantName = selectedPlant?.title || selectedPlant?.name || "장흥 발전소";
+  const plantName = selectedPlant?.title || selectedPlant?.name;
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -92,10 +92,13 @@ function PlantSideBar({ selectedPlant, onSelectTurbine }) {
       </div>
 
       <section className="sidebar-panel plant-report-panel">
-        <SideTitle>발전소 보고서 작성</SideTitle>
+        <SideTitle>발전소 운영 보고서 작성</SideTitle>
         <ReportBox
           startDate={today}
           endDate={today}
+          onCreateReport={(reportData) => {
+            console.log("보고서 생성 데이터:", reportData);
+          }}
         />
       </section>
     </div>

@@ -20,6 +20,7 @@ function getMonthBeforeString() {
 function ReportBox({
   startDate = getTodayString(),
   endDate = getTodayString(),
+  onCreateReport,
 }) {
   const [reportType, setReportType] = useState("daily");
   const [selectedStartDate, setSelectedStartDate] = useState(startDate);
@@ -52,13 +53,49 @@ function ReportBox({
   };
 
   const handleStartDateChange = (e) => {
-    setSelectedStartDate(e.target.value);
+    const today = getTodayString();
+    let newStartDate = e.target.value;
+
+    if (newStartDate > today) {
+      newStartDate = today;
+    }
+
+    setSelectedStartDate(newStartDate);
+
+    if (newStartDate > selectedEndDate) {
+      setSelectedEndDate(newStartDate);
+    }
+
     setReportType(null);
   };
 
   const handleEndDateChange = (e) => {
-    setSelectedEndDate(e.target.value);
+    const today = getTodayString();
+    let newEndDate = e.target.value;
+
+    if (newEndDate > today) {
+      newEndDate = today;
+    }
+
+    setSelectedEndDate(newEndDate);
+
+    if (selectedStartDate > newEndDate) {
+      setSelectedStartDate(newEndDate);
+    }
+
     setReportType(null);
+  };
+
+  const handleCreateReport = () => {
+    const reportData = {
+      reportType,
+      startDate: selectedStartDate,
+      endDate: selectedEndDate,
+    };
+
+    console.log(reportData);
+
+    onCreateReport?.(reportData);
   };
 
   return (
@@ -69,6 +106,7 @@ function ReportBox({
           <input
             type="date"
             value={selectedStartDate}
+            max={getTodayString()}
             onChange={handleStartDateChange}
           />
         </div>
@@ -80,6 +118,8 @@ function ReportBox({
           <input
             type="date"
             value={selectedEndDate}
+            min={selectedStartDate}
+            max={getTodayString()}
             onChange={handleEndDateChange}
           />
         </div>
@@ -110,13 +150,7 @@ function ReportBox({
 
       <button
         className="report-create-button"
-        onClick={() => {
-          console.log({
-            reportType,
-            startDate: selectedStartDate,
-            endDate: selectedEndDate,
-          });
-        }}
+        onClick={handleCreateReport}
       >
         보고서 생성
       </button>

@@ -1,0 +1,69 @@
+.turbine-report-list {
+  width: 100%;
+  padding: 6px 35px 0 35px;
+  box-sizing: border-box;
+}
+.turbine-report-items {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.turbine-report-item {
+  width: 100%;
+  height: 45px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 12px;
+  box-sizing: border-box;
+
+  border-top: 1px solid var(--color-divider);
+  cursor: pointer;
+}
+.turbine-report-item:hover {
+  background-color: var(--color-point-bright);
+}
+.turbine-report-item:last-child {
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.turbine-report-date {
+  font-size: 17px;
+  font-weight: 800;
+  color: #000;
+}
+
+.turbine-report-icon {
+  width: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 15px;
+  font-weight: 800;
+  color: #000;
+}
+
+.turbine-report-icon.warning {
+  font-size: 16px;
+}
+
+.turbine-report-more-button {
+  display: block;
+  margin-left: auto;
+  margin-top: 10px;
+  margin-right: 10px;
+
+  border: none;
+  background: none;
+
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-dark-gray);
+  text-decoration: underline;
+  cursor: pointer;
+}
