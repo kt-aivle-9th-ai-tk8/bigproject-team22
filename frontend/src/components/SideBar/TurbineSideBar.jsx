@@ -87,6 +87,9 @@ function TurbineSideBar({ selectedPlant, selectedTurbine }) {
       </div>
 
       <section className="sidebar-panel turbine-report-panel">
+          <SideTitle>
+            터빈보고서 리스트
+          </SideTitle>
           <TurbineReportList
             items={reportItems}
             onSelectReport={(report) => {

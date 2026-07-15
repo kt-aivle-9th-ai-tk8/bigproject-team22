@@ -27,6 +27,39 @@ function MainScreen() {
   });
 
   useEffect(() => {
+    const currentState = {
+      screenMode,
+      selectedPlant,
+      selectedTurbine,
+    };
+
+    window.history.replaceState(currentState, "", window.location.href);
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const state = event.state;
+
+      if (!state) {
+        setScreenMode("map");
+        setSelectedPlant(null);
+        setSelectedTurbine(null);
+        return;
+      }
+
+      setScreenMode(state.screenMode || "map");
+      setSelectedPlant(state.selectedPlant || null);
+      setSelectedTurbine(state.selectedTurbine || null);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("screenMode", screenMode);
   }, [screenMode]);
 
@@ -46,28 +79,38 @@ function MainScreen() {
     }
   }, [selectedTurbine]);
 
+  const moveMode = (nextMode, nextPlant, nextTurbine) => {
+    const nextState = {
+      screenMode: nextMode,
+      selectedPlant: nextPlant,
+      selectedTurbine: nextTurbine,
+    };
+
+    setScreenMode(nextMode);
+    setSelectedPlant(nextPlant);
+    setSelectedTurbine(nextTurbine);
+
+    window.history.pushState(nextState, "", window.location.href);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("screenMode");
     localStorage.removeItem("selectedPlant");
     localStorage.removeItem("selectedTurbine");
+
     navigate("/login");
   };
 
   const handleSelectPlant = (plant) => {
-    setSelectedPlant(plant);
-    setSelectedTurbine(null);
-    setScreenMode("plant");
+    moveMode("plant", plant, null);
   };
 
   const handleSelectTurbine = (turbine) => {
-    setSelectedTurbine(turbine);
-    setScreenMode("turbine");
+    moveMode("turbine", selectedPlant, turbine);
   };
 
   const handleBackToMap = () => {
-    setSelectedPlant(null);
-    setSelectedTurbine(null);
-    setScreenMode("map");
+    moveMode("map", null, null);
   };
 
   return (
@@ -77,10 +120,7 @@ function MainScreen() {
       <div className="dashboard-layout">
         <MainBar
           mode={screenMode}
-          selectedPlant={selectedPlant}
-          selectedTurbine={selectedTurbine}
           onSelectPlant={handleSelectPlant}
-          onBackToMap={handleBackToMap}
         />
 
         <SideBar

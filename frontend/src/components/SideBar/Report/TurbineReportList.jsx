@@ -24,10 +24,6 @@ const REPORT_TYPE_ICON = {
 function TurbineReportList({ items = [], onSelectReport }) {
   return (
     <div className="turbine-report-list">
-      <div className="turbine-report-title">
-        터빈보고서 리스트
-      </div>
-
       <div className="turbine-report-items">
         {items.map((item) => (
           <div
