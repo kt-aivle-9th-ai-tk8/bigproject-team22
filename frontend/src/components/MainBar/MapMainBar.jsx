@@ -18,6 +18,11 @@ function MapMainBar({ onSelectPlant }) {
       name: "대구 발전소",
       coordinate: [128.6014, 35.8714],
     },
+    {
+      id: 4,
+      name: "장흥 발전소2",
+      coordinate: [126.912, 34.684],
+    },
   ];
 
   return (
