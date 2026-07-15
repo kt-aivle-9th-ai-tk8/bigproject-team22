@@ -1,4 +1,4 @@
-package kt.co.kt.aivle.nine.ai.team22.windfarmonm;
+package kr.co.kt.aivle.nine.ai.team22.windfarmonm;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
