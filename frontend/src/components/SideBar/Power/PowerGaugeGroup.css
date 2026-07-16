@@ -1,7 +1,7 @@
 .power-gauge-group {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--power-gauge-count), 1fr);
 
   padding: 10px 20px;
   box-sizing: border-box;
