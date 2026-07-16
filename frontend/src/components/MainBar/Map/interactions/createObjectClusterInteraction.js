@@ -9,20 +9,25 @@ const easeInCubic = (progress) => {
   return progress * progress * progress;
 };
 
-export function createPlantClusterInteraction({
+export function createObjectClusterInteraction({
   map,
   view,
   mapElement,
-  plantLayer,
-  expandedPlantLayer,
-  expandedPlantSource,
-  onSelectPlant,
+
+  objectLayer,
+  expandedObjectLayer,
+  expandedObjectSource,
+
+  onSelectObject,
 }) {
   let expandedClusterFeature = null;
   let closeTimerId = null;
   let animationFrameId = null;
   let isClosing = false;
 
+  /*
+   * 현재 실행 중인 애니메이션 취소
+   */
   const cancelAnimation = () => {
     if (animationFrameId === null) {
       return;
@@ -32,6 +37,9 @@ export function createPlantClusterInteraction({
     animationFrameId = null;
   };
 
+  /*
+   * 예약된 닫기 작업 취소
+   */
   const cancelScheduledClose = () => {
     if (closeTimerId === null) {
       return;
@@ -41,44 +49,53 @@ export function createPlantClusterInteraction({
     closeTimerId = null;
   };
 
+  /*
+   * 펼쳐진 객체 Feature 제거
+   */
   const clearExpandedFeatures = () => {
-    expandedPlantSource.clear();
+    expandedObjectSource.clear();
   };
 
+  /*
+   * 숨겨진 숫자 클러스터 다시 표시
+   */
   const showClusterFeature = (clusterFeature) => {
     if (!clusterFeature) {
       return;
     }
 
     clusterFeature.set("isExpanded", false);
-    plantLayer.changed();
+    objectLayer.changed();
   };
 
+  /*
+   * 펼치는 동안 숫자 클러스터 숨기기
+   */
   const hideClusterFeature = (clusterFeature) => {
     if (!clusterFeature) {
       return;
     }
 
     clusterFeature.set("isExpanded", true);
-    plantLayer.changed();
+    objectLayer.changed();
   };
 
+  /*
+   * 애니메이션 없이 즉시 닫기
+   */
   const closeImmediately = () => {
     cancelScheduledClose();
     cancelAnimation();
 
     clearExpandedFeatures();
-
-    showClusterFeature(
-      expandedClusterFeature
-    );
+    showClusterFeature(expandedClusterFeature);
 
     expandedClusterFeature = null;
     isClosing = false;
   };
 
   /*
-   * 아이콘 개수에 따라 원형 배치 반지름 계산
+   * 객체 개수에 따라 원형 배치 반지름 계산
    */
   const calculateRadiusInPixels = (count) => {
     const itemSizeInPixels = 52;
@@ -87,18 +104,20 @@ export function createPlantClusterInteraction({
       (count * itemSizeInPixels) /
       (2 * Math.PI);
 
-    return Math.max(
-      38,
-      Math.min(calculatedRadius, 120)
-    ) + 5;
+    return (
+      Math.max(
+        38,
+        Math.min(calculatedRadius, 120)
+      ) + 5
+    );
   };
 
   /*
-   * 아이콘 배치 시작 각도
+   * 객체 원형 배치 시작 각도
    */
   const getStartAngle = (count) => {
     /*
-     * 두 개일 때 숫자 아이콘 중심 기준 좌우 배치
+     * 두 개일 때 중심을 기준으로 좌우 배치
      */
     if (count === 2) {
       return 0;
@@ -127,7 +146,7 @@ export function createPlantClusterInteraction({
 
     /*
      * 다른 클러스터가 펼쳐져 있었다면
-     * 기존 숫자 아이콘을 다시 표시
+     * 기존 클러스터 숫자를 다시 표시
      */
     if (
       expandedClusterFeature &&
@@ -152,8 +171,7 @@ export function createPlantClusterInteraction({
     const clusterGeometry =
       clusterFeature.getGeometry();
 
-    const resolution =
-      view.getResolution();
+    const resolution = view.getResolution();
 
     if (!clusterGeometry || !resolution) {
       return;
@@ -162,8 +180,7 @@ export function createPlantClusterInteraction({
     const centerCoordinate =
       clusterGeometry.getCoordinates();
 
-    const count =
-      clusteredFeatures.length;
+    const count = clusteredFeatures.length;
 
     const radiusInPixels =
       calculateRadiusInPixels(count);
@@ -175,17 +192,16 @@ export function createPlantClusterInteraction({
       getStartAngle(count);
 
     /*
-     * 숫자 클러스터 숨김
+     * 펼치는 동안 숫자 클러스터 숨기기
      */
     hideClusterFeature(clusterFeature);
 
     const animatedItems =
       clusteredFeatures.map(
-        (plantFeature, index) => {
+        (objectFeature, index) => {
           const angle =
             startAngle +
-            (Math.PI * 2 * index) /
-              count;
+            (Math.PI * 2 * index) / count;
 
           const targetCoordinate = [
             centerCoordinate[0] +
@@ -204,24 +220,24 @@ export function createPlantClusterInteraction({
                 centerCoordinate[1],
               ]),
 
-              plantId:
-                plantFeature.get("plantId"),
+              objectId:
+                objectFeature.get("objectId"),
 
-              plantName:
-                plantFeature.get(
-                  "plantName"
+              objectName:
+                objectFeature.get(
+                  "objectName"
                 ),
 
-              plantData:
-                plantFeature.get(
-                  "plantData"
+              objectData:
+                objectFeature.get(
+                  "objectData"
                 ),
 
               parentCluster:
                 clusterFeature,
             });
 
-          expandedPlantSource.addFeature(
+          expandedObjectSource.addFeature(
             expandedFeature
           );
 
@@ -241,9 +257,11 @@ export function createPlantClusterInteraction({
     expandedClusterFeature =
       clusterFeature;
 
+    /*
+     * 펼침 애니메이션
+     */
     const duration = 250;
-    const startTime =
-      performance.now();
+    const startTime = performance.now();
 
     const animateExpansion = (
       currentTime
@@ -304,11 +322,11 @@ export function createPlantClusterInteraction({
   };
 
   /*
-   * 펼쳐진 아이콘들을 다시 중심으로 모은 뒤 닫기
+   * 펼쳐진 객체들을 중심으로 모은 뒤 닫기
    */
   const closeExpandedCluster = () => {
     const expandedFeatures =
-      expandedPlantSource.getFeatures();
+      expandedObjectSource.getFeatures();
 
     if (expandedFeatures.length === 0) {
       showClusterFeature(
@@ -355,9 +373,11 @@ export function createPlantClusterInteraction({
         };
       });
 
+    /*
+     * 닫힘 애니메이션
+     */
     const duration = 180;
-    const startTime =
-      performance.now();
+    const startTime = performance.now();
 
     const animateClosing = (
       currentTime
@@ -410,8 +430,7 @@ export function createPlantClusterInteraction({
       clearExpandedFeatures();
 
       /*
-       * 닫힘 애니메이션이 끝난 뒤
-       * 숫자 클러스터 다시 표시
+       * 닫힌 뒤 숫자 클러스터 다시 표시
        */
       showClusterFeature(
         expandedClusterFeature
@@ -429,19 +448,21 @@ export function createPlantClusterInteraction({
   };
 
   /*
-   * 마우스가 숫자 클러스터에서 펼쳐진 아이콘으로
-   * 이동하는 동안 바로 닫히지 않도록 지연
+   * 클러스터에서 펼쳐진 아이콘으로 이동할 때
+   * 즉시 닫히는 현상을 막기 위한 지연
    */
   const scheduleClose = () => {
     cancelScheduledClose();
 
-    closeTimerId =
-      window.setTimeout(() => {
-        closeExpandedCluster();
-        closeTimerId = null;
-      }, 250);
+    closeTimerId = window.setTimeout(() => {
+      closeExpandedCluster();
+      closeTimerId = null;
+    }, 50);
   };
 
+  /*
+   * 지정한 레이어의 Feature 찾기
+   */
   const getFeatureAtPixel = (
     pixel,
     targetLayer,
@@ -465,41 +486,37 @@ export function createPlantClusterInteraction({
   };
 
   /*
-   * 클릭 이벤트
+   * 객체 클릭 이벤트
    */
   const handleSingleClick = (event) => {
     /*
-     * 펼쳐진 개별 발전소 먼저 검사
+     * 펼쳐진 개별 객체 먼저 검사
      */
     const expandedFeature =
       getFeatureAtPixel(
         event.pixel,
-        expandedPlantLayer,
+        expandedObjectLayer,
         15
       );
 
     if (expandedFeature) {
-      const selectedPlant =
-        expandedFeature.get(
-          "plantData"
-        );
+      const selectedObject =
+        expandedFeature.get("objectData");
 
-      if (selectedPlant) {
-        onSelectPlant?.(
-          selectedPlant
-        );
+      if (selectedObject) {
+        onSelectObject?.(selectedObject);
       }
 
       return;
     }
 
     /*
-     * 기본 발전소 또는 클러스터 검사
+     * 단일 객체 또는 클러스터 검사
      */
     const clusterFeature =
       getFeatureAtPixel(
         event.pixel,
-        plantLayer,
+        objectLayer,
         10
       );
 
@@ -508,99 +525,76 @@ export function createPlantClusterInteraction({
     }
 
     const clusteredFeatures =
-      clusterFeature.get("features") ||
-      [];
+      clusterFeature.get("features") || [];
 
     /*
-     * 단일 발전소면 바로 선택
+     * 객체가 하나면 바로 선택
      */
-    if (
-      clusteredFeatures.length === 1
-    ) {
-      const selectedPlant =
+    if (clusteredFeatures.length === 1) {
+      const selectedObject =
         clusteredFeatures[0].get(
-          "plantData"
+          "objectData"
         );
 
-      if (selectedPlant) {
-        onSelectPlant?.(
-          selectedPlant
-        );
+      if (selectedObject) {
+        onSelectObject?.(selectedObject);
       }
 
       return;
     }
 
     /*
-     * 여러 발전소면 펼침
+     * 여러 객체면 펼치기
      */
-    if (
-      clusteredFeatures.length > 1
-    ) {
-      expandCluster(
-        clusterFeature
-      );
+    if (clusteredFeatures.length > 1) {
+      expandCluster(clusterFeature);
     }
   };
 
   /*
-   * hover 이벤트
+   * 객체 hover 이벤트
    */
   const handlePointerMove = (event) => {
     /*
-     * 펼쳐진 개별 발전소 위인지 검사
+     * 펼쳐진 개별 객체 위인지 검사
      */
     const expandedFeature =
       getFeatureAtPixel(
         event.pixel,
-        expandedPlantLayer,
+        expandedObjectLayer,
         20
       );
 
     if (expandedFeature) {
       cancelScheduledClose();
-
-      mapElement.style.cursor =
-        "pointer";
-
+      mapElement.style.cursor = "pointer";
       return;
     }
 
     /*
-     * 클러스터 또는 단일 발전소 위인지 검사
+     * 클러스터 또는 단일 객체 위인지 검사
      */
     const clusterFeature =
       getFeatureAtPixel(
         event.pixel,
-        plantLayer,
+        objectLayer,
         10
       );
 
     if (!clusterFeature) {
-      mapElement.style.cursor =
-        "default";
-
+      mapElement.style.cursor = "default";
       scheduleClose();
-
       return;
     }
 
     cancelScheduledClose();
-
-    mapElement.style.cursor =
-      "pointer";
+    mapElement.style.cursor = "pointer";
 
     const clusteredFeatures =
-      clusterFeature.get("features") ||
-      [];
+      clusterFeature.get("features") || [];
 
-    if (
-      clusteredFeatures.length > 1
-    ) {
-      expandCluster(
-        clusterFeature
-      );
-
+    if (clusteredFeatures.length > 1) {
+      expandCluster(clusterFeature);
       return;
     }
 
@@ -608,12 +602,10 @@ export function createPlantClusterInteraction({
   };
 
   /*
-   * 지도 영역 밖으로 마우스가 나갔을 때
+   * 지도 밖으로 마우스가 나갔을 때
    */
   const handlePointerLeave = () => {
-    mapElement.style.cursor =
-      "default";
-
+    mapElement.style.cursor = "default";
     scheduleClose();
   };
 
@@ -633,7 +625,7 @@ export function createPlantClusterInteraction({
   );
 
   /*
-   * 컴포넌트 정리
+   * 이벤트 및 애니메이션 정리
    */
   const destroy = () => {
     cancelScheduledClose();
@@ -663,8 +655,7 @@ export function createPlantClusterInteraction({
     expandedClusterFeature = null;
     isClosing = false;
 
-    mapElement.style.cursor =
-      "default";
+    mapElement.style.cursor = "default";
   };
 
   return {

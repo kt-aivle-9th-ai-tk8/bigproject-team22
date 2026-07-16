@@ -1,35 +1,38 @@
 import Map from "./Map/Map";
 import "./MapMainBar.css";
+import plantIcon from "../../assets/icon/plant.png";
 
-function MapMainBar({ onSelectPlant }) {
-  const plants = [
-    {
-      id: 1,
-      name: "장흥 발전소",
-      coordinate: [126.907, 34.681],
-    },
-    {
-      id: 2,
-      name: "경주 발전소",
-      coordinate: [129.2247, 35.8562],
-    },
-    {
-      id: 3,
-      name: "대구 발전소",
-      coordinate: [128.6014, 35.8714],
-    },
-    {
-      id: 4,
-      name: "장흥 발전소2",
-      coordinate: [126.912, 34.684],
-    },
-  ];
+function MapMainBar({
+  plants = [],
+  isLoading,
+  error,
+  onSelectPlant,
+}) {
+  if (isLoading) {
+    return (
+      <div className="map-main-bar">
+        발전소 데이터를 불러오는 중입니다.
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="map-main-bar">
+        발전소 데이터를 불러오지 못했습니다.
+      </div>
+    );
+  }
 
   return (
     <div className="map-main-bar">
       <Map
-        plants={plants}
-        onSelectPlant={onSelectPlant}
+        objects={plants}
+        iconSrc={plantIcon}
+        iconScale={0.07}
+        clusterDistance={40}
+        clusterMinDistance={15}
+        onSelectObject={onSelectPlant}
       />
     </div>
   );
