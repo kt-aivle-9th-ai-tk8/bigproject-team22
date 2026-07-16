@@ -111,7 +111,7 @@ function MapSideBar({
 
       <section className="sidebar-panel map-fault-panel">
         <SideTitle>
-          실시간 결함 내역
+          실시간 점검 알림
         </SideTitle>
 
         <FaultList items={faultItems} />

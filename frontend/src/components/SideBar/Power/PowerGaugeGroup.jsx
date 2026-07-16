@@ -5,7 +5,10 @@ const DEFAULT_LABELS = ["현재 출력", "금일 출력", "금주 출력"];
 
 function PowerGaugeGroup({ items }) {
   return (
-    <div className="power-gauge-group">
+    <div
+      className="power-gauge-group"
+      style={{ "--power-gauge-count": items.length }}
+    >
       {items.map((item, index) => (
         <div className="power-gauge-group-item" key={item.id}>
           <div className="power-gauge-group-content">
