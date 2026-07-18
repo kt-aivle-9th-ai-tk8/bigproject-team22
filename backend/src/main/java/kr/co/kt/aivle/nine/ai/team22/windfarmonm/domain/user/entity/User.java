@@ -12,7 +12,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -40,8 +42,11 @@ public class User {
     @Column(nullable = false)
     private String userName;
 
+    // @JdbcTypeCode(VARCHAR): Hibernate 6.3+ 가 MySQL 네이티브 ENUM 컬럼을 생성하지 않도록 강제.
+    // 표준 VARCHAR 로 저장해 DB 이식성(PostgreSQL 등)·구버전 호환·enum 값 추가 시 무마이그레이션 확보.
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(nullable = false, length = 20)
     private Role role;
 
     @Column(nullable = false)
