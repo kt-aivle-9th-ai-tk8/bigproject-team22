@@ -1,10 +1,11 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.presentation.user.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.application.user.dto.SignUpCommand;
-import kr.co.kt.aivle.nine.ai.team22.windfarmonm.domain.user.entity.Role;
 
+/**
+ * 회원가입 요청. role 은 클라이언트가 지정하지 않는다(서버가 GUEST 로 고정, 이후 관리자 승인으로 승격).
+ */
 public record SignUpRequest(
         @NotBlank(message = "사번은 필수입니다.")
         String employeeId,
@@ -13,12 +14,9 @@ public record SignUpRequest(
         String password,
 
         @NotBlank(message = "이름은 필수입니다.")
-        String userName,
-
-        @NotNull(message = "권한(role)은 필수입니다.")
-        Role role
+        String userName
 ) {
     public SignUpCommand toCommand() {
-        return new SignUpCommand(employeeId, password, userName, role);
+        return new SignUpCommand(employeeId, password, userName);
     }
 }
