@@ -1,0 +1,233 @@
+/* 전체 배경 화면 (옅은 하늘색) */
+.login-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #EBF2FA;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* 모바일 비율의 독립된 서류 형태 카드 */
+.login-card {
+  background-color: #FFFFFF;
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid #AEAEB2;
+  border-radius: 12px;
+  padding: 60px 40px 40px 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 헤더 스타일 */
+.login-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 8px 0;
+}
+
+.login-header p {
+  font-size: 15px;
+  color: #AEAEB2;
+  margin: 0 0 36px 0;
+}
+
+/* 폼 및 인풋 스타일 */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-group input {
+  width: 100%;
+  height: 56px;
+  border: 1px solid #000000;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 16px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-group input:focus {
+  border-color: #0066FF;
+}
+
+.input-group input:disabled {
+  background-color: #F5F5F5;
+  border-color: #AEAEB2;
+  cursor: not-allowed;
+}
+
+/* 로그인 버튼 */
+.login-button {
+  width: 100%;
+  height: 52px;
+  background-color: #0066FF;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background-color 0.2s;
+}
+
+.login-button:hover {
+  background-color: #0052CC;
+}
+
+.login-button:disabled {
+  background-color: #AEAEB2;
+  cursor: not-allowed;
+}
+
+/* 하단 내비게이션 링크 */
+.login-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  margin-bottom: 60px;
+  font-size: 14px;
+  color: #000000;
+}
+
+.login-nav span {
+  cursor: pointer;
+}
+
+.login-nav .divider {
+  color: #AEAEB2;
+  cursor: default;
+}
+
+/* 회사 정보 및 규제 대응 푸터 */
+.login-footer {
+  margin-top: auto;
+  border-top: 1px solid #E5E5EA;
+  padding-top: 24px;
+}
+
+.company-info {
+  font-size: 11px;
+  color: #8E8E93;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.logo-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+.company-info p {
+  margin: 2px 0;
+}
+
+.footer-links {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #8E8E93;
+}
+
+.footer-links span {
+  cursor: pointer;
+}
+
+.policy-highlight {
+  font-weight: bold;
+  color: #000000;
+}
+
+/* 어둡고 흐린 배경 레이어 */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.35); /* 피그마의 어두운 오버레이 재현 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  border-radius: 12px; /* 카드 바깥 범위를 덮기 위함 */
+}
+
+/* 팝업 모달창 본체 */
+.modal-window {
+  background-color: #FFFFFF;
+  width: 280px;
+  border: 1px solid #AEAEB2;
+  border-radius: 14px;
+  padding: 24px 20px 16px 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* 경고 노란색 아이콘 */
+.modal-icon {
+  font-size: 32px;
+  color: #FFCC00;
+  margin-bottom: 12px;
+}
+
+/* 성공 타이틀 (Success!) */
+.modal-title.success-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0066FF;
+  margin-bottom: 12px;
+}
+
+/* 메시지 텍스트 */
+.modal-body p {
+  font-size: 15px;
+  color: #333333;
+  margin: 4px 0;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* 확인/뒤로가기 버튼 */
+.modal-close-button {
+  width: 100%;
+  max-width: 80px;
+  height: 32px;
+  background-color: #0066FF;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: background-color 0.2s;
+}
+
+.modal-close-button:hover {
+  background-color: #0052CC;
+}
