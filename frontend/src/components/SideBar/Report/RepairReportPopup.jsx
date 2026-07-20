@@ -152,13 +152,18 @@ function RepairReportPopup({
   };
 
   return (
-    <div className="repair-popup-overlay" role="presentation">
-      <section
-        className="repair-popup"
-        role="dialog"
-        aria-modal="true"
-        aria-label="수리 보고서 정보 입력"
-      >
+    <div
+        className="repair-popup-overlay"
+        role="presentation"
+        onClick={onClose}
+        >
+        <section
+            className="repair-popup"
+            role="dialog"
+            aria-modal="true"
+            aria-label="수리 보고서 정보 입력"
+            onClick={(event) => event.stopPropagation()}
+        >
         <div className="repair-popup-body">
           <div className="repair-popup-section">
             <h2 className="repair-popup-main-title">수리 보고서</h2>
