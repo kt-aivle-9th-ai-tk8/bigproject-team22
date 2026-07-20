@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  # 운영: 외부(지정된) Redis 서버로 접속. 멀티 인스턴스 간 세션 공유.
+  # 세션은 @EnableRedisHttpSession(SessionConfig) 로 활성화된다.
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD} # 미설정 시 기동 실패(운영 시크릿 강제)

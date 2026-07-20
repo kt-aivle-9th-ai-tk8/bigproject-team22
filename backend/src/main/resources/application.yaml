@@ -1,3 +1,10 @@
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
 spring:
   application:
-    name: windfarm-monitoring
+    name: windfarmonm
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE} # set `local` at development phase, set `prod` at production phase

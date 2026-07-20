@@ -1,0 +1,180 @@
+.signup-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #FFFFFF;
+  position: relative;
+}
+
+/* 왼쪽 폼 영역 */
+.signup-form-section {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 60px;
+  box-sizing: border-box;
+}
+
+.signup-wrapper {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+}
+
+.signup-wrapper h2 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  color: #000000;
+}
+
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.signup-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.signup-input-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+}
+
+.signup-input-group input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #AEAEB2;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  background-color: #FFFFFF;
+}
+
+.signup-input-group input:focus {
+  border-color: #0066FF;
+}
+
+/* 실시간 벨리데이션 텍스트 스타일 */
+.validation-msg {
+  font-size: 12px;
+  margin-top: 2px;
+  font-weight: 500;
+}
+.validation-msg.valid {
+  color: #34C759; /* 그린 */
+}
+.validation-msg.invalid {
+  color: #FF3B30; /* 레드 */
+}
+
+/* 체크박스 커스텀 */
+.terms-group {
+  margin-top: 10px;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+  cursor: pointer;
+}
+
+/* 가입 완료 버튼 (시안의 딥그린/국방색 계열 포인트 컬러 반영) */
+.signup-button {
+  width: 100%;
+  height: 48px;
+  background-color: #2D4A22; 
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+.signup-button:hover {
+  background-color: #203518;
+}
+
+/* 오른쪽 이미지 영역 */
+.signup-image-section {
+  flex: 1;
+  background-image: url('https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?q=80&w=1200'); /* 원본 이미지 확보 후 교체 가능 */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* 화면 크기가 작아지면 이미지를 숨기고 폼을 넓게 조절 */
+@media (max-width: 900px) {
+  .signup-image-section {
+    display: none;
+  }
+}
+
+/* 모달 레이아웃 */
+.signup-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.signup-modal-window {
+  background-color: #FFFFFF;
+  width: 300px;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.signup-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #34C759;
+  margin-bottom: 12px;
+}
+
+.signup-modal-window p {
+  font-size: 15px;
+  color: #333333;
+  margin-bottom: 20px;
+}
+
+.signup-modal-window button {
+  width: 100%;
+  height: 38px;
+  background-color: #0066FF;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
