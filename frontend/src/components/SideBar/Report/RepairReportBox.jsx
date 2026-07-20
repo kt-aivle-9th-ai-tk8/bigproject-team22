@@ -33,6 +33,19 @@ function RepairReportBox({
   };
 
   const handleCreateReport = () => {
+    const isEmptyRepairInfo =
+      !repairInfo.startDate ||
+      !repairInfo.startTime ||
+      !repairInfo.endDate ||
+      !repairInfo.endTime ||
+      repairInfo.turbines.length === 0 ||
+      !repairInfo.documentId.trim();
+
+    if (isEmptyRepairInfo) {
+      alert("수리기간, 터빈, 공문 ID를 모두 입력해주세요.");
+      return;
+    }
+
     const reportData = {
       reportKind: "repair",
       repairPeriod:
