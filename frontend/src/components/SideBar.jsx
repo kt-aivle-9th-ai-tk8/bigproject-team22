@@ -4,12 +4,13 @@ import TurbineSideBar from "./SideBar/TurbineSideBar";
 
 function SideBar({
   mode,
-  plants = [],
+  plants,
   selectedPlant,
   selectedTurbine,
   onSelectPlant,
   onSelectTurbine,
-  onCreateInspectionReport
+  onCreateInspectionReport,
+  onCreateRepairReport,
 }) {
   return (
     <aside className="side-bar">
@@ -24,7 +25,7 @@ function SideBar({
         <PlantSideBar
           selectedPlant={selectedPlant}
           onSelectTurbine={onSelectTurbine}
-          onCreateInspectionReport={onCreateInspectionReport}
+          onCreateRepairReport={onCreateRepairReport}
         />
       )}
 
@@ -32,6 +33,7 @@ function SideBar({
         <TurbineSideBar
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
+          onCreateInspectionReport={onCreateInspectionReport}
         />
       )}
     </aside>

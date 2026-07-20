@@ -115,7 +115,7 @@ function InspectionReportBox({ onCreateReport }) {
               </div>
 
               <div className="inspection-upload-text">
-                이미지가 들어간 압축 파일을 업로드 해주세요
+                터빈 드론 촬영 이미지가 들어간 압축 파일을 업로드 해주세요
               </div>
 
               <div className="inspection-upload-sub-text">
