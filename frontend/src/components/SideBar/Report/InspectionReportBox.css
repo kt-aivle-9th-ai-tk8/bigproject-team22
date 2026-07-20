@@ -25,8 +25,36 @@
 
   box-sizing: border-box;
   cursor: pointer;
+
+  container-type: inline-size;
+}
+.inspection-upload-text {
+  width: 90%;
+
+  font-size: clamp(9px, 3.2cqw, 12px);
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 2px;
+
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.inspection-upload-sub-text {
+  width: 90%;
+
+  font-size: clamp(8px, 2.7cqw, 10px);
+  font-weight: 500;
+  color: var(--color-dark-gray);
+  line-height: 1.25;
+
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .inspection-upload-box.dragging {
   border-color: var(--color-text-point-dark);
   background-color: var(--color-point-bright);

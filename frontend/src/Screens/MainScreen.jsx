@@ -375,7 +375,9 @@ function MainScreen() {
     //   body: formData,
     // });
   };
-
+  const handleCreateRepairReport = (repairReportData) => {
+    console.log("MainScreen에서 받은 수리 보고서 JSON:", repairReportData);
+  };
   return (
     <div className="main-screen">
       <Header
@@ -404,7 +406,8 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
-          onCreateInspectionReport={handleCreateInspectionReport}
+          onCreateInspectionReport = {handleCreateInspectionReport}
+          onCreateRepairReport={handleCreateRepairReport}
         />
 
         <UnderBar

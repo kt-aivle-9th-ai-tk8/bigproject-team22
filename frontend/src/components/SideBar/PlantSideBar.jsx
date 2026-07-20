@@ -5,7 +5,7 @@ import TurbineList from "./Turbine/TurbineList";
 import ReportBox from "./Report/ReportBox";
 import SideTitle from "./SideTitle";
 import ReportTitleToggle from "./Report/ReportTitleToggle";
-import InspectionReportBox from "./Report/InspectionReportBox";
+import RepairReportBox from "./Report/RepairReportBox";
 
 import { WEATHER_TYPE } from "./Weather/WeatherItem";
 import { TURBINE_STATUS } from "./Turbine/TurbineItem";
@@ -14,7 +14,7 @@ import "./PlantSideBar.css";
 function PlantSideBar({
   selectedPlant,
   onSelectTurbine,
-  onCreateInspectionReport,
+  onCreateRepairReport,
 }) {
   const plantName = selectedPlant?.title || selectedPlant?.name;
 
@@ -67,13 +67,6 @@ function PlantSideBar({
       alertCount: 2,
       hasEmergency: true,
     },
-    {
-      id: 4,
-      name: "터빈 D",
-      status: TURBINE_STATUS.NORMAL,
-      alertCount: 0,
-      hasEmergency: false,
-    },
   ];
 
   return (
@@ -103,6 +96,10 @@ function PlantSideBar({
         <ReportTitleToggle
           selectedType={reportMode}
           onChange={setReportMode}
+          firstType="operation"
+          secondType="repair"
+          firstTitle="발전소 운영 보고서"
+          secondTitle="수리 보고서"
         />
 
         {reportMode === "operation" && (
@@ -111,18 +108,20 @@ function PlantSideBar({
             startDate={today}
             endDate={today}
             onCreateReport={(reportData) => {
-              console.log("보고서 생성 데이터:", reportData);
+              console.log("발전소 운영 보고서 생성 데이터:", reportData);
             }}
           />
         )}
-        {reportMode === "inspection" && (
-          <InspectionReportBox
-            onCreateReport={onCreateInspectionReport}
+
+        {reportMode === "repair" && (
+          <RepairReportBox
+            repairPeriod="-"
+            turbineName="-"
+            documentId="-"
+            turbineOptions={turbineItems.map((turbine) => turbine.name)}
+            onCreateReport={onCreateRepairReport}
           />
         )}
-
-
-        
       </section>
     </div>
   );
