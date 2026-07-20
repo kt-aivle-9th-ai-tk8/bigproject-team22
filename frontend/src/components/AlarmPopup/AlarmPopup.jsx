@@ -9,8 +9,15 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen) {
       setSelectedReport(null);
+      return;
     }
-  }, [isOpen]);
+
+    if (alarm.length === 1) {
+      setSelectedReport(alarm[0]);
+    } else {
+      setSelectedReport(null);
+    }
+  }, [isOpen, alarm]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -82,6 +89,7 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
           <AlarmReportDetail
             report={selectedReport}
             onBack={handleBackClick}
+            showBackButton={alarm.length > 1}
           />
         ) : (
           <AlarmReportList
@@ -121,16 +129,18 @@ function AlarmReportList({ alarm, onSelectReport }) {
   );
 }
 
-function AlarmReportDetail({ report, onBack }) {
+function AlarmReportDetail({ report, onBack, showBackButton = true }) {
   return (
     <div className="alarm-report-detail">
-      <button
-        className="alarm-back-button"
-        type="button"
-        onClick={onBack}
-      >
-        ← 목록으로
-      </button>
+      {showBackButton && (
+        <button
+          className="alarm-back-button"
+          type="button"
+          onClick={onBack}
+        >
+          ← 목록으로
+        </button>
+      )}
 
       <div className="alarm-report-markdown">
         <ReactMarkdown>{report.markdown ?? ""}</ReactMarkdown>

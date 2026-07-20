@@ -9,6 +9,7 @@ function SideBar({
   selectedTurbine,
   onSelectPlant,
   onSelectTurbine,
+  onCreateInspectionReport
 }) {
   return (
     <aside className="side-bar">
@@ -23,6 +24,7 @@ function SideBar({
         <PlantSideBar
           selectedPlant={selectedPlant}
           onSelectTurbine={onSelectTurbine}
+          onCreateInspectionReport={onCreateInspectionReport}
         />
       )}
 
