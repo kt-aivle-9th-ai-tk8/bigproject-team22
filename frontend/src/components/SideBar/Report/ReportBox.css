@@ -5,12 +5,13 @@
 }
 
 .report-date-row {
+  height: 44px;
   width: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 36px;
 }
 
 .report-date-field {
@@ -22,6 +23,8 @@
 .report-date-field label {
   width: 100%;
   text-align: right;
+  height: 12px;
+  line-height: 12px;
 
   font-size: 10px;
   font-weight: 500;
@@ -51,11 +54,12 @@
 }
 
 .report-type-row {
+  height: 26px;
   width: 100%;
   display: flex;
   justify-content: flex-end;
   gap: 14px;
-  margin-bottom: 26px;
+  margin-bottom: 50px;
 }
 
 .report-type-row button {

@@ -359,6 +359,23 @@ function MainScreen() {
     moveMode("map", null, null);
   };
 
+  const handleCreateInspectionReport = (reportData) => {
+    console.log("MainScreen에서 받은 점검 보고서 데이터:", reportData);
+
+    const formData = new FormData();
+    formData.append("reportKind", reportData.reportKind);
+
+    if (reportData.file) {
+      formData.append("file", reportData.file);
+    }
+
+    // 나중에 API 연결 시 사용
+    // fetch("/api/inspection/report", {
+    //   method: "POST",
+    //   body: formData,
+    // });
+  };
+
   return (
     <div className="main-screen">
       <Header
@@ -387,6 +404,7 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
+          onCreateInspectionReport={handleCreateInspectionReport}
         />
 
         <UnderBar

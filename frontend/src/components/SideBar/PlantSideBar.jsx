@@ -1,17 +1,25 @@
+import { useState } from "react";
+
 import WeatherGroup from "./Weather/WeatherGroup";
 import TurbineList from "./Turbine/TurbineList";
 import ReportBox from "./Report/ReportBox";
 import SideTitle from "./SideTitle";
+import ReportTitleToggle from "./Report/ReportTitleToggle";
+import InspectionReportBox from "./Report/InspectionReportBox";
 
 import { WEATHER_TYPE } from "./Weather/WeatherItem";
 import { TURBINE_STATUS } from "./Turbine/TurbineItem";
-
 import "./PlantSideBar.css";
 
-function PlantSideBar({ selectedPlant, onSelectTurbine }) {
+function PlantSideBar({
+  selectedPlant,
+  onSelectTurbine,
+  onCreateInspectionReport,
+}) {
   const plantName = selectedPlant?.title || selectedPlant?.name;
 
   const today = new Date().toISOString().slice(0, 10);
+  const [reportMode, setReportMode] = useState("operation");
 
   const weatherItems = [
     {
@@ -92,14 +100,29 @@ function PlantSideBar({ selectedPlant, onSelectTurbine }) {
       </div>
 
       <section className="sidebar-panel plant-report-panel">
-        <SideTitle>발전소 운영 보고서 작성</SideTitle>
-        <ReportBox
-          startDate={today}
-          endDate={today}
-          onCreateReport={(reportData) => {
-            console.log("보고서 생성 데이터:", reportData);
-          }}
+        <ReportTitleToggle
+          selectedType={reportMode}
+          onChange={setReportMode}
         />
+
+        {reportMode === "operation" && (
+          <ReportBox
+            reportMode={reportMode}
+            startDate={today}
+            endDate={today}
+            onCreateReport={(reportData) => {
+              console.log("보고서 생성 데이터:", reportData);
+            }}
+          />
+        )}
+        {reportMode === "inspection" && (
+          <InspectionReportBox
+            onCreateReport={onCreateInspectionReport}
+          />
+        )}
+
+
+        
       </section>
     </div>
   );
