@@ -3,9 +3,9 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.auth;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import kr.co.kt.aivle.nine.ai.team22.windfarmonm.domain.user.entity.Role;
-import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.exception.BusinessException;
-import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.exception.ErrorCode;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 

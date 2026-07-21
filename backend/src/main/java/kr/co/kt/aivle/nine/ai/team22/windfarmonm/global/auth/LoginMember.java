@@ -1,6 +1,6 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.auth;
 
-import kr.co.kt.aivle.nine.ai.team22.windfarmonm.domain.user.entity.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 
 import java.io.Serializable;
 
