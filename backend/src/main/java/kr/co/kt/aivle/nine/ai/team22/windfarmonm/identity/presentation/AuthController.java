@@ -44,11 +44,12 @@ public class AuthController {
             oldSession.invalidate();
         }
         HttpSession session = httpRequest.getSession(true);
-        session.setAttribute(SessionConst.LOGIN_MEMBER,
-                new LoginMember(result.userId(), result.employeeId(), result.userName(), result.role()));
 
         // 1인 1세션: 다른 기기의 이전 세션 축출 + 현재 세션 id 등록
         authService.registerSession(result.userId(), session.getId());
+
+        session.setAttribute(SessionConst.LOGIN_MEMBER,
+                new LoginMember(result.userId(), result.employeeId(), result.userName(), result.role()));
 
         return ResponseEntity.ok(ApiResponse.success("로그인되었습니다.", LoginResponse.from(result)));
     }
