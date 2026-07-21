@@ -54,6 +54,7 @@ public class AuthService {
      * 로그아웃 시에는 이 포인터를 지우지 않는다. 어차피 Redis TTL 만료를 RDB 가 알 수 없어
      * "활성 여부"의 근거로 쓸 수 없기 때문이며, 죽은 id 를 축출하는 것은 무해한 no-op 이다.
      */
+    // TODO: 동시 로그인 시 발생 가능한 latestSessionId 저장 경합 해결 필요 (https://github.com/kt-aivle-9th-ai-tk8/bigproject-team22/pull/23#discussion_r3618676948)
     @Transactional
     public void registerSession(Long userId, String newSessionId) {
         User user = userRepository.findById(userId)

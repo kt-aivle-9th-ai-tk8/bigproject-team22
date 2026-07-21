@@ -60,6 +60,7 @@ public class User {
      * 따라서 "현재 로그인 중" 여부는 반드시 Redis(SessionManager#exists)로 확인해야 한다.
      * 로그아웃/강제종료 시에도 지우지 않으며, 다음 로그인 때 덮어쓴다.
      */
+    // TODO: DB 유출 시 발생가능한 세션 탈취 문제 해결 필요(https://github.com/kt-aivle-9th-ai-tk8/bigproject-team22/pull/23#discussion_r3618676953)
     @Column(length = 64)
     private String latestSessionId;
 
