@@ -1,16 +1,17 @@
 .report-box {
   width: 100%;
-  padding: 10px 31px 0;
+  padding: 28px 31px 0;
   box-sizing: border-box;
 }
 
 .report-date-row {
+  height: 44px;
   width: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 18px;
 }
 
 .report-date-field {
@@ -22,8 +23,10 @@
 .report-date-field label {
   width: 100%;
   text-align: right;
+  height: 12px;
+  line-height: 12px;
 
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 500;
   color: var(--color-dark-gray);
   margin-bottom: 4px;
@@ -51,11 +54,12 @@
 }
 
 .report-type-row {
+  height: 26px;
   width: 100%;
   display: flex;
   justify-content: flex-end;
   gap: 14px;
-  margin-bottom: 26px;
+  margin-bottom: 50px;
 }
 
 .report-type-row button {

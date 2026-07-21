@@ -1,0 +1,281 @@
+.repair-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  background-color: rgba(0, 0, 0, 0.35);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.repair-popup {
+  width: 600px;
+  max-height: 92vh;
+
+  background-color: #ffffff;
+  border-radius: 8px;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+}
+
+.repair-popup-body {
+  padding: 20px;
+  box-sizing: border-box;
+
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.repair-popup-main-title {
+  margin: 0 0 24px 0;
+
+  font-size: 28px;
+  font-weight: 700;
+  color: #000;
+
+  text-align: left;
+}
+
+.repair-popup-section {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.repair-popup-title {
+  margin: 0 0 12px 0;
+
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+}
+
+.repair-date-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.repair-date-field {
+  display: flex;
+  flex-direction: column;
+}
+.repair-date-field label {
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--color-dark-gray);
+  margin-bottom: 4px;
+}
+
+.repair-date-field input {
+  width: 95px;
+  height: 28px;
+
+  border: 1px solid #000;
+  border-radius: 4px;
+
+  font-size: 12px;
+  color: #000;
+  text-align: center;
+
+  box-sizing: border-box;
+}
+
+.repair-time-field input {
+  width: 100px;
+}
+
+.repair-date-separator {
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+
+  font-size: 14px;
+  color: #000;
+}
+
+.repair-turbine-list {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.repair-turbine-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  font-size: 13px;
+  font-weight: 500;
+  color: #000;
+
+  cursor: pointer;
+}
+
+.repair-turbine-option input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}
+
+.repair-document-input {
+  width: 100%;
+  height: 32px;
+
+  border: 1px solid #000;
+  border-radius: 4px;
+
+  padding: 0 10px;
+  box-sizing: border-box;
+
+  font-size: 11px;
+  color: #000;
+}
+
+.repair-content-textarea {
+  width: 100%;
+  height: 200px;
+
+  border: 1px solid #000;
+  border-radius: 8px;
+
+  padding: 10px;
+  box-sizing: border-box;
+
+  resize: none;
+
+  font-size: 11px;
+  color: #000;
+}
+
+.repair-additional-list {
+  width: 100%;
+}
+
+.repair-additional-item {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.repair-additional-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.repair-additional-header .repair-popup-title {
+  margin-bottom: 0;
+}
+
+.repair-additional-remove-button {
+  border: none;
+  background: none;
+
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-dark-gray);
+  text-decoration: underline;
+
+  cursor: pointer;
+}
+
+.repair-additional-title-input {
+  width: 100%;
+  height: 32px;
+
+  border: 1px solid #000;
+  border-radius: 4px;
+
+  padding: 0 10px;
+  box-sizing: border-box;
+
+  font-size: 11px;
+  color: #000;
+
+  margin-bottom: 8px;
+}
+
+.repair-additional-content-textarea {
+  width: 100%;
+  height: 120px;
+
+  border: 1px solid #000;
+  border-radius: 8px;
+
+  padding: 10px;
+  box-sizing: border-box;
+
+  resize: none;
+
+  font-size: 11px;
+  color: #000;
+}
+
+.repair-add-button {
+  width: 100%;
+  height: 55px;
+
+  border: none;
+  border-radius: 8px;
+  background-color: var(--color-point);
+
+  font-size: 28px;
+  font-weight: 800;
+  color: #000;
+
+  cursor: pointer;
+}
+
+.repair-popup-footer {
+  padding: 0 20px 20px;
+  box-sizing: border-box;
+
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.repair-popup-cancel-button,
+.repair-popup-complete-button {
+  height: 30px;
+
+  border: none;
+  border-radius: 5px;
+
+  padding: 0 10px;
+
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+
+  cursor: pointer;
+}
+
+.repair-popup-cancel-button {
+  background-color: #c8c8c8;
+}
+
+.repair-popup-complete-button {
+  background-color: var(--color-point);
+}
+
+.required-mark {
+  color: #ff3b30;
+  font-size: 15px;
+  font-weight: 1000;
+  vertical-align: top;
+  margin-left: -2px;
+}
+
+.repair-popup-complete-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

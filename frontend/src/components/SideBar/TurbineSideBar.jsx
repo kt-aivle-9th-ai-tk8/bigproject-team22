@@ -1,13 +1,26 @@
+import { useState } from "react";
+
 import SideTitle from "./SideTitle";
 import PowerGaugeGroup from "./Power/PowerGaugeGroup";
+import ReportBox from "./Report/ReportBox";
+import ReportTitleToggle from "./Report/ReportTitleToggle";
+import InspectionReportBox from "./Report/InspectionReportBox";
+import TurbineReportList, { REPORT_TYPE } from "./Report/TurbineReportList";
 
 import "./TurbineSideBar.css";
 
-function TurbineSideBar({ selectedPlant, selectedTurbine }) {
+function TurbineSideBar({
+  selectedPlant,
+  selectedTurbine,
+  onCreateInspectionReport,
+}) {
+  const [reportMode, setReportMode] = useState("operation");
+
   const plantName = selectedPlant?.title || selectedPlant?.name || "장흥 발전소";
   const turbineName = selectedTurbine?.name || "터빈 A";
+  const today = new Date().toISOString().slice(0, 10);
 
-    const powerGaugeItems = [
+  const powerGaugeItems = [
     {
       id: 1,
       label: "현재 출력",
@@ -37,6 +50,39 @@ function TurbineSideBar({ selectedPlant, selectedTurbine }) {
     },
   ];
 
+  const reportItems = [
+    {
+      id: 1,
+      date: "2026-07-09",
+      time: "14:20",
+      status: REPORT_TYPE.FAULT,
+    },
+    {
+      id: 2,
+      date: "2026-07-08",
+      time: "12:20",
+      status: REPORT_TYPE.FAULT,
+    },
+    {
+      id: 3,
+      date: "2026-07-06",
+      time: "14:20",
+      status: REPORT_TYPE.OPERATION,
+    },
+    {
+      id: 4,
+      date: "2026-07-02",
+      time: "14:00",
+      status: REPORT_TYPE.WARNING,
+    },
+    {
+      id: 5,
+      date: "2026-06-24",
+      time: "10:20",
+      status: REPORT_TYPE.REPAIR,
+    },
+  ];
+
   return (
     <div className="sidebar-content turbine-sidebar-content">
       <section className="sidebar-panel turbine-power-panel">
@@ -45,6 +91,67 @@ function TurbineSideBar({ selectedPlant, selectedTurbine }) {
         </SideTitle>
 
         <PowerGaugeGroup items={powerGaugeItems} />
+      </section>
+
+      <div className="sidebar-divider-wrap turbine-divider">
+        <div className="sidebar-divider" />
+      </div>
+
+      <section className="sidebar-panel turbine-report-panel">
+        <SideTitle>터빈보고서 리스트</SideTitle>
+
+        <TurbineReportList
+          items={reportItems}
+          onSelectReport={(report) => {
+            console.log("선택한 보고서:", report);
+          }}
+        />
+      </section>
+
+      <div className="sidebar-divider-wrap turbine-divider">
+        <div className="sidebar-divider" />
+      </div>
+
+      <section className="sidebar-panel plant-report-panel">
+        <ReportTitleToggle
+          selectedType={reportMode}
+          onChange={setReportMode}
+          firstType="operation"
+          secondType="inspection"
+          firstTitle="터빈 운영 보고서"
+          secondTitle="점검 보고서"
+        />
+
+        {reportMode === "operation" && (
+          <ReportBox
+            reportMode={reportMode}
+            startDate={today}
+            endDate={today}
+            onCreateReport={(reportData) => {
+              console.log("터빈 운영 보고서 생성 데이터:", {
+                ...reportData,
+                plantId: selectedPlant?.id,
+                plantName,
+                turbineId: selectedTurbine?.id,
+                turbineName,
+              });
+            }}
+          />
+        )}
+
+        {reportMode === "inspection" && (
+          <InspectionReportBox
+            onCreateReport={(reportData) => {
+              onCreateInspectionReport?.({
+                ...reportData,
+                plantId: selectedPlant?.id,
+                plantName,
+                turbineId: selectedTurbine?.id,
+                turbineName,
+              });
+            }}
+          />
+        )}
       </section>
     </div>
   );

@@ -1,17 +1,25 @@
+import { useState } from "react";
+
 import WeatherGroup from "./Weather/WeatherGroup";
 import TurbineList from "./Turbine/TurbineList";
 import ReportBox from "./Report/ReportBox";
 import SideTitle from "./SideTitle";
+import ReportTitleToggle from "./Report/ReportTitleToggle";
+import RepairReportBox from "./Report/RepairReportBox";
 
 import { WEATHER_TYPE } from "./Weather/WeatherItem";
 import { TURBINE_STATUS } from "./Turbine/TurbineItem";
-
 import "./PlantSideBar.css";
 
-function PlantSideBar({ selectedPlant, onSelectTurbine }) {
-  const plantName = selectedPlant?.title || selectedPlant?.name || "장흥 발전소";
+function PlantSideBar({
+  selectedPlant,
+  onSelectTurbine,
+  onCreateRepairReport,
+}) {
+  const plantName = selectedPlant?.title || selectedPlant?.name;
 
   const today = new Date().toISOString().slice(0, 10);
+  const [reportMode, setReportMode] = useState("operation");
 
   const weatherItems = [
     {
@@ -59,13 +67,6 @@ function PlantSideBar({ selectedPlant, onSelectTurbine }) {
       alertCount: 2,
       hasEmergency: true,
     },
-    {
-      id: 4,
-      name: "터빈 D",
-      status: TURBINE_STATUS.NORMAL,
-      alertCount: 0,
-      hasEmergency: false,
-    },
   ];
 
   return (
@@ -92,11 +93,35 @@ function PlantSideBar({ selectedPlant, onSelectTurbine }) {
       </div>
 
       <section className="sidebar-panel plant-report-panel">
-        <SideTitle>발전소 보고서 작성</SideTitle>
-        <ReportBox
-          startDate={today}
-          endDate={today}
+        <ReportTitleToggle
+          selectedType={reportMode}
+          onChange={setReportMode}
+          firstType="operation"
+          secondType="repair"
+          firstTitle="발전소 운영 보고서"
+          secondTitle="수리 보고서"
         />
+
+        {reportMode === "operation" && (
+          <ReportBox
+            reportMode={reportMode}
+            startDate={today}
+            endDate={today}
+            onCreateReport={(reportData) => {
+              console.log("발전소 운영 보고서 생성 데이터:", reportData);
+            }}
+          />
+        )}
+
+        {reportMode === "repair" && (
+          <RepairReportBox
+            repairPeriod="-"
+            turbineName="-"
+            documentId="-"
+            turbineOptions={turbineItems.map((turbine) => turbine.name)}
+            onCreateReport={onCreateRepairReport}
+          />
+        )}
       </section>
     </div>
   );
