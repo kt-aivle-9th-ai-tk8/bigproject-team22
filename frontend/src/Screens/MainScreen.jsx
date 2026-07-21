@@ -17,6 +17,7 @@ import "../components/Bar.css";
  * 발전소 기본 정보, 지도 좌표, 날씨, 발전량,
  * 결함 데이터를 하나의 배열에서 관리
  */
+
 const dummyPlants = [
   {
     id: 1,
