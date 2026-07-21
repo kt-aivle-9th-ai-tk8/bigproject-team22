@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./SignupScreen.css";
+// assets 폴더 내의 windmill.png 이미지를 올바르게 불러옵니다.
+import windmillImg from "../assets/windmill.png";
 
 function SignupScreen() {
   // 입력 필드 상태 관리
@@ -18,7 +20,7 @@ function SignupScreen() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // 실시간 비밀번호 유효성 검사 상태
-  const [isPasswordValid, setIsPasswordValid] = useState(null); // null, true, false
+  const [isPasswordValid, setIsPasswordValid] = useState(null);
   const [isConfirmValid, setIsConfirmValid] = useState(null);
 
   // 입력 변경 핸들러
@@ -27,7 +29,7 @@ function SignupScreen() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 비밀번호 복잡도 실시간 검증 (영문, 숫자, 특수문자 중 2종류 최소 10자리 이상 또는 3종류 8자리 이상)
+  // 비밀번호 복잡도 실시간 검증
   useEffect(() => {
     const pwd = formData.password;
     if (!pwd) {
@@ -43,11 +45,7 @@ function SignupScreen() {
     const condition1 = typesCount >= 2 && pwd.length >= 10;
     const condition2 = typesCount >= 3 && pwd.length >= 8;
 
-    if (condition1 || condition2) {
-      setIsPasswordValid(true);
-    } else {
-      setIsPasswordValid(false);
-    }
+    setIsPasswordValid(condition1 || condition2);
   }, [formData.password]);
 
   // 비밀번호 확인 일치 검증
@@ -64,7 +62,6 @@ function SignupScreen() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // 빈 필드 검증
     const { employeeId, password, confirmPassword, username, department, phone, email } = formData;
     if (!employeeId || !password || !confirmPassword || !username || !department || !phone || !email) {
       alert("모든 정보를 입력해주세요.");
@@ -81,7 +78,6 @@ function SignupScreen() {
       return;
     }
 
-    // 가입 완료 팝업 노출
     setShowSuccessModal(true);
   };
 
@@ -96,7 +92,18 @@ function SignupScreen() {
       {/* 왼쪽 입력 폼 영역 */}
       <div className="signup-form-section">
         <div className="signup-wrapper">
-          <h2>회원가입</h2>
+          
+          {/* 헤더: 회원가입 - 공백 - 희미한 로그인 버튼 */}
+          <div className="signup-header">
+            <h2>회원가입</h2>
+            <button 
+              type="button" 
+              className="header-login-btn"
+              onClick={() => window.location.href = "/login"}
+            >
+              로그인
+            </button>
+          </div>
           
           <form onSubmit={handleSubmit} className="signup-form">
             <div className="signup-input-group">
@@ -159,8 +166,11 @@ function SignupScreen() {
         </div>
       </div>
 
-      {/* 오른쪽 이미지 섹션 */}
-      <div className="signup-image-section"></div>
+      {/* 오른쪽 이미지 섹션 (windmill.png 직접 연결) */}
+      <div 
+        className="signup-image-section"
+        style={{ backgroundImage: `url(${windmillImg})` }}
+      ></div>
 
       {/* 가입 완료 커스텀 모달 */}
       {showSuccessModal && (

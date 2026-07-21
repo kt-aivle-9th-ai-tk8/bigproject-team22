@@ -4,11 +4,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host localhost --port 5173",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "ol": "^10.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-gauge-component": "^2.0.29",
