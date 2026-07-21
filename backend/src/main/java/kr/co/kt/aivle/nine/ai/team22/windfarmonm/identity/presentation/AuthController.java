@@ -43,13 +43,20 @@ public class AuthController {
         if (oldSession != null) {
             oldSession.invalidate();
         }
+        // 세션 생성
         HttpSession session = httpRequest.getSession(true);
 
-        // 1인 1세션: 다른 기기의 이전 세션 축출 + 현재 세션 id 등록
-        authService.registerSession(result.userId(), session.getId());
-
-        session.setAttribute(SessionConst.LOGIN_MEMBER,
-                new LoginMember(result.userId(), result.employeeId(), result.userName(), result.role()));
+        try {
+            // 현재 세션을 최기 세션으로 등록
+            authService.registerSession(result.userId(), session.getId());
+            // 현재 세션에 권한 부여
+            session.setAttribute(SessionConst.LOGIN_MEMBER,
+                    new LoginMember(result.userId(), result.employeeId(), result.userName(), result.role()));
+        } catch (RuntimeException e) {
+            // 세션 등록 과정에서 문제 발생 시 세션 무효화 처리
+            session.invalidate();
+            throw e;
+        }
 
         return ResponseEntity.ok(ApiResponse.success("로그인되었습니다.", LoginResponse.from(result)));
     }
