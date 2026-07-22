@@ -1,5 +1,5 @@
 # 테스트 전용 설정(테스트 클래스패스 우선이라 main application.yaml 을 대체).
-# DataSource/Redis 접속은 Testcontainers @ServiceConnection 이 주입한다.
+# DataSource/Redis 접속은 IntegrationTestSupport 의 @ServiceConnection 이 주입한다.
 server:
   servlet:
     context-path: /api
