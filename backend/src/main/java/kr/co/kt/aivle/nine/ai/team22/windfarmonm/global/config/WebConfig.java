@@ -1,5 +1,6 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.config;
 
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.auth.AdminRoleInterceptor;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.auth.LoginCheckInterceptor;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.auth.LoginMemberArgumentResolver;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final LoginMemberArgumentResolver loginMemberArgumentResolver;
     private final LoginCheckInterceptor loginCheckInterceptor;
+    private final AdminRoleInterceptor adminRoleInterceptor;
 
     /** 인증 없이 접근 가능한 공개 경로 */
     // TODO: 개발과정에서만 필요한 h2-console 이하부를 Spring Profile 기능을 통해 분리
@@ -45,5 +47,10 @@ public class WebConfig implements WebMvcConfigurer {
                 .order(1)
                 .addPathPatterns("/**")
                 .excludePathPatterns(PUBLIC_PATHS);
+
+        // 관리자 경로는 로그인 검사(order 1) 이후 ADMIN 권한을 추가 검사
+        registry.addInterceptor(adminRoleInterceptor)
+                .order(2)
+                .addPathPatterns("/admin/**");
     }
 }
