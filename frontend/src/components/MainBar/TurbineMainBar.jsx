@@ -10,17 +10,11 @@ function TurbineMainBar({
   const turbineName = selectedTurbine?.name || "터빈 A";
 
   return (
-    <div className="turbin e-main-bar">
+    <div className="turbine-main-bar">
       <Turbine3DSimulation
         plantName={plantName}
         turbineName={turbineName}
-        onRunSimulation={(simulationData) => {
-          onRunSimulation?.({
-            ...simulationData,
-            plantId: selectedPlant?.id,
-            turbineId: selectedTurbine?.id,
-          });
-        }}
+        onRunSimulation={onRunSimulation}
       />
     </div>
   );

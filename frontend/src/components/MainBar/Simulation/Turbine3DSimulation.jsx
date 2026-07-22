@@ -1,156 +1,21 @@
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import {
   OrbitControls,
   Environment,
   useGLTF,
   useTexture,
 } from "@react-three/drei";
-import { BackSide, CanvasTexture, RepeatWrapping, DoubleSide } from "three";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
+
 import "./Turbine3DSimulation.css";
+
 import CloudSphere from "./CloudSphere";
-
-function SkySphere() {
-  const texture = useTexture("/images/simulation-bg.png");
-
-  return (
-    <mesh position={[0, 19, 0]} scale={[80, 80, 80]}>
-      <sphereGeometry args={[1, 64, 64]} />
-      <meshBasicMaterial map={texture} side={BackSide} />
-    </mesh>
-  );
-}
-
-function GroundPlane() {
-  const texture = useTexture("/images/ground-bg.png");
-
-  useEffect(() => {
-    if (!texture) return;
-
-    texture.wrapS = RepeatWrapping;
-    texture.wrapT = RepeatWrapping;
-    texture.repeat.set(14, 14);
-    texture.needsUpdate = true;
-  }, [texture]);
-
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -3.6, 0]}>
-      <circleGeometry args={[55, 128]} />
-      <meshStandardMaterial map={texture} />
-    </mesh>
-  );
-}
-function GroundEdgeFog() {
-  const edgeFogTexture = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 1024;
-
-    const context = canvas.getContext("2d");
-
-    const gradient = context.createRadialGradient(
-      canvas.width / 2,
-      canvas.height / 2,
-      canvas.width * 0.25,
-      canvas.width / 2,
-      canvas.height / 2,
-      canvas.width * 0.5
-    );
-
-    gradient.addColorStop(0, "rgba(219, 231, 238, 0)");
-    gradient.addColorStop(0.55, "rgba(219, 231, 238, 0)");
-    gradient.addColorStop(0.78, "rgba(219, 231, 238, 0.28)");
-    gradient.addColorStop(1, "rgba(219, 231, 238, 0.75)");
-
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    const texture = new CanvasTexture(canvas);
-    texture.needsUpdate = true;
-
-    return texture;
-  }, []);
-
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -3.58, 0]}>
-      <circleGeometry args={[55, 128]} />
-      <meshBasicMaterial
-        map={edgeFogTexture}
-        transparent
-        side={DoubleSide}
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-function HorizonFog() {
-  const fogTexture = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 256;
-
-    const context = canvas.getContext("2d");
-    const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-
-    gradient.addColorStop(0, "rgba(219, 231, 238, 0)");
-    gradient.addColorStop(0.35, "rgba(219, 231, 238, 0.28)");
-    gradient.addColorStop(0.5, "rgba(219, 231, 238, 0.55)");
-    gradient.addColorStop(0.65, "rgba(219, 231, 238, 0.28)");
-    gradient.addColorStop(1, "rgba(219, 231, 238, 0)");
-    gradient.addColorStop(1, "rgba(219, 231, 238, 0)");
-    
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    const texture = new CanvasTexture(canvas);
-    texture.needsUpdate = true;
-
-    return texture;
-  }, []);
-
-  return (
-    <mesh position={[0, -4, 0]}>
-      <cylinderGeometry args={[80, 35, 12, 96, 1, true]} />
-      <meshBasicMaterial
-        map={fogTexture}
-        transparent
-        side={BackSide}
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-
-function TurbineModel({ isRunning, bladeSpeed }) {
-  const bladeRef = useRef(null);
-  const { scene } = useGLTF("/models/turbine.glb");
-
-  useFrame(() => {
-    if (!bladeRef.current || !isRunning) return;
-
-    bladeRef.current.rotateY(bladeSpeed);
-  });
-
-  useEffect(() => {
-    if (!scene) return;
-
-    scene.traverse((object) => {
-      if (!object.isMesh) return;
-
-      if (object.name === "Plane002") {
-        bladeRef.current = object;
-      }
-    });
-  }, [scene]);
-
-  return (
-    <primitive
-      object={scene}
-      position={[0, -3.6, 0]}
-      scale={2}
-    />
-  );
-}
+import SkySphere from "./layers/SkySphere";
+import GroundPlane from "./layers/GroundPlane";
+import GroundEdgeFog from "./layers/GroundEdgeFog";
+import HorizonFog from "./layers/HorizonFog";
+import ValleyModel from "./layers/ValleyModel";
+import TurbineModel from "./layers/TurbineModel";
 
 function Turbine3DSimulation({
   plantName = "장흥 발전소",
@@ -178,35 +43,76 @@ function Turbine3DSimulation({
   return (
     <div className="turbine-3d-simulation">
       <div className="turbine-3d-viewer">
-        <Canvas camera={{ position: [18, 8, 0], fov: 42 }}>
-            <SkySphere />
-            <CloudSphere
-              position={[0, 19, 0]}
-              scale={[78, 78, 78]}
-              opacity={0.85}
-              color="#ffffff"
-              shadowColor="#ced4da"
-            />
-            <GroundPlane />
-            <GroundEdgeFog />
-            <HorizonFog />
+        <Canvas
+          dpr={[1, 2]}
+          gl={{ antialias: true }}
+          camera={{ position: [17.9, 3.583, 0.397], fov: 45, near: 0.1, far: 500 }}
+        >
+          <SkySphere
+            texturePath="/images/simulation-bg.png"
+            position={[0, 19, 0]}
+            scale={[80, 80, 80]}
+          />
 
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[4, 6, 4]} intensity={1.4} />
+          <CloudSphere
+            position={[0, 19, 0]}
+            scale={[78, 78, 78]}
+            opacity={0.85}
+            color="#ffffff"
+            shadowColor="#ced4da"
+          />
+          
+          {/* <GroundPlane
+            texturePath="/images/ground-bg.png"
+            position={[0, -3.6, 0]}
+            radius={55}
+            segments={128}
+            repeat={[14, 14]}
+          /> */}
 
-            <TurbineModel
-                isRunning={isRunning}
-                bladeSpeed={bladeSpeed}
-            />
+          <ValleyModel
+            modelPath="/models/valley.glb"
+            position={[-7, -9.5, 1]}
+            scale={0.08}
+            rotation={[0, (150 * Math.PI) / 180 , 0]}
+          />
 
-            <Environment preset="city" />
+          {/* <GroundEdgeFog
+            position={[0, -3.58, 0]}
+            radius={55}
+            segments={128}
+            edgeOpacity={0.75}
+          />
 
-            <OrbitControls
-                enablePan={true}
-                minDistance={5}
-                maxDistance={50}
-                target={[0, -0.8, 0]}
-            />
+          <HorizonFog
+            position={[0, -4, 0]}
+            radiusTop={80}
+            radiusBottom={35}
+            height={12}
+            segments={96}
+          /> */}
+
+          <ambientLight intensity={0.45} />
+          <directionalLight position={[4, 6, 4]} intensity={3.0} />
+
+          <TurbineModel
+            modelPath="/models/turbine.glb"
+            isRunning={isRunning}
+            bladeSpeed={bladeSpeed}
+            bladeObjectName="Plane002"
+            position={[0, -3.6, 0]}
+            scale={2}
+          />
+
+          {/* <Environment preset="city" /> */}
+
+          <OrbitControls
+            enablePan={false}
+            minDistance={5}
+            maxDistance={30}
+            maxPolarAngle={1.8}
+            target={[0, -0.8, 0]}
+          />
         </Canvas>
 
         <div className="turbine-3d-label">
@@ -264,6 +170,7 @@ function Turbine3DSimulation({
 }
 
 useGLTF.preload("/models/turbine.glb");
+useGLTF.preload("/models/valley.glb");
 useTexture.preload("/images/simulation-bg.png");
 useTexture.preload("/images/ground-bg.png");
 
