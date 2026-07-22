@@ -4,7 +4,6 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.AdminU
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 
 public record AdminUserResponse(
-        Long id,
         String employeeId,
         String userName,
         Role role,
@@ -12,7 +11,6 @@ public record AdminUserResponse(
 ) {
     public static AdminUserResponse from(AdminUserResult result) {
         return new AdminUserResponse(
-                result.id(),
                 result.employeeId(),
                 result.userName(),
                 result.role(),

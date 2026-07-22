@@ -4,12 +4,11 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.UserRe
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 
 public record UserResponse(
-        Long id,
         String employeeId,
         String userName,
         Role role
 ) {
     public static UserResponse from(UserResult result) {
-        return new UserResponse(result.id(), result.employeeId(), result.userName(), result.role());
+        return new UserResponse(result.employeeId(), result.userName(), result.role());
     }
 }
