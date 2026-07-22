@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.support;
 
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -17,7 +18,7 @@ import org.testcontainers.utility.DockerImageName;
  * - Testcontainers 2.x 는 core 만 사용하고 GenericContainer + @DynamicPropertySource 로 연결한다
  *   (DB 전용 모듈/@ServiceConnection 미사용).
  */
-@SpringBootTest
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 public abstract class IntegrationTestSupport {
 
     private static final GenericContainer<?> MYSQL =
