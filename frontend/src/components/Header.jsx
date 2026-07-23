@@ -64,7 +64,8 @@ function Header({ onLogout, onTitleClick, alarm = [] }) {
                 aria-label={`알림 보고서 ${alarm.length}개 열기`}
                 onClick={handleOpenAlarm}
               >
-                <img src={alarmIcon} alt="" />
+                <span className="header-alarm-dot" />
+                <span className="header-alarm-text">경고</span>
               </button>
             )}
           </div>
