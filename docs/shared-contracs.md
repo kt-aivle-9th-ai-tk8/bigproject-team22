@@ -1,0 +1,1 @@
+// Spring Boot ↔ FastAPI (enum, 필드명, "모델" 용어 정의)
