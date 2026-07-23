@@ -1,4 +1,6 @@
 import { useState } from "react";
+// 1. react-router-dom에서 useNavigate를 import 합니다.
+import { useNavigate } from "react-router-dom"; 
 import "./ReportBox.css";
 
 function getTodayString() {
@@ -22,13 +24,15 @@ function ReportBox({
   endDate = getTodayString(),
   onCreateReport,
 }) {
+  // 2. navigate 함수를 선언합니다.
+  const navigate = useNavigate();
+
   const [reportType, setReportType] = useState("daily");
   const [selectedStartDate, setSelectedStartDate] = useState(startDate);
   const [selectedEndDate, setSelectedEndDate] = useState(endDate);
 
   const handleDailyClick = () => {
     const today = getTodayString();
-
     setReportType("daily");
     setSelectedStartDate(today);
     setSelectedEndDate(today);
@@ -37,7 +41,6 @@ function ReportBox({
   const handleWeeklyClick = () => {
     const today = getTodayString();
     const weekAgo = getDateStringBefore(7);
-
     setReportType("weekly");
     setSelectedStartDate(weekAgo);
     setSelectedEndDate(today);
@@ -46,7 +49,6 @@ function ReportBox({
   const handleMonthlyClick = () => {
     const today = getTodayString();
     const monthAgo = getMonthBeforeString();
-
     setReportType("monthly");
     setSelectedStartDate(monthAgo);
     setSelectedEndDate(today);
@@ -94,8 +96,13 @@ function ReportBox({
     };
 
     console.log(reportData);
-
     onCreateReport?.(reportData);
+  };
+
+  // 3. 보고서 목록 버튼 클릭 시 이동하는 핸들러 함수
+  const handleGoToReportList = () => {
+    // App.jsx에 설정된 보고서 목록 라우터 경로로 이동
+    navigate("/reportlist"); 
   };
 
   return (
@@ -155,7 +162,11 @@ function ReportBox({
         보고서 생성
       </button>
 
-      <button className="report-list-button">
+      {/* 4. onClick 이벤트 연결 */}
+      <button 
+        className="report-list-button"
+        onClick={handleGoToReportList}
+      >
         보고서 목록
       </button>
     </div>

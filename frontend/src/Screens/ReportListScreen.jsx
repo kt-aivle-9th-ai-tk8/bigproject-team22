@@ -33,7 +33,7 @@ function ReportListScreen() {
       {/* 상단 헤더 */}
       <header className="report-header">
         <div className="header-title-area">
-          <h2>보고요약 리스트</h2>
+          <h2>지난 보고서 리스트</h2>
           <span className="current-date">2026.07.21</span>
         </div>
         <button className="logout-btn" onClick={() => window.location.href = "/login"}>로그아웃</button>
