@@ -7,8 +7,11 @@ on:
     branches:
       - develop
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -16,7 +19,7 @@ jobs:
   # 변경점 탐지 Job
   # ----------------------------------------------------
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     outputs:
       ## 각 Job에서 사용할 수 있도록 outputs 설정
       backend: ${{ steps.filter.outputs.backend }}
@@ -44,6 +47,9 @@ jobs:
     ## 조건: backend 폴더에 변경점이 있는 경우에만 실행
     if: ${{ needs.detect-changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: ./backend
@@ -80,6 +86,24 @@ jobs:
           tags: ${{ steps.login-ecr.outputs.registry }}/windfarm-onm-backend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
+      ### ECS Task Definition에 새 이미지 주소 덮어쓰기
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ./backend/task-definition.json 
+          container-name: windfarm-onm-backend-container  # ECS Task 안의 컨테이너 이름
+          image: ${{ steps.login-ecr.outputs.registry }}/windfarm-onm-backend:${{ github.sha }}
+
+      ### 갱신된 Task Definition으로 ECS 서비스 업데이트 (Rollout)
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: windfarm-onm-backend-service
+          cluster: windfarm-onm-cluster           
+          wait-for-service-stability: true        
 
   # 2. FastAPI(이상감지) 배포 Job
   deploy-anomaly-service:
@@ -87,6 +111,9 @@ jobs:
     ## 조건: anomaly-service 폴더에 변경점이 있는 경우에만 실행
     if: ${{ needs.detect-changes.outputs.anomaly-service == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: ./anomaly-service
@@ -116,12 +143,31 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def-anomaly
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ./anomaly-service/task-definition.json
+          container-name: windfarm-onm-anomaly-container
+          image: ${{ steps.login-ecr.outputs.registry }}/windfarm-onm-anomaly:${{ github.sha }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-anomaly.outputs.task-definition }}
+          service: windfarm-onm-anomaly-service
+          cluster: windfarm-onm-cluster
+          wait-for-service-stability: true
+
   # 3. FastAPI(리포트) 배포 Job
   deploy-report-agent:
     needs: detect-changes
     ## 조건: report-agent 폴더에 변경점이 있는 경우에만 실행
     if: ${{ needs.detect-changes.outputs.report-agent == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: ./report-agent-service
@@ -151,12 +197,31 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def-report
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ./report-agent-service/task-definition.json
+          container-name: windfarm-onm-report-agent-container
+          image: ${{ steps.login-ecr.outputs.registry }}/windfarm-onm-report-agent:${{ github.sha }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-report.outputs.task-definition }}
+          service: windfarm-onm-report-agent-service
+          cluster: windfarm-onm-cluster
+          wait-for-service-stability: true
+
   # 4. React 배포 Job
   deploy-frontend: 
     needs: detect-changes
     ## 조건: frontend 폴더에 변경점이 있는 경우에만 실행
     if: ${{ needs.detect-changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: ./frontend
