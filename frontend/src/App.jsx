@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainScreen from "./screens/MainScreen";
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
+import ReportListScreen from "./screens/ReportListScreen";
 
 import "./App.css";
 
@@ -15,6 +16,9 @@ function App() {
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/signup" element={<SignupScreen />} />
         <Route path="/main" element={<MainScreen />} />
+        
+        {/* 보고서 목록 화면 라우트 추가 */}
+        <Route path="/reportlist" element={<ReportListScreen />} />
       </Routes>
     </BrowserRouter>
   );
