@@ -6,30 +6,33 @@ import * as THREE from "three";
 const TWO_PI = Math.PI * 2;
 
 function TurbineModel({
-  modelPath = "/models/turbine.glb",
+  modelPath = "/models/turbine_fix.glb",
   isRunning,
   bladeSpeed,
-  bladeObjectName = "Plane002",
+  bladeGroupName = "Plane",
+  bladeMeshNames = ["Blade_01001", "Blade_02001", "Blade_03001"],
   position = [0, -3.6, 0],
   scale = 2,
   stopSpeed = 0.025,
   onBladeClick,
 }) {
-  const bladeRef = useRef(null);
+  // 실제 회전할 부모 Object3D
+  const bladeGroupRef = useRef(null);
 
-  // 처음 A 블레이드 위치
-  const initialRotationYRef = useRef(null);
+  // 클릭 가능한 개별 블레이드 Mesh
+  const bladeMeshRefs = useRef([]);
 
-  // 처음 위치 기준으로 얼마나 돌았는지 누적 저장
+  // Plane의 처음 회전 상태
+  const initialGroupQuaternionRef = useRef(null);
+
+  // Plane의 처음 rotation.y
+  const initialGroupRotationYRef = useRef(0);
+
+  // 처음 위치 기준 누적 회전량
   const accumulatedRotationRef = useRef(0);
 
-  // 정지 중인지
   const isStoppingRef = useRef(false);
-
-  // 정지 위치까지 남은 회전량
   const remainingStopRotationRef = useRef(0);
-
-  // 이전 isRunning 값
   const prevIsRunningRef = useRef(isRunning);
 
   const { scene } = useGLTF(modelPath);
@@ -37,22 +40,49 @@ function TurbineModel({
   useEffect(() => {
     if (!scene) return;
 
+    bladeMeshRefs.current = [];
+    bladeGroupRef.current = null;
+
+    console.log("====== turbine_fix.glb 회전/클릭 대상 확인 ======");
+
     scene.traverse((object) => {
-      if (!object.isMesh) return;
+      if (object.name === bladeGroupName) {
+        bladeGroupRef.current = object;
 
-      if (object.name === bladeObjectName) {
-        bladeRef.current = object;
+        initialGroupQuaternionRef.current = object.quaternion.clone();
+        initialGroupRotationYRef.current = object.rotation.y;
+        accumulatedRotationRef.current = 0;
 
-        if (initialRotationYRef.current === null) {
-          initialRotationYRef.current = object.rotation.y;
-          accumulatedRotationRef.current = 0;
-        }
+        console.log("회전 대상 Plane 찾음:", object.name, object.type);
+      }
+
+      if (object.isMesh && bladeMeshNames.includes(object.name)) {
+        bladeMeshRefs.current.push(object);
+        console.log("클릭 대상 블레이드 찾음:", object.name);
       }
     });
-  }, [scene, bladeObjectName]);
+
+    console.log(
+      "클릭 가능한 블레이드:",
+      bladeMeshRefs.current.map((mesh) => mesh.name)
+    );
+
+    console.log("============================================");
+  }, [scene, bladeGroupName]);
+
+  const restoreInitialBladeGroup = () => {
+    if (!bladeGroupRef.current || !initialGroupQuaternionRef.current) return;
+
+    bladeGroupRef.current.quaternion.copy(initialGroupQuaternionRef.current);
+    bladeGroupRef.current.updateMatrixWorld(true);
+
+    accumulatedRotationRef.current = 0;
+    remainingStopRotationRef.current = 0;
+    isStoppingRef.current = false;
+  };
 
   useEffect(() => {
-    if (!bladeRef.current || initialRotationYRef.current === null) {
+    if (!bladeGroupRef.current || !initialGroupQuaternionRef.current) {
       prevIsRunningRef.current = isRunning;
       return;
     }
@@ -72,22 +102,25 @@ function TurbineModel({
         ((accumulatedRotationRef.current % TWO_PI) + TWO_PI) % TWO_PI;
 
       const remainingToInitialPosition =
-        currentLoopAngle === 0
-          ? 0
-          : TWO_PI - currentLoopAngle;
+        currentLoopAngle === 0 ? 0 : TWO_PI - currentLoopAngle;
 
       remainingStopRotationRef.current = remainingToInitialPosition;
-      isStoppingRef.current = remainingToInitialPosition > 0.001;
+
+      if (remainingToInitialPosition <= 0.001) {
+        restoreInitialBladeGroup();
+      } else {
+        isStoppingRef.current = true;
+      }
     }
 
     prevIsRunningRef.current = isRunning;
   }, [isRunning]);
 
   useFrame(() => {
-    if (!bladeRef.current || initialRotationYRef.current === null) return;
+    if (!bladeGroupRef.current || !initialGroupQuaternionRef.current) return;
 
     if (isRunning) {
-      bladeRef.current.rotateY(bladeSpeed);
+      bladeGroupRef.current.rotateX(bladeSpeed);
       accumulatedRotationRef.current += bladeSpeed;
       return;
     }
@@ -97,10 +130,7 @@ function TurbineModel({
     const remainingRotation = remainingStopRotationRef.current;
 
     if (remainingRotation <= 0.001) {
-      bladeRef.current.rotation.y = initialRotationYRef.current;
-      accumulatedRotationRef.current = 0;
-      remainingStopRotationRef.current = 0;
-      isStoppingRef.current = false;
+      restoreInitialBladeGroup();
       return;
     }
 
@@ -109,38 +139,41 @@ function TurbineModel({
       Math.max(stopSpeed, 0.01)
     );
 
-    bladeRef.current.rotateY(nextStep);
+    bladeGroupRef.current.rotateX(nextStep);
     accumulatedRotationRef.current += nextStep;
     remainingStopRotationRef.current -= nextStep;
 
     if (remainingStopRotationRef.current <= 0.001) {
-      bladeRef.current.rotation.y = initialRotationYRef.current;
-      accumulatedRotationRef.current = 0;
-      remainingStopRotationRef.current = 0;
-      isStoppingRef.current = false;
+      restoreInitialBladeGroup();
     }
   });
+
+  const isClickableBlade = (object) => {
+    return bladeMeshRefs.current.includes(object);
+  };
+
   const handlePointerDown = (event) => {
-    if (!bladeRef.current) return;
     if (isRunning) return;
     if (isStoppingRef.current) return;
-
-    if (event.object !== bladeRef.current) return;
+    if (!isClickableBlade(event.object)) return;
 
     event.stopPropagation();
 
-    const bladeWorldPosition = new THREE.Vector3();
-    bladeRef.current.getWorldPosition(bladeWorldPosition);
+    const bladeBox = new THREE.Box3().setFromObject(event.object);
+    const bladeCenter = new THREE.Vector3();
 
-    onBladeClick?.(bladeWorldPosition);
+    bladeBox.getCenter(bladeCenter);
+
+    onBladeClick?.({
+      name: event.object.name,
+      position: bladeCenter,
+    });
   };
 
   const handlePointerOver = (event) => {
-    if (!bladeRef.current) return;
     if (isRunning) return;
     if (isStoppingRef.current) return;
-
-    if (event.object !== bladeRef.current) return;
+    if (!isClickableBlade(event.object)) return;
 
     document.body.style.cursor = "pointer";
   };
@@ -148,6 +181,7 @@ function TurbineModel({
   const handlePointerOut = () => {
     document.body.style.cursor = "default";
   };
+
   return (
     <primitive
       object={scene}

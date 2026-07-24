@@ -1,12 +1,12 @@
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import {
   OrbitControls,
   Environment,
+  Html,
   useGLTF,
   useTexture,
 } from "@react-three/drei";
 import { useRef, useState } from "react";
-import * as THREE from "three";
 
 import "./Turbine3DSimulation.css";
 
@@ -18,43 +18,10 @@ import ValleyModel from "./layers/ValleyModel";
 import TurbineModel from "./layers/TurbineModel";
 import RainLayer from "./layers/RainLayer";
 import CloudyLayer from "./layers/CloudyLayer";
-function CameraZoomController({ isZoomed, controlsRef, zoomTargetPosition }) {
-  const { camera } = useThree();
+import CameraZoomController from "./CameraZoomController";
+import BladeInfoPopup from "./BladeInfoPopup";
+import Turbine3DSidebar from "./Turbine3DSidebar";
 
-  const normalCameraPosition = useRef(
-    new THREE.Vector3(17.9, 3.583, 0.397)
-  );
-
-  const normalTarget = useRef(
-    new THREE.Vector3(0, -0.8, 0)
-  );
-
-  useFrame(() => {
-    const targetControlTarget =
-      isZoomed && zoomTargetPosition
-        ? zoomTargetPosition
-        : normalTarget.current;
-
-    let targetCameraPosition = normalCameraPosition.current;
-
-    if (isZoomed && zoomTargetPosition) {
-      targetCameraPosition = new THREE.Vector3(
-        zoomTargetPosition.x + 5,
-        zoomTargetPosition.y + 1.2,
-        zoomTargetPosition.z + 0.4
-      );
-    }
-
-    camera.position.lerp(targetCameraPosition, 0.08);
-
-    if (controlsRef.current) {
-      controlsRef.current.target.lerp(targetControlTarget, 0.08);
-      controlsRef.current.update();
-    }
-  });
-
-  return null;
-}
 
 function Turbine3DSimulation({
   plantName = "장흥 발전소",
@@ -67,6 +34,8 @@ function Turbine3DSimulation({
   const [weather, setWeather] = useState("sunny");
   const [isBladeZoomed, setIsBladeZoomed] = useState(false);
   const [bladeZoomTarget, setBladeZoomTarget] = useState(null);
+  const [selectedBladeName, setSelectedBladeName] = useState("");
+  const [isBladePopupOpen, setIsBladePopupOpen] = useState(false);
 
   const controlsRef = useRef(null);
 
@@ -96,6 +65,9 @@ function Turbine3DSimulation({
 
       if (next) {
         setIsBladeZoomed(false);
+        setBladeZoomTarget(null);
+        setSelectedBladeName("");
+        setIsBladePopupOpen(false);
       }
 
       return next;
@@ -119,6 +91,7 @@ function Turbine3DSimulation({
             isZoomed={isBladeZoomed}
             controlsRef={controlsRef}
             zoomTargetPosition={bladeZoomTarget}
+            isRunning={isRunning}
           />
 
           <SkySphere
@@ -149,35 +122,12 @@ function Turbine3DSimulation({
             fogStrength={0.55}
           />
 
-          {/* <GroundPlane
-            texturePath="/images/ground-bg.png"
-            position={[0, -3.6, 0]}
-            radius={55}
-            segments={128}
-            repeat={[14, 14]}
-          /> */}
-
           <ValleyModel
             modelPath="/models/valley.glb"
             position={[-7, -9.5, 1]}
             scale={0.08}
             rotation={[0, (150 * Math.PI) / 180, 0]}
           />
-
-          {/* <GroundEdgeFog
-            position={[0, -3.58, 0]}
-            radius={55}
-            segments={128}
-            edgeOpacity={0.75}
-          />
-
-          <HorizonFog
-            position={[0, -4, 0]}
-            radiusTop={80}
-            radiusBottom={35}
-            height={12}
-            segments={96}
-          /> */}
 
           <ambientLight
             intensity={isRainy ? 0.12 : isCloudy ? 0.22 : 0.45}
@@ -194,18 +144,44 @@ function Turbine3DSimulation({
           />
 
           <TurbineModel
-            modelPath="/models/turbine.glb"
+            modelPath="/models/turbine_fix.glb"
             isRunning={isRunning}
             bladeSpeed={bladeSpeed}
-            bladeObjectName="Plane002"
+            bladeGroupName="Plane"
+            bladeMeshNames={["Blade_01001", "Blade_02001", "Blade_03001"]}
             position={[0, -3.6, 0]}
             scale={2}
-            stopSpeed={0.025}
-            onBladeClick={(bladeWorldPosition) => {
-              setBladeZoomTarget(bladeWorldPosition);
-              setIsBladeZoomed((prev) => !prev);
+            stopSpeed={0.1}
+            onBladeClick={(bladeData) => {
+              console.log("클릭한 블레이드:", bladeData.name);
+              setBladeZoomTarget(bladeData.position);
+              setSelectedBladeName(bladeData.name);
+              setIsBladePopupOpen(false);
+              setIsBladeZoomed(true);
             }}
           />
+          {isBladeZoomed && bladeZoomTarget && !isBladePopupOpen && (
+            <Html
+              position={[
+                bladeZoomTarget.x,
+                bladeZoomTarget.y,
+                bladeZoomTarget.z,
+              ]}
+              center
+              zIndexRange={[30, 0]}
+            >
+              <button
+                className="blade-center-action-button"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsBladePopupOpen(true);
+                }}
+                aria-label="블레이드 상세 열기"
+                title="블레이드 상세"
+              />
+            </Html>
+          )}
 
           <OrbitControls
             ref={controlsRef}
@@ -217,91 +193,50 @@ function Turbine3DSimulation({
           />
         </Canvas>
 
+        {isBladeZoomed && (
+          <button
+            className="blade-zoom-close-button"
+            type="button"
+            onClick={() => {
+              setIsBladeZoomed(false);
+              setBladeZoomTarget(null);
+              setSelectedBladeName("");
+              setIsBladePopupOpen(false);
+            }}
+            aria-label="블레이드 확대 닫기"
+          >
+            ×
+          </button>
+        )}
+
+        {isBladePopupOpen && (
+          <BladeInfoPopup
+            selectedBladeName={selectedBladeName}
+            onClose={() => setIsBladePopupOpen(false)}
+          />
+        )}
+
+
         <div className="turbine-3d-label">
           <strong>{plantName}</strong>
           <span>{turbineName} 3D Simulation</span>
         </div>
       </div>
 
-      <div className="turbine-3d-panel">
-        <h3>3D 시뮬레이션 제어</h3>
+      <Turbine3DSidebar
+        weather={weather}
+        onChangeWeather={setWeather}
+        bladeSpeed={bladeSpeed}
+        onChangeBladeSpeed={setBladeSpeed}
+        isRunning={isRunning}
+        onToggleRunning={handleToggleRunning}
+      />
 
-        <div className="turbine-3d-field">
-          <label>날씨</label>
-
-          <div className="turbine-weather-button-row">
-            <button
-              type="button"
-              className={weather === "sunny" ? "active" : ""}
-              onClick={() => setWeather("sunny")}
-            >
-              맑음
-            </button>
-
-            <button
-              type="button"
-              className={weather === "cloudy" ? "active" : ""}
-              onClick={() => setWeather("cloudy")}
-            >
-              흐림
-            </button>
-
-            <button
-              type="button"
-              className={weather === "rainy" ? "active" : ""}
-              onClick={() => setWeather("rainy")}
-            >
-              비
-            </button>
-          </div>
-        </div>
-
-        <div className="turbine-3d-field">
-          <label>터빈 상태</label>
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value="normal">정상</option>
-            <option value="warning">경고</option>
-            <option value="alert">위험</option>
-          </select>
-        </div>
-
-        <div className="turbine-3d-field">
-          <label>회전 속도</label>
-          <input
-            type="range"
-            min="0"
-            max="0.08"
-            step="0.005"
-            value={bladeSpeed}
-            onChange={(event) => setBladeSpeed(Number(event.target.value))}
-          />
-          <span>{bladeSpeed.toFixed(3)}</span>
-        </div>
-
-        <button
-          className="turbine-3d-toggle-button"
-          type="button"
-          onClick={handleToggleRunning}
-        >
-          {isRunning ? "정지" : "가동"}
-        </button>
-
-        <button
-          className="turbine-3d-run-button"
-          type="button"
-          onClick={handleRunSimulation}
-        >
-          시뮬레이션 저장
-        </button>
-      </div>
     </div>
   );
 }
 
-useGLTF.preload("/models/turbine.glb");
+useGLTF.preload("/models/turbine_fix.glb");
 useGLTF.preload("/models/valley.glb");
 useTexture.preload("/images/simulation-bg.png");
 useTexture.preload("/images/cloudy-bg.png");
