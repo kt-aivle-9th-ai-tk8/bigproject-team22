@@ -1,164 +1,131 @@
 import { useState } from "react";
+import OperationReportPopup from "./Popup/OperationReportPopup";
 import "./ReportBox.css";
 
 function getTodayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getDateStringBefore(days) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
-}
-
-function getMonthBeforeString() {
-  const date = new Date();
-  date.setMonth(date.getMonth() - 1);
-  return date.toISOString().slice(0, 10);
-}
+const EMPTY_REPORT_INFO = {
+  reportType: "daily",
+  startDate: getTodayString(),
+  endDate: getTodayString(),
+  content: "",
+};
 
 function ReportBox({
   startDate = getTodayString(),
   endDate = getTodayString(),
   onCreateReport,
 }) {
-  const [reportType, setReportType] = useState("daily");
-  const [selectedStartDate, setSelectedStartDate] = useState(startDate);
-  const [selectedEndDate, setSelectedEndDate] = useState(endDate);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  const handleDailyClick = () => {
-    const today = getTodayString();
+  const [reportInfo, setReportInfo] = useState({
+    ...EMPTY_REPORT_INFO,
+    startDate,
+    endDate,
+  });
 
-    setReportType("daily");
-    setSelectedStartDate(today);
-    setSelectedEndDate(today);
+  const handleInfoClick = () => {
+    setIsPopupOpen(true);
   };
 
-  const handleWeeklyClick = () => {
-    const today = getTodayString();
-    const weekAgo = getDateStringBefore(7);
+  const handlePopupComplete = (popupData) => {
+    console.log("발전소 운영 보고서 팝업 입력 데이터:", popupData);
 
-    setReportType("weekly");
-    setSelectedStartDate(weekAgo);
-    setSelectedEndDate(today);
-  };
-
-  const handleMonthlyClick = () => {
-    const today = getTodayString();
-    const monthAgo = getMonthBeforeString();
-
-    setReportType("monthly");
-    setSelectedStartDate(monthAgo);
-    setSelectedEndDate(today);
-  };
-
-  const handleStartDateChange = (e) => {
-    const today = getTodayString();
-    let newStartDate = e.target.value;
-
-    if (newStartDate > today) {
-      newStartDate = today;
-    }
-
-    setSelectedStartDate(newStartDate);
-
-    if (newStartDate > selectedEndDate) {
-      setSelectedEndDate(newStartDate);
-    }
-
-    setReportType(null);
-  };
-
-  const handleEndDateChange = (e) => {
-    const today = getTodayString();
-    let newEndDate = e.target.value;
-
-    if (newEndDate > today) {
-      newEndDate = today;
-    }
-
-    setSelectedEndDate(newEndDate);
-
-    if (selectedStartDate > newEndDate) {
-      setSelectedStartDate(newEndDate);
-    }
-
-    setReportType(null);
+    setReportInfo(popupData);
+    setIsPopupOpen(false);
   };
 
   const handleCreateReport = () => {
+    const isEmptyReportInfo =
+      !reportInfo.startDate ||
+      !reportInfo.endDate ||
+      !reportInfo.reportType;
+
+    if (isEmptyReportInfo) {
+      alert("보고서 정보를 입력해주세요.");
+      return;
+    }
+
     const reportData = {
-      reportType,
-      startDate: selectedStartDate,
-      endDate: selectedEndDate,
+      reportKind: "operation",
+      reportType: reportInfo.reportType,
+      startDate: reportInfo.startDate,
+      endDate: reportInfo.endDate,
+      content: reportInfo.content,
     };
 
-    console.log(reportData);
-
+    console.log("발전소 운영 보고서 생성 JSON:", reportData);
     onCreateReport?.(reportData);
+
+    setReportInfo({
+      ...EMPTY_REPORT_INFO,
+      startDate,
+      endDate,
+    });
   };
 
+  const getReportTypeLabel = (type) => {
+    if (type === "daily") return "일간";
+    if (type === "weekly") return "주간";
+    if (type === "monthly") return "월간";
+    return "-";
+  };
+
+  const displayPeriod =
+    reportInfo.startDate && reportInfo.endDate
+      ? `${reportInfo.startDate} ~ ${reportInfo.endDate}`
+      : "-";
+
+  const displayReportType = getReportTypeLabel(reportInfo.reportType);
+  const displayContent = reportInfo.content?.trim() || "-";
+
   return (
-    <div className="report-box">
-      <div className="report-date-row">
-        <div className="report-date-field">
-          <label>조회 기간 시작일</label>
-          <input
-            type="date"
-            value={selectedStartDate}
-            max={getTodayString()}
-            onChange={handleStartDateChange}
-          />
-        </div>
-
-        <span className="report-date-separator">~</span>
-
-        <div className="report-date-field">
-          <label>조회 기간 종료일</label>
-          <input
-            type="date"
-            value={selectedEndDate}
-            min={selectedStartDate}
-            max={getTodayString()}
-            onChange={handleEndDateChange}
-          />
-        </div>
-      </div>
-
-      <div className="report-type-row">
+    <>
+      <div className="report-box">
         <button
-          className={reportType === "daily" ? "active" : ""}
-          onClick={handleDailyClick}
+          className="report-info-button"
+          type="button"
+          onClick={handleInfoClick}
         >
-          일간
+          <div className="report-info-row">
+            <span className="report-info-label">조회 기간</span>
+            <span className="report-info-value">{displayPeriod}</span>
+          </div>
+
+          <div className="report-info-row">
+            <span className="report-info-label">보고서 종류</span>
+            <span className="report-info-value">{displayReportType}</span>
+          </div>
+
+          <div className="report-info-row">
+            <span className="report-info-label">추가 내용</span>
+            <span className="report-info-value">{displayContent}</span>
+          </div>
         </button>
 
         <button
-          className={reportType === "weekly" ? "active" : ""}
-          onClick={handleWeeklyClick}
+          className="report-create-button"
+          type="button"
+          onClick={handleCreateReport}
         >
-          주간
+          보고서 생성
         </button>
 
-        <button
-          className={reportType === "monthly" ? "active" : ""}
-          onClick={handleMonthlyClick}
-        >
-          월간
+        <button className="report-list-button" type="button">
+          보고서 목록
         </button>
       </div>
 
-      <button
-        className="report-create-button"
-        onClick={handleCreateReport}
-      >
-        보고서 생성
-      </button>
-
-      <button className="report-list-button">
-        보고서 목록
-      </button>
-    </div>
+      {isPopupOpen && (
+        <OperationReportPopup
+          initialData={reportInfo}
+          onClose={() => setIsPopupOpen(false)}
+          onComplete={handlePopupComplete}
+        />
+      )}
+    </>
   );
 }
 
