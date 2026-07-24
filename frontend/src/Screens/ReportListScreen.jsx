@@ -2,52 +2,22 @@ import React, { useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./ReportListScreen.css";
 
+// 발전소별 소속 터빈 데이터 매핑
+const PLANT_TURBINE_MAP = {
+  "장흥 발전소": ["터빈A", "터빈B", "터빈C"],
+  "대구 발전소": ["터빈D", "터빈E", "터빈F"],
+  "경주 발전소": ["터빈G", "터빈H"],
+  "양산 발전소": ["터빈I", "터빈J"],
+};
+
+// 피드백 반영 더미 데이터
 const INITIAL_REPORTS = [
-  {
-    id: 1,
-    plant: "장흥 발전소",
-    turbine: "터빈A",
-    type: "운영보고서",
-    date: "2026-07-20",
-    issue: "정기 점검 보고",
-    preview: "월간 발전량 및 설비 상태 양호.",
-  },
-  {
-    id: 2,
-    plant: "장흥 발전소",
-    turbine: "터빈C",
-    type: "결함보고서",
-    date: "2026-07-14",
-    issue: "블레이드 파손",
-    preview: "보고서 첫 줄 내용 미리보기입니다.",
-  },
-  {
-    id: 3,
-    plant: "경주 발전소",
-    turbine: "터빈A",
-    type: "이상보고서",
-    date: "2026-07-10",
-    issue: "기어박스 소음",
-    preview: "진동 센서 이상 데이터 감지됨.",
-  },
-  {
-    id: 4,
-    plant: "대구 발전소",
-    turbine: "터빈B",
-    type: "결함보고서",
-    date: "2026-07-01",
-    issue: "인버터 과열",
-    preview: "점검 결과 모듈 교체 필요.",
-  },
-  {
-    id: 5,
-    plant: "양산 발전소",
-    turbine: "터빈A",
-    type: "이상보고서",
-    date: "2026-06-25",
-    issue: "전압 불안정",
-    preview: "계통 연계 관련 점검 진행.",
-  },
+  { id: 1, plant: "장흥 발전소", turbine: "터빈A", type: "운영보고서", date: "2026-07-20" },
+  { id: 2, plant: "장흥 발전소", turbine: "터빈C", type: "결함보고서", date: "2026-07-14" },
+  { id: 3, plant: "경주 발전소", turbine: "터빈G", type: "이상보고서", date: "2026-07-10" },
+  { id: 4, plant: "대구 발전소", turbine: "터빈E", type: "결함보고서", date: "2026-07-01" },
+  { id: 5, plant: "양산 발전소", turbine: "터빈I", type: "이상보고서", date: "2026-06-25" },
+  { id: 6, plant: "대구 발전소", turbine: "터빈D", type: "운영보고서", date: "2026-06-20" },
 ];
 
 function ReportListScreen() {
@@ -58,41 +28,68 @@ function ReportListScreen() {
   const initialPlant = queryParams.get("plant") || "전체";
   const initialTurbine = queryParams.get("turbine") || "전체";
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("전체");
   const [selectedPlant, setSelectedPlant] = useState(initialPlant);
   const [selectedTurbine, setSelectedTurbine] = useState(initialTurbine);
 
-  const [sortKey, setSortKey] = useState("date");
+  const [sortKey, setSortKey] = useState("date"); // date(날짜순), title(가나다순)
   const [isAscending, setIsAscending] = useState(false);
 
   const todayString = new Date().toISOString().slice(0, 10).replace(/-/g, ".");
 
+  // 발전소 선택 변경 시 처리
+  const handlePlantChange = (e) => {
+    const newPlant = e.target.value;
+    setSelectedPlant(newPlant);
+    setSelectedTurbine("전체"); // 발전소가 바뀌면 터빈 선택값 초기화
+  };
+
+  // 선택된 발전소에 따른 터빈 목록 동적 계산
+  const availableTurbines = useMemo(() => {
+    if (selectedPlant === "전체") {
+      return Object.values(PLANT_TURBINE_MAP).flat();
+    }
+    return PLANT_TURBINE_MAP[selectedPlant] || [];
+  }, [selectedPlant]);
+
+  // 필터 초기화 기능
+  const handleResetFilters = () => {
+    setSelectedType("전체");
+    setSelectedPlant("전체");
+    setSelectedTurbine("전체");
+    setSortKey("date");
+    setIsAscending(false);
+  };
+
+  // 필터가 하나라도 변경되었는지 체크
+  const isFiltered =
+    selectedType !== "전체" ||
+    selectedPlant !== "전체" ||
+    selectedTurbine !== "전체" ||
+    sortKey !== "date" ||
+    isAscending !== false;
+
+  // 필터링 및 정렬 로직
   const filteredAndSortedReports = useMemo(() => {
     return INITIAL_REPORTS.filter((report) => {
-      const matchesSearch =
-        report.plant.includes(searchTerm) ||
-        report.issue.includes(searchTerm) ||
-        report.preview.includes(searchTerm);
-
       const matchesType = selectedType === "전체" || report.type === selectedType;
       const matchesPlant = selectedPlant === "전체" || report.plant === selectedPlant;
       const matchesTurbine = selectedTurbine === "전체" || report.turbine === selectedTurbine;
 
-      return matchesSearch && matchesType && matchesPlant && matchesTurbine;
+      return matchesType && matchesPlant && matchesTurbine;
     }).sort((a, b) => {
       let comparison = 0;
       if (sortKey === "date") {
         comparison = a.date.localeCompare(b.date);
-      } else if (sortKey === "plant") {
-        comparison = a.plant.localeCompare(b.plant, "ko");
-      } else if (sortKey === "issue") {
-        comparison = a.issue.localeCompare(b.issue, "ko");
+      } else if (sortKey === "title") {
+        const nameA = `${a.plant} ${a.turbine}`;
+        const nameB = `${b.plant} ${b.turbine}`;
+        comparison = nameA.localeCompare(nameB, "ko");
       }
 
       return isAscending ? comparison : -comparison;
     });
-  }, [searchTerm, selectedType, selectedPlant, selectedTurbine, sortKey, isAscending]);
+  }, [selectedType, selectedPlant, selectedTurbine, sortKey, isAscending]);
 
   return (
     <div className="report-list-container">
@@ -103,33 +100,19 @@ function ReportListScreen() {
           <span className="current-date">{todayString}</span>
         </div>
 
-        {/* 우측 상단 버튼 그룹 */}
         <div className="header-btn-group">
           <button className="logout-btn" onClick={() => navigate("/login")}>
             로그아웃
           </button>
-          <button className="home-btn" onClick={() => navigate("/main")}>
+          <button className="back-btn" onClick={() => navigate(-1)}>
             뒤로가기
           </button>
         </div>
       </header>
 
-      {/* 1. 검색창 */}
-      <div className="search-container">
-        <div className="search-box">
-          <span className="search-icon">🔍</span>
-          <input
-            type="text"
-            placeholder="발전소명 또는 내용을 입력하세요"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* 2. 검색창 아래: 필터 & 정렬 영역 */}
+      {/* 필터 & 정렬 컨트롤 바 */}
       <div className="controls-row">
-        {/* 좌측 필터 드롭다운들 */}
+        {/* 좌측 필터 드롭다운 그룹 */}
         <div className="filter-controls">
           <select
             value={selectedType}
@@ -144,14 +127,15 @@ function ReportListScreen() {
 
           <select
             value={selectedPlant}
-            onChange={(e) => setSelectedPlant(e.target.value)}
+            onChange={handlePlantChange}
             className="select-box"
           >
             <option value="전체">발전소: 전체</option>
-            <option value="장흥 발전소">장흥 발전소</option>
-            <option value="대구 발전소">대구 발전소</option>
-            <option value="경주 발전소">경주 발전소</option>
-            <option value="양산 발전소">양산 발전소</option>
+            {Object.keys(PLANT_TURBINE_MAP).map((plantName) => (
+              <option key={plantName} value={plantName}>
+                {plantName}
+              </option>
+            ))}
           </select>
 
           <select
@@ -160,13 +144,22 @@ function ReportListScreen() {
             className="select-box"
           >
             <option value="전체">터빈: 전체</option>
-            <option value="터빈A">터빈A</option>
-            <option value="터빈B">터빈B</option>
-            <option value="터빈C">터빈C</option>
+            {availableTurbines.map((turbineName) => (
+              <option key={turbineName} value={turbineName}>
+                {turbineName}
+              </option>
+            ))}
           </select>
+
+          {/* 조건 변경 시 보여지는 초기화 버튼 */}
+          {isFiltered && (
+            <button className="reset-btn" onClick={handleResetFilters}>
+              초기화
+            </button>
+          )}
         </div>
 
-        {/* 우측 정렬 드롭다운 & 버튼 */}
+        {/* 우측 정렬 컨트롤 */}
         <div className="sort-controls">
           <select
             value={sortKey}
@@ -174,8 +167,7 @@ function ReportListScreen() {
             className="select-box"
           >
             <option value="date">날짜순</option>
-            <option value="plant">발전소별</option>
-            <option value="issue">가나다순</option>
+            <option value="title">가나다순</option>
           </select>
 
           <button
@@ -187,24 +179,20 @@ function ReportListScreen() {
         </div>
       </div>
 
-      {/* 3. 보고서 카드 리스트 */}
+      {/* 보고서 카드 리스트 */}
       <main className="report-list">
         {filteredAndSortedReports.length > 0 ? (
           filteredAndSortedReports.map((report) => (
             <div key={report.id} className="report-card">
               <div className="report-content">
-                <div className="card-top-row">
+                <div className="card-main-row">
                   <h3 className="plant-name">
                     {report.plant}{" "}
                     <span className="turbine-tag">[{report.turbine}]</span>
                   </h3>
+                  <span className={`type-badge ${report.type}`}>{report.type}</span>
                   <span className="report-date">{report.date}</span>
                 </div>
-                <div className="badge-row">
-                  <span className={`type-badge ${report.type}`}>{report.type}</span>
-                </div>
-                <h4 className="issue-title">{report.issue}</h4>
-                <p className="preview-text">{report.preview}</p>
               </div>
               <div className="card-arrow">
                 <span>›</span>
