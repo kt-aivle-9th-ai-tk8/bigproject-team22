@@ -2,7 +2,7 @@
 #   실행: docker run -d -p 8000:8000 --name anomaly-container anomaly-service
 
 # ---- build stage ----
-FROM python:3.10-slim
+FROM python:3.11-slim
 WORKDIR /app
 
 # 캐시 파일 실행 X

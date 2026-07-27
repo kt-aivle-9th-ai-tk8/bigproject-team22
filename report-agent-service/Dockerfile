@@ -2,7 +2,7 @@
 #   실행: docker run -d -p 8001:8000 --name report-agent-container report-agent-service
 
 # ---- build stage ----
-FROM python:3.10-slim
+FROM python:3.11-slim
 WORKDIR /app
 
 # 캐시 파일 실행 X
