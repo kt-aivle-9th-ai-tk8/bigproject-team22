@@ -3,7 +3,7 @@
     "containerDefinitions": [
         {
             "name": "windfarm-onm-report-agent-container",
-            "image": "nginx",
+            "image": "336090301989.dkr.ecr.ap-northeast-2.amazonaws.com/windfarm-onm-report-agent:latest",
             "cpu": 0,
             "portMappings": [
                 {
