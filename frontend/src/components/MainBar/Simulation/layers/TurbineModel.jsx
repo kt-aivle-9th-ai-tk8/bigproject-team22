@@ -25,6 +25,9 @@ function TurbineModel({
   // Plane의 처음 회전 상태
   const initialGroupQuaternionRef = useRef(null);
 
+  // Plane의 처음 rotation.y
+  const initialGroupRotationYRef = useRef(0);
+
   // 처음 위치 기준 누적 회전량
   const accumulatedRotationRef = useRef(0);
 
@@ -43,15 +46,11 @@ function TurbineModel({
     console.log("====== turbine_fix.glb 회전/클릭 대상 확인 ======");
 
     scene.traverse((object) => {
-      if (object.isMesh) {
-        object.castShadow = true;
-        object.receiveShadow = true;
-      }
-
       if (object.name === bladeGroupName) {
         bladeGroupRef.current = object;
 
         initialGroupQuaternionRef.current = object.quaternion.clone();
+        initialGroupRotationYRef.current = object.rotation.y;
         accumulatedRotationRef.current = 0;
 
         console.log("회전 대상 Plane 찾음:", object.name, object.type);
@@ -102,11 +101,8 @@ function TurbineModel({
       const currentLoopAngle =
         ((accumulatedRotationRef.current % TWO_PI) + TWO_PI) % TWO_PI;
 
-      let remainingToInitialPosition = TWO_PI - currentLoopAngle;
-
-      if (remainingToInitialPosition >= TWO_PI - 0.001) {
-        remainingToInitialPosition = 0;
-      }
+      const remainingToInitialPosition =
+        currentLoopAngle === 0 ? 0 : TWO_PI - currentLoopAngle;
 
       remainingStopRotationRef.current = remainingToInitialPosition;
 
