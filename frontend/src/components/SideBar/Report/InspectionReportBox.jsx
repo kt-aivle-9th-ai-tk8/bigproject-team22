@@ -1,161 +1,170 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
+import InspectionReportPopup from "./Popup/InspectionReportPopup";
 import "./InspectionReportBox.css";
 
-function InspectionReportBox({ onCreateReport }) {
-  const fileInputRef = useRef(null);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const isValidFile = (file) => {
-    if (!file) return false;
-
-    const allowedExtensions = [".zip", ".7z", ".rar"];
-    const lowerFileName = file.name.toLowerCase();
-
-    return allowedExtensions.some((extension) =>
-      lowerFileName.endsWith(extension)
-    );
-  };
-
-  const handleFileSelect = (file) => {
-  if (!isValidFile(file)) {
-    alert("압축 파일만 업로드할 수 있습니다.");
-    return;
-  }
-
-  setSelectedFile(file);
+const EMPTY_INSPECTION_INFO = {
+  startDate: "",
+  startTime: "00:00",
+  endDate: "",
+  endTime: "23:59",
+  turbines: [],
+  content: "",
+  additionalItems: [],
+  files: [],
+  filesBySurface: {},
 };
 
-  const handleFileInputChange = (event) => {
-    const file = event.target.files?.[0];
+function InspectionReportBox({
+  inspectionPeriod = "-",
+  turbineName = "-",
+  turbineOptions = [],
+  initialData = {},
+  onCreateReport,
+}) {
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [inspectionInfo, setInspectionInfo] = useState({
+    ...EMPTY_INSPECTION_INFO,
+    ...initialData,
+  });
 
-    if (!file) return;
-
-    handleFileSelect(file);
+  const handleInfoClick = () => {
+    setIsPopupOpen(true);
   };
 
-  const handleUploadBoxClick = () => {
-    fileInputRef.current?.click();
+  const handlePopupComplete = (popupData) => {
+    console.log("점검 보고서 팝업 완료 데이터:", popupData);
+
+    setInspectionInfo(popupData);
+    setIsPopupOpen(false);
   };
 
-  const handleDragOver = (event) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
+  const handleCreateReport = () => {
+    const files = inspectionInfo.files || Object.values(
+      inspectionInfo.filesBySurface || {}
+    );
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
+    const isEmptyInspectionInfo =
+      !inspectionInfo.startDate ||
+      !inspectionInfo.startTime ||
+      !inspectionInfo.endDate ||
+      !inspectionInfo.endTime ||
+      inspectionInfo.turbines.length === 0 ||
+      files.length === 0;
 
-  const handleDrop = (event) => {
-    event.preventDefault();
-    setIsDragging(false);
-
-    const file = event.dataTransfer.files?.[0];
-
-    if (!file) return;
-
-    handleFileSelect(file);
-  };
-
-  const handleRemoveFile = (event) => {
-    event.stopPropagation();
-    setSelectedFile(null);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const handleCreateInspectionReport = () => {
-    if (!selectedFile) {
-      alert("점검 보고서를 생성하려면 압축 파일을 먼저 업로드해주세요.");
+    if (isEmptyInspectionInfo) {
+      alert("보고서 정보를 입력해주세요.");
       return;
     }
 
-    onCreateReport?.({
+    const reportData = {
       reportKind: "inspection",
-      file: selectedFile,
-      fileName: selectedFile.name,
-      fileSize: selectedFile.size,
-      fileType: selectedFile.type,
+      inspectionPeriod:
+        inspectionInfo.startDate && inspectionInfo.endDate
+          ? `${inspectionInfo.startDate} ${inspectionInfo.startTime} ~ ${inspectionInfo.endDate} ${inspectionInfo.endTime}`
+          : inspectionPeriod,
+      startDate: inspectionInfo.startDate,
+      startTime: inspectionInfo.startTime,
+      endDate: inspectionInfo.endDate,
+      endTime: inspectionInfo.endTime,
+      startDateTime: inspectionInfo.startDateTime,
+      endDateTime: inspectionInfo.endDateTime,
+      turbines: inspectionInfo.turbines,
+      turbineName:
+        inspectionInfo.turbines.length > 0
+          ? inspectionInfo.turbines.join(", ")
+          : turbineName,
+      content: inspectionInfo.content,
+      additionalItems: inspectionInfo.additionalItems,
+      files,
+      filesBySurface: inspectionInfo.filesBySurface || {},
+    };
+
+    console.log("====================================");
+    console.log("점검 보고서 생성 버튼 클릭");
+    console.log("점검 보고서 생성 최종 데이터:", reportData);
+    console.log("업로드 ZIP 파일 목록:", files);
+    console.table(
+      files.map((fileItem) => ({
+        turbineName: fileItem.turbineName,
+        bladeLabel: fileItem.bladeLabel,
+        bladeId: fileItem.bladeId,
+        surfaceLabel: fileItem.surfaceLabel,
+        surfaceId: fileItem.surfaceId,
+        fileName: fileItem.fileName,
+        fileSize: fileItem.fileSize,
+        fileType: fileItem.fileType,
+      }))
+    );
+    console.log("====================================");
+
+    onCreateReport?.(reportData);
+
+    setInspectionInfo({
+      ...EMPTY_INSPECTION_INFO,
+      ...initialData,
     });
   };
 
+  const displayInspectionPeriod =
+    inspectionInfo.startDate && inspectionInfo.endDate
+      ? `${inspectionInfo.startDate} ${inspectionInfo.startTime} ~ ${inspectionInfo.endDate} ${inspectionInfo.endTime}`
+      : inspectionPeriod;
+
+  const displayTurbineName =
+    inspectionInfo.turbines.length > 0
+      ? inspectionInfo.turbines.join(", ")
+      : turbineName;
+
+  const displayContent = inspectionInfo.content?.trim() || "-";
+
   return (
-    <div className="inspection-report-box">
-      <div className="inspection-report-spacer">
-        <div
-          className={`inspection-upload-box ${isDragging ? "dragging" : ""}`}
-          role="button"
-          tabIndex={0}
-          onClick={handleUploadBoxClick}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              handleUploadBoxClick();
-            }
-          }}
+    <>
+      <div className="inspection-report-box">
+        <button
+          className="inspection-info-button"
+          type="button"
+          onClick={handleInfoClick}
         >
-          <input
-            ref={fileInputRef}
-            className="inspection-upload-input"
-            type="file"
-            accept=".zip,.7z,.rar"
-            onChange={handleFileInputChange}
-          />
+          <div className="inspection-info-row">
+            <span className="inspection-info-label">점검 기간</span>
+            <span className="inspection-info-value">
+              {displayInspectionPeriod}
+            </span>
+          </div>
 
-          {!selectedFile ? (
-            <>
-              <div className="inspection-upload-button">
-                <span className="inspection-upload-plus">＋</span>
-                <span>압축 파일로 시작</span>
-              </div>
+          <div className="inspection-info-row">
+            <span className="inspection-info-label">터빈</span>
+            <span className="inspection-info-value">{displayTurbineName}</span>
+          </div>
 
-              <div className="inspection-upload-text">
-                터빈 드론 촬영 이미지가 들어간 압축 파일을 업로드 해주세요
-              </div>
+          <div className="inspection-info-row">
+            <span className="inspection-info-label">추가 내용</span>
+            <span className="inspection-info-value">{displayContent}</span>
+          </div>
+        </button>
 
-              <div className="inspection-upload-sub-text">
-                또는 여기에 파일 끌어다 놓기
-              </div>
-            </>
-          ) : (
-            <div className="inspection-selected-file">
-              <div className="inspection-selected-file-name">
-                {selectedFile.name}
-              </div>
+        <button
+          className="report-create-button"
+          type="button"
+          onClick={handleCreateReport}
+        >
+          보고서 생성
+        </button>
 
-              <div className="inspection-selected-file-size">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </div>
-
-              <button
-                className="inspection-file-remove-button"
-                type="button"
-                onClick={handleRemoveFile}
-              >
-                삭제
-              </button>
-            </div>
-          )}
-        </div>
+        <button className="report-list-button" type="button">
+          보고서 목록
+        </button>
       </div>
 
-      <button
-        className="report-create-button"
-        type="button"
-        onClick={handleCreateInspectionReport}
-      >
-        보고서 생성
-      </button>
-
-      <button className="report-list-button">
-        보고서 목록
-      </button>
-    </div>
+      {isPopupOpen && (
+        <InspectionReportPopup
+          initialData={inspectionInfo}
+          turbineOptions={turbineOptions}
+          onClose={() => setIsPopupOpen(false)}
+          onComplete={handlePopupComplete}
+        />
+      )}
+    </>
   );
 }
 

@@ -78,6 +78,7 @@ function Turbine3DSimulation({
     <div className="turbine-3d-simulation">
       <div className="turbine-3d-viewer">
         <Canvas
+          shadows
           dpr={[1, 2]}
           gl={{ antialias: true }}
           camera={{
@@ -134,14 +135,26 @@ function Turbine3DSimulation({
           />
 
           <directionalLight
-            position={[4, 6, 4]}
-            intensity={isRainy ? 0.35 : isCloudy ? 0.75 : 3.0}
+            castShadow
+            position={[4, 8, 4]}
+            intensity={isRainy ? 0.8 : isCloudy ? 1.5 : 4.0}
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-near={0.5}
+            shadow-camera-far={80}
+            shadow-camera-left={-25}
+            shadow-camera-right={25}
+            shadow-camera-top={25}
+            shadow-camera-bottom={-25}
           />
-
-          <directionalLight
-            position={[4, 6, 4]}
-            intensity={isCloudyWeather ? 1.5 : 3.0}
-          />
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, -3.62, 0]}
+            receiveShadow
+          >
+            <planeGeometry args={[80, 80]} />
+            <shadowMaterial transparent opacity={0.28} />
+          </mesh>
 
           <TurbineModel
             modelPath="/models/turbine_fix.glb"

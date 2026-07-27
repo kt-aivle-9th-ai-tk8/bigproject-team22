@@ -45,7 +45,7 @@ function Turbine3DSidebar({
         <input
           type="range"
           min="0"
-          max="0.08"
+          max="0.5"
           step="0.005"
           value={bladeSpeed}
           onChange={(event) => onChangeBladeSpeed(Number(event.target.value))}
