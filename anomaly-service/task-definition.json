@@ -1,9 +1,20 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:ap-northeast-2:336090301989:task-definition/windfarm-onm-anomaly-task:1",
+    "family": "windfarm-onm-anomaly-task",
+    "executionRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "3072",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
     "containerDefinitions": [
         {
             "name": "windfarm-onm-anomaly-container",
-            "image": "336090301989.dkr.ecr.ap-northeast-2.amazonaws.com/windfarm-onm-anomaly:latest",
+            "image": "nginx",
             "cpu": 0,
             "portMappings": [
                 {
@@ -33,49 +44,7 @@
             "systemControls": []
         }
     ],
-    "family": "windfarm-onm-anomaly-task",
-    "executionRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
-    "networkMode": "awsvpc",
-    "revision": 1,
     "volumes": [],
-    "status": "ACTIVE",
-    "requiresAttributes": [
-        {
-            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
-        },
-        {
-            "name": "ecs.capability.execution-role-awslogs"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
-        },
-        {
-            "name": "ecs.capability.task-eni"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
-        }
-    ],
     "placementConstraints": [],
-    "compatibilities": [
-        "EC2",
-        "FARGATE",
-        "MANAGED_INSTANCES"
-    ],
-    "runtimePlatform": {
-        "cpuArchitecture": "X86_64",
-        "operatingSystemFamily": "LINUX"
-    },
-    "requiresCompatibilities": [
-        "FARGATE"
-    ],
-    "cpu": "1024",
-    "memory": "3072",
-    "registeredAt": "2026-07-23T06:21:35.588Z",
-    "registeredBy": "arn:aws:iam::336090301989:root",
-    "enableFaultInjection": false,
     "tags": []
 }
