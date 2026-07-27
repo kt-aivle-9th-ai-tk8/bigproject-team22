@@ -1,0 +1,25 @@
+#   빌드: docker build -t report-agent-service .
+#   실행: docker run -d -p 8001:8000 --name report-agent-container report-agent-service
+
+# ---- build stage ----
+FROM python:3.10-slim
+WORKDIR /app
+
+# 캐시 파일 실행 X
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# ---- package 설치 ----
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---- requirements 설치 ----
+COPY requirements.txt .
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ---- 소스 코드 복사 및 실행 ----
+COPY . .
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
