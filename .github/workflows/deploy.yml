@@ -67,7 +67,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-deploy-role
+          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role
           aws-region: ap-northeast-2
 
       - name: Login to Amazon ECR
@@ -127,7 +127,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-deploy-role
+          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role
           aws-region: ap-northeast-2
 
       - name: Login to Amazon ECR
@@ -181,7 +181,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-deploy-role
+          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role 
           aws-region: ap-northeast-2
 
       - name: Login to Amazon ECR
@@ -244,7 +244,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-deploy-role
+          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role
           aws-region: ap-northeast-2
 
       # 빌드 결과물(dist 또는 build)을 S3로 업로드
