@@ -81,6 +81,12 @@ function ReportBox({
   const displayReportType = getReportTypeLabel(reportInfo.reportType);
   const displayContent = reportInfo.content?.trim() || "-";
 
+  // 3. 보고서 목록 버튼 클릭 시 이동하는 핸들러 함수
+  const handleGoToReportList = () => {
+    // App.jsx에 설정된 보고서 목록 라우터 경로로 이동
+    navigate("/reportlist"); 
+  };
+
   return (
     <>
       <div className="report-box">

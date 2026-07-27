@@ -1,0 +1,47 @@
+{
+    "containerDefinitions": [
+        {
+            "name": "windfarm-onm-backend-container",
+            "image": "336090301989.dkr.ecr.ap-northeast-2.amazonaws.com/windfarm-onm-backend:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 8080,
+                    "hostPort": 8080,
+                    "protocol": "tcp",
+                    "name": "windfarm-onm-backend-container-8080-tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/windfarm-onm-backend-task",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "ap-northeast-2",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "windfarm-onm-backend-task",
+    "executionRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "cpu": "1024",
+    "memory": "2048",
+    "tags": []
+}

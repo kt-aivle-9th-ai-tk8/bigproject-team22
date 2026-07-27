@@ -1,0 +1,50 @@
+{
+    "containerDefinitions": [
+        {
+            "name": "windfarm-onm-report-agent-container",
+            "image": "336090301989.dkr.ecr.ap-northeast-2.amazonaws.com/windfarm-onm-report-agent:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp",
+                    "name": "windfarm-onm-report-agent-container-8000-tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/windfarm-onm-report-agent-task",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "ap-northeast-2",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "windfarm-onm-report-agent-task",
+    "executionRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "3072",
+    "tags": []
+}

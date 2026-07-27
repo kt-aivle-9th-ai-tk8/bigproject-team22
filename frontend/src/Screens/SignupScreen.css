@@ -96,7 +96,7 @@
   cursor: pointer;
 }
 
-/* 가입 완료 버튼 (시안의 딥그린/국방색 계열 포인트 컬러 반영) */
+/* 가입 완료 버튼 */
 .signup-button {
   width: 100%;
   height: 48px;
@@ -115,10 +115,41 @@
   background-color: #203518;
 }
 
-/* 오른쪽 이미지 영역 */
+/* 헤더 정렬 (양 끝 배치) */
+.signup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.signup-header h2 {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+  color: #000000;
+}
+
+/* 상단 희미한(은은한) 로그인 버튼 */
+.header-login-btn {
+  background: none;
+  border: none;
+  color: #8E8E93; /* 희미한 쿨그레이 색상 */
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s;
+}
+
+.header-login-btn:hover {
+  color: #0066FF; /* 마우스 호버 시 블루 포인트 */
+  text-decoration: underline;
+}
+
+/* 오른쪽 이미지 영역 스타일 */
 .signup-image-section {
   flex: 1;
-  background-image: url('https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?q=80&w=1200'); /* 원본 이미지 확보 후 교체 가능 */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
