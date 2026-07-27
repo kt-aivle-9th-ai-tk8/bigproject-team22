@@ -21,5 +21,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ---- 소스 코드 복사 및 실행 ----
 COPY . .
+
+# 보안 설정
+RUN useradd -m appuser
+RUN chown -R appuser /app
+USER appuser
+
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
