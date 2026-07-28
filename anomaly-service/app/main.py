@@ -21,7 +21,7 @@ app.add_middleware(
 # 라우터 등록
 # app.include_router(anomaly_router, prefix="/api/v1/anomaly")
 
-@app.get("/health")
+@app.get("/api/health")
 def health_check():
     """AWS ECS Target Group Health Check를 위한 엔드포인트"""
     return {"status": "healthy", "service": "anomaly-service"}
