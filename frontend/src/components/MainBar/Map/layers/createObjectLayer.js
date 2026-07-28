@@ -15,6 +15,13 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import CircleStyle from "ol/style/Circle";
 
+const getCssVariableColor = (variableName, fallbackColor) => {
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(variableName)
+    .trim();
+
+  return value || fallbackColor;
+};
 /*
  * 단일 객체 아이콘 스타일
  */
@@ -26,21 +33,13 @@ const createSingleObjectStyle = (
   return new Style({
     image: new Icon({
       src: iconSrc,
-
-      /*
-       * 아이콘 아래쪽 중앙을 객체 좌표에 맞춤
-       */
       anchor: [0.5, 1],
-
       scale: iconScale,
     }),
 
     text: new Text({
       text: objectFeature.get("objectName"),
 
-      /*
-       * 아이콘 위쪽에 객체 이름 표시
-       */
       offsetY: -30,
 
       font: "bold 12px sans-serif",
@@ -66,7 +65,7 @@ const createClusterStyle = (count) => {
       radius: 30,
 
       fill: new Fill({
-        color: "#0B50D1",
+        color: getCssVariableColor("--color-point", "#b4cfff;"),
       }),
 
       stroke: new Stroke({
@@ -77,10 +76,10 @@ const createClusterStyle = (count) => {
 
     text: new Text({
       text: String(count),
-      font: "bold 20px sans-serif",
+      font: "bold 22px sans-serif",
 
       fill: new Fill({
-        color: "#ffffff",
+        color: getCssVariableColor("--color-text-point-dark", "#0B50D1;"),
       }),
     }),
   });

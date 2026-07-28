@@ -71,7 +71,7 @@
   width: 100%;
   height: 42px;
 
-  border: 2px solid var(--color-text-point-dark);
+  border: 2px solid var(--color-point-divider);
   border-radius: 8px;
 
   background-color: var(--color-point);
