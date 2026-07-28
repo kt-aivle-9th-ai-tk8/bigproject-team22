@@ -25,7 +25,7 @@ function App() {
         <Route path="/main" element={<MainScreen />} />
         
         {/* 보고서 목록 화면 라우트 추가 */}
-        {/* <Route path="/reportlist" element={<ReportListScreen />} /> */}
+        <Route path="/reportlist" element={<ReportListScreen />} />
       </Routes>
     </BrowserRouter>
   );

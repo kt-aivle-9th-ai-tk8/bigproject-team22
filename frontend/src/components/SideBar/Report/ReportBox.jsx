@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import OperationReportPopup from "./Popup/OperationReportPopup";
 import "./ReportBox.css";
 
@@ -18,6 +19,8 @@ function ReportBox({
   endDate = getTodayString(),
   onCreateReport,
 }) {
+  const navigate = useNavigate();
+
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   const [reportInfo, setReportInfo] = useState({
@@ -40,8 +43,7 @@ function ReportBox({
   const handleCreateReport = () => {
     const isEmptyReportInfo =
       !reportInfo.startDate ||
-      !reportInfo.endDate ||
-      !reportInfo.reportType;
+      !reportInfo.endDate;
 
     if (isEmptyReportInfo) {
       alert("보고서 정보를 입력해주세요.");
@@ -50,7 +52,7 @@ function ReportBox({
 
     const reportData = {
       reportKind: "operation",
-      reportType: reportInfo.reportType,
+      reportType: reportInfo.reportType || "custom",
       startDate: reportInfo.startDate,
       endDate: reportInfo.endDate,
       content: reportInfo.content,
@@ -64,6 +66,10 @@ function ReportBox({
       startDate,
       endDate,
     });
+  };
+
+  const handleGoToReportList = () => {
+    navigate("/reportlist");
   };
 
   const getReportTypeLabel = (type) => {
@@ -80,12 +86,6 @@ function ReportBox({
 
   const displayReportType = getReportTypeLabel(reportInfo.reportType);
   const displayContent = reportInfo.content?.trim() || "-";
-
-  // 3. 보고서 목록 버튼 클릭 시 이동하는 핸들러 함수
-  const handleGoToReportList = () => {
-    // App.jsx에 설정된 보고서 목록 라우터 경로로 이동
-    navigate("/reportlist"); 
-  };
 
   return (
     <>
@@ -119,7 +119,11 @@ function ReportBox({
           보고서 생성
         </button>
 
-        <button className="report-list-button" type="button">
+        <button
+          className="report-list-button"
+          type="button"
+          onClick={handleGoToReportList}
+        >
           보고서 목록
         </button>
       </div>
