@@ -141,6 +141,12 @@ function TurbineSideBar({
 
         {reportMode === "inspection" && (
           <InspectionReportBox
+            turbineName={turbineName}
+            turbineOptions={[turbineName]}
+            initialData={{
+              turbines: [turbineName],
+              fixedTurbine: true,
+            }}
             onCreateReport={(reportData) => {
               onCreateInspectionReport?.({
                 ...reportData,
@@ -148,10 +154,12 @@ function TurbineSideBar({
                 plantName,
                 turbineId: selectedTurbine?.id,
                 turbineName,
+                turbines: [turbineName],
               });
             }}
           />
         )}
+        
       </section>
     </div>
   );

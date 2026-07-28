@@ -5,7 +5,7 @@ import TurbineList from "./Turbine/TurbineList";
 import ReportBox from "./Report/ReportBox";
 import SideTitle from "./SideTitle";
 import ReportTitleToggle from "./Report/ReportTitleToggle";
-import RepairReportBox from "./Report/RepairReportBox";
+import InspectionReportBox from "./Report/InspectionReportBox";
 
 import { WEATHER_TYPE } from "./Weather/WeatherItem";
 import { TURBINE_STATUS } from "./Turbine/TurbineItem";
@@ -14,12 +14,12 @@ import "./PlantSideBar.css";
 function PlantSideBar({
   selectedPlant,
   onSelectTurbine,
-  onCreateRepairReport,
+  onCreateInspectionReport,
 }) {
-  const plantName = selectedPlant?.title || selectedPlant?.name;
-
-  const today = new Date().toISOString().slice(0, 10);
   const [reportMode, setReportMode] = useState("operation");
+
+  const plantName = selectedPlant?.title || selectedPlant?.name;
+  const today = new Date().toISOString().slice(0, 10);
 
   const weatherItems = [
     {
@@ -97,9 +97,9 @@ function PlantSideBar({
           selectedType={reportMode}
           onChange={setReportMode}
           firstType="operation"
-          secondType="repair"
+          secondType="inspection"
           firstTitle="발전소 운영 보고서"
-          secondTitle="수리 보고서"
+          secondTitle="점검 보고서"
         />
 
         {reportMode === "operation" && (
@@ -108,18 +108,25 @@ function PlantSideBar({
             startDate={today}
             endDate={today}
             onCreateReport={(reportData) => {
-              console.log("발전소 운영 보고서 생성 데이터:", reportData);
+              console.log("발전소 운영 보고서 생성 데이터:", {
+                ...reportData,
+                plantId: selectedPlant?.id,
+                plantName,
+              });
             }}
           />
         )}
 
-        {reportMode === "repair" && (
-          <RepairReportBox
-            repairPeriod="-"
-            turbineName="-"
-            documentId="-"
+        {reportMode === "inspection" && (
+          <InspectionReportBox
             turbineOptions={turbineItems.map((turbine) => turbine.name)}
-            onCreateReport={onCreateRepairReport}
+            onCreateReport={(reportData) => {
+              onCreateInspectionReport?.({
+                ...reportData,
+                plantId: selectedPlant?.id,
+                plantName,
+              });
+            }}
           />
         )}
       </section>
