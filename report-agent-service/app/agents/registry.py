@@ -32,13 +32,13 @@ REGISTRY = {
         "critic": _anomaly_critic.critic,              # hard=숫자 게이트 / soft=인과 레이어드
         "retry_policy": _anomaly_critic.retry_policy,  # anomaly 전용 hard/soft 소진·강등 정책
     },
-    "defect": {  # stub — 팀원 구현 예정. critic 설계 전엔 None(검증 스킵).
+    "defect": {
         "fetch": _defect_tools.fetch,
         "agent": _defect_agent.defect_agent,
         "max_retries": 2,
         "critic": None,
     },
-    "operation": {  # stub — 팀원 구현 예정.
+    "operation": {
         "fetch": _operation_tools.fetch,
         "agent": _operation_agent.operation_agent,
         "max_retries": 2,
