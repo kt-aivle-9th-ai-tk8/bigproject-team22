@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./LoginScreen.css";
 
 function LoginScreen() {
+  const navigate = useNavigate();
+
   const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
-  
+
   // 보안 및 오류 관련 상태 관리
   const [errorCount, setErrorCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
@@ -13,22 +16,47 @@ function LoginScreen() {
   const [modalType, setModalType] = useState(null); // 'success' 또는 'fail'
   const [modalMessage, setModalMessage] = useState("");
 
+  // 모달(팝업) 열림 상태에서 엔터키 입력 감지 이벤트
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === "Enter" && modalType) {
+        handleCloseModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, [modalType]);
+
   const handleLogin = (e) => {
     if (e) e.preventDefault();
 
     if (isLocked) {
       setModalType("fail");
-      setModalMessage("비밀번호 5회 오류로 인해 계정이 잠겼습니다. 관리자에게 문의하세요.");
+      setModalMessage(
+        "비밀번호 5회 오류로 인해 계정이 잠겼습니다. 관리자에게 문의하세요."
+      );
       return;
     }
 
+    // ⚡ [개발 편의 기능] 빈 값 상태로 로그인 시도 시 즉시 성공 처리!
+    if (!employeeId.trim() && !password.trim()) {
+      setErrorCount(0);
+      setModalType("success");
+      setModalMessage("로그인에 성공했습니다! (개발 테스트 모드)");
+      return;
+    }
+
+    // 아이디나 비밀번호 중 하나만 비어있는 경우
     if (!employeeId.trim() || !password.trim()) {
       setModalType("fail");
       setModalMessage("사번과 비밀번호를 모두 입력해주세요.");
       return;
     }
 
-    // 테스트용 임시 로그인 정보 검증
+    // 테스트용 임시 로그인 정보 검증 (123 / 123!)
     const isLoginSuccess = employeeId === "123" && password === "123!";
 
     if (isLoginSuccess) {
@@ -42,16 +70,20 @@ function LoginScreen() {
       setModalType("fail");
       if (nextErrorCount >= 5) {
         setIsLocked(true);
-        setModalMessage("비밀번호 5회 오류로 인해 계정이 잠겼습니다. 관리자에게 문의하세요.");
+        setModalMessage(
+          "비밀번호 5회 오류로 인해 계정이 잠겼습니다. 관리자에게 문의하세요."
+        );
       } else {
-        setModalMessage(`로그인에 실패했습니다.\n다시 시도해 주세요. (오류 횟수: ${nextErrorCount}/5)`);
+        setModalMessage(
+          `로그인에 실패했습니다.\n다시 시도해 주세요. (오류 횟수: ${nextErrorCount}/5)`
+        );
       }
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleLogin();
+    if (e.key === "Enter" && !modalType) {
+      handleLogin(e);
     }
   };
 
@@ -59,10 +91,10 @@ function LoginScreen() {
     const currentType = modalType;
     setModalType(null);
     setModalMessage("");
-    
-    // 성공 모달을 닫았을 때만 메인 페이지로 이동
+
+    // 성공 모달을 닫았을 때 메인 페이지로 이동 (/main)
     if (currentType === "success") {
-      window.location.href = "/Main";
+      navigate("/main");
     }
   };
 
@@ -102,11 +134,15 @@ function LoginScreen() {
         </form>
 
         <div className="login-nav">
-          <span onClick={() => window.location.href = "/signup"}>회원가입</span>
+          <span onClick={() => navigate("/signup")}>회원가입</span>
           <span className="divider">|</span>
-          <span onClick={() => alert("인증 코드를 발송합니다.")}>아이디 찾기</span>
+          <span onClick={() => alert("인증 코드를 발송합니다.")}>
+            아이디 찾기
+          </span>
           <span className="divider">|</span>
-          <span onClick={() => alert("인증 코드를 발송합니다.")}>비밀번호 찾기</span>
+          <span onClick={() => alert("인증 코드를 발송합니다.")}>
+            비밀번호 찾기
+          </span>
         </div>
 
         <footer className="login-footer">
@@ -125,7 +161,7 @@ function LoginScreen() {
         </footer>
       </div>
 
-      {/* 피그마 시안 반영 커스텀 결과 모달 (성공/실패 공용) */}
+      {/* 성공/실패 모달 */}
       {modalType && (
         <div className="modal-overlay">
           <div className="modal-window">

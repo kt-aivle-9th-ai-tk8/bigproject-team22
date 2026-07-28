@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import alarmIcon from "../assets/icon/alarm.png";
 import AlarmPopup from "./AlarmPopup/AlarmPopup";
@@ -6,6 +7,7 @@ import AlarmPopup from "./AlarmPopup/AlarmPopup";
 import "./Header.css";
 
 function Header({ onLogout, onTitleClick, alarm = [] }) {
+  const navigate = useNavigate();
   const [now, setNow] = useState(new Date());
   const [isAlarmOpen, setIsAlarmOpen] = useState(false);
 
@@ -43,6 +45,11 @@ function Header({ onLogout, onTitleClick, alarm = [] }) {
     setIsAlarmOpen(false);
   };
 
+  // 3. 👤 아이콘 클릭 시 내 정보 페이지로 이동하는 함수
+  const handleUserClick = () => {
+    navigate("/admin/users");
+  };
+
   return (
     <>
       <header className="header">
@@ -71,12 +78,14 @@ function Header({ onLogout, onTitleClick, alarm = [] }) {
           </div>
         </div>
 
+        {/* 4. 기존 로그아웃 텍스트 대신 👤 아이콘 버튼 적용 */}
         <button
-          className="logout-button"
+          className="user-profile-button"
           type="button"
-          onClick={onLogout}
+          title="사용자 페이지"
+          onClick={handleUserClick}
         >
-          로그아웃
+          👤
         </button>
       </header>
 

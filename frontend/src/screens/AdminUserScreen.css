@@ -1,0 +1,205 @@
+/* 화면 전체 중앙 배치 및 옅은 백그라운드 */
+.user-screen-overlay {
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 카드 용지 메인 스타일 */
+.user-screen-card {
+  width: 100%;
+  max-width: 680px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 36px 44px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+}
+
+/* 상단 헤더 (타이틀 & 연필/닫기 아이콘) */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.card-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111111;
+  margin: 0;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #666666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background-color: #f0f0f0;
+  color: #111111;
+}
+
+.icon-btn.edit-btn.active {
+  background-color: #e6f0ff;
+  color: #0066ff;
+}
+
+/* 프로필 정보 헤더 */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.avatar-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-icon {
+  font-size: 32px;
+  color: #a0a0a0;
+}
+
+.profile-name-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #222222;
+}
+
+.admin-badge {
+  background-color: #e6f0ff;
+  color: #0066ff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* 정보 리스트 스타일 */
+.info-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #f0f0f0;
+  margin-bottom: 32px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-item.clickable {
+  cursor: pointer;
+}
+
+.info-item.clickable:hover {
+  background-color: #fafafa;
+}
+
+.info-label {
+  font-size: 15px;
+  color: #333333;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 15px;
+  color: #666666;
+}
+
+.info-value.read-only {
+  color: #999999;
+}
+
+.info-input {
+  padding: 6px 12px;
+  border: 1px solid #0066ff;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  text-align: right;
+}
+
+.pw-change-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.arrow-icon {
+  font-size: 18px;
+  color: #cccccc;
+}
+
+/* 하단 버튼 영역 */
+.action-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-entry-btn {
+  width: 100%;
+  height: 48px;
+  background-color: #0066ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.admin-entry-btn:hover {
+  background-color: #0052cc;
+}
+
+.logout-link-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #888888;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.logout-link-btn:hover {
+  color: #333333;
+}
