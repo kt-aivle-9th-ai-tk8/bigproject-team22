@@ -27,3 +27,6 @@ htmlcov/
 # 7. OS 시스템 파일
 .DS_Store
 Thumbs.db
+# ── report-agent 로컬 데이터/산출물 (각자 로컬 전용, 배포 땐 DB/S3) ──
+data/
+outputs/
