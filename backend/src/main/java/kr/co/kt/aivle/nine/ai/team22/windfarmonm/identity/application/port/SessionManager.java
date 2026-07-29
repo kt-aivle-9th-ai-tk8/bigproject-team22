@@ -1,4 +1,4 @@
-package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application;
+package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.port;
 
 /**
  * 세션 저장소 조작 포트. 구현(Redis 세션 어댑터)은 infrastructure 레이어에 둔다.

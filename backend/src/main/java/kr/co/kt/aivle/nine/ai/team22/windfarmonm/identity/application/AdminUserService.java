@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.AdminUserResult;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.port.SessionManager;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserRepository;
