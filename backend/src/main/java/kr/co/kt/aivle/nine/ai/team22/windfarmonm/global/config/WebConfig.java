@@ -29,6 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
             "/users",            // 회원가입
             "/auth/login",       // 로그인
             "/auth/logout",      // 로그아웃
+            "/health",           // ECS Target Group Health Check
             "/error",
             "/h2-console/**",
             "/swagger-ui/**",
