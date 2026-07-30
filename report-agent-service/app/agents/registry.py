@@ -23,6 +23,7 @@ from app.agents.reports.defect import defect_agent as _defect_agent
 from app.agents.reports.defect import tools as _defect_tools
 from app.agents.reports.operation import operation_agent as _operation_agent
 from app.agents.reports.operation import tools as _operation_tools
+from app.agents.reports.operation import critic_rules as _operation_critic
 
 REGISTRY = {
     "anomaly": {
@@ -42,7 +43,8 @@ REGISTRY = {
         "fetch": _operation_tools.fetch,
         "agent": _operation_agent.operation_agent,
         "max_retries": 2,
-        "critic": None,
+        "critic": _operation_critic.critic,              # 총평 숫자 게이트(hard) + 인과/정비 가드(soft)
+        "retry_policy": _operation_critic.retry_policy,  # hard/soft 소진·강등 정책
     },
 }
 REPORT_TYPES = tuple(REGISTRY.keys())
