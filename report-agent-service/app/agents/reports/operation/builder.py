@@ -140,11 +140,16 @@ def _mermaid_monthly(monthly) -> list:
     act = [_num1(m.get("actual")) for m in monthly]
     top = (int(max(exp + [0]) // 100) + 1) * 100
     bot = int(min(act + [0]) // 100) * 100
+    # x축 라벨(월별 24개)이 좁아 붙으므로 차트 폭을 넓혀 간격을 벌린다.
+    #   폭 = 라벨당 약 55px (최소 900). %-format·f-string은 %%/중괄호 충돌이라 문자열 연결로 조립.
+    chart_w = max(900, len(months) * 55)
+    init = ('%%{init: {"xyChart": {"width": ' + str(chart_w) + ', "height": 380}, '
+            '"themeVariables": {"xyChart": {"plotColorPalette": "' + _XY_COLORS + '"}}}}%%')
     return [
         "🔵 기대(expected_power_unit) · 🟠 실측(power_output)",
         "",
         "```mermaid",
-        f'%%{{init: {{"themeVariables": {{"xyChart": {{"plotColorPalette": "{_XY_COLORS}"}}}}}}}}%%',
+        init,
         "xychart-beta",
         '    title "월별 기대 vs 실측 발전량 (kW)"',
         f"    x-axis [{', '.join(months)}]",
