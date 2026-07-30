@@ -5,6 +5,7 @@
   - **터빈별 실적 순위표**(부진 터빈 식별 = 단지 운영의 핵심)
 operation.builder의 공용 헬퍼(_f/_bar 등)를 재사용한다(운영 계열 동일 스타일).
 """
+from app.agents.verify import extract_numbers
 from app.agents.reports.operation.builder import (
     _f, _num1, _pad_display, _bar, _XY_COLORS, _loss_driver, CATEGORY_KO, DISCLAIMER,
 )
@@ -50,6 +51,7 @@ def fact_lines(to) -> list:
     f = facts(to)
     crit, low, ok, top_loss = _fleet_health(to)
     lines = [
+        f"- 단지 총 실측 발전량: {_f(f['total_actual_mwh'])} MWh / 총 기대 발전량: {_f(f['total_expected_mwh'])} MWh",
         f"- 단지 발전 달성률(실측/기대): {_f(f['utilization'])}%",
         f"- 단지 가동률: {_f(f['availability'])}%, 관측 평균 풍속: {_f(f['avg_wind'])} m/s",
         f"- 총 손실 {_f(f['energy_loss_mwh'])} MWh 중 정지 {_f(f['downtime_loss_mwh'])} / "
@@ -59,6 +61,14 @@ def fact_lines(to) -> list:
         f"- 함대 건강: 심각 {crit}기 / 저조 {low}기 / 정상 {ok}기",
     ]
     return lines
+
+
+def allowed_numbers(to) -> set:
+    """종합분석이 인용해도 되는 수치(절대값) 집합 = facts 블록 + 기간 날짜 (critic grounding)."""
+    text = "\n".join(fact_lines(to))
+    t = to.get("farm", {}) or {}
+    text += "\n" + str(t.get("period_start", "")) + "\n" + str(t.get("period_end", ""))
+    return {abs(n) for n in extract_numbers(text)}
 
 
 def build_kpi_table(to) -> list:

@@ -1,8 +1,9 @@
 """operation 결정론적 렌더러 — 모든 수치는 코드가 tool_outputs에서 주입(사실의 단일 출처).
 
-팀 규칙:
-- 표·차트·수치는 전부 builder(코드)가 만든다. LLM은 숫자를 절대 쓰지 않는다.
-- render_report(to, analysis=None): analysis(선택)는 '숫자 없는 정성 총평'만 삽입.
+팀 규칙(anomaly/defect와 동일):
+- 표·차트·수치는 전부 builder(코드)가 만든다(사실의 단일 출처).
+- render_report(to, analysis=None): analysis(선택)는 facts 수치를 '인용'한 종합 총평. critic이 grounding으로 검증.
+- fact_lines/allowed_numbers: LLM 인용 대상·검증 허용집합.
 - 차트는 mermaid xychart-beta (anomaly와 동일 컨벤션, GitHub에서 렌더/ git 친화적).
 
 운영 리포트 고유 포맷(이상감지와 구분): KPI 대시보드 → 발전 성과 → 손실 분해 진단 →
@@ -70,11 +71,12 @@ def facts(to) -> dict:
 
 
 def fact_lines(to) -> list:
-    """LLM 총평용 '관측 요약' (참고용 — 분석엔 숫자 쓰지 말 것). 정성 판단 근거."""
+    """LLM 종합분석이 '인용'할 수 있는 facts 블록(수치 포함). 이 수치만 인용 가능(생성 금지)."""
     f = facts(to)
     lines = []
     if to.get("scada", {}).get("found"):
         lines += [
+            f"- 총 실측 발전량: {_f(f['total_actual_mwh'])} MWh / 총 기대 발전량: {_f(f['total_expected_mwh'])} MWh",
             f"- 발전 달성률(실측/기대): {_f(f['utilization'])}%",
             f"- 가동률(정지 안 한 시간 비율): {_f(f['availability'])}%",
             f"- 관측 평균 풍속: {_f(f['avg_wind'])} m/s",
@@ -85,6 +87,17 @@ def fact_lines(to) -> list:
         f"- 이상 이벤트 {f['total_events']}건(유지중 {f['ongoing']}/종료 {f['ended']}), "
         f"정지 {f['stop']}·데이터부재 {f['data_missing']}·성능저하 {f['degradation']}")
     return lines
+
+
+def allowed_numbers(to) -> set:
+    """종합분석이 인용해도 되는 수치(절대값) 집합 = facts 블록 + 기간 날짜.
+
+    critic grounding: 분석의 모든 숫자가 이 집합에 있어야 통과(없으면 환각/변형). anomaly와 동일.
+    """
+    text = "\n".join(fact_lines(to))
+    t = to.get("turbine", {}) or {}
+    text += "\n" + str(t.get("period_start", "")) + "\n" + str(t.get("period_end", ""))
+    return {abs(n) for n in extract_numbers(text)}
 
 
 def _loss_driver(f) -> tuple:

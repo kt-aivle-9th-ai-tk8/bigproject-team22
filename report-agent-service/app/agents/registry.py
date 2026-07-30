@@ -27,6 +27,7 @@ from app.agents.reports.operation import tools as _operation_tools
 from app.agents.reports.operation import critic_rules as _operation_critic
 from app.agents.reports.farm_operation import farm_operation_agent as _farm_agent
 from app.agents.reports.farm_operation import tools as _farm_tools
+from app.agents.reports.farm_operation import critic_rules as _farm_critic
 
 REGISTRY = {
     "anomaly": {
@@ -53,8 +54,8 @@ REGISTRY = {
         "fetch": _farm_tools.fetch,
         "agent": _farm_agent.farm_operation_agent,
         "max_retries": 2,
-        "critic": _operation_critic.critic,              # 제네릭(narrative 숫자/인과/정비) 재사용
-        "retry_policy": _operation_critic.retry_policy,  # 제네릭(report_type 기반) 재사용
+        "critic": _farm_critic.critic,                   # grounding=단지 builder, soft/policy는 operation 재사용
+        "retry_policy": _operation_critic.retry_policy,  # 제네릭(report_type 기반)
     },
 }
 REPORT_TYPES = tuple(REGISTRY.keys())
