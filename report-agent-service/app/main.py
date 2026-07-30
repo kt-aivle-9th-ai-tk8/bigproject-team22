@@ -38,7 +38,7 @@ app.add_middleware(
 )
 
 # 🩺 AWS ECS Target Group 및 로드밸런서용 Health Check 엔드포인트 (삭제 금지)
-@app.get("/api/health", tags=["Health"])
+@app.get("/api/health/", tags=["Health"])
 def health_check():
     return {
         "status": "healthy",
