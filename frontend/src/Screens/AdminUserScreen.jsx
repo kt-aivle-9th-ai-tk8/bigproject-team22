@@ -1,195 +1,152 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "./UserScreen.css";
+import React, { useState } from 'react';
+import { Search, User, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import './AdminUserScreen.css'; // CSS 파일 임포트
 
-function UserScreen() {
-  const navigate = useNavigate();
+const AdminUserScreen = () => {
+  const [activeTab, setActiveTab] = useState('users');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // 관리자 여부 상태 (현재는 개발용으로 true 설정, 일반 사용자는 false)
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [pendingUsers, setPendingUsers] = useState([
+    { id: 1, name: '김민수', employeeId: '2505001', requestDate: '2024.05.20 14:30', plant: '장흥 발전소' },
+    { id: 2, name: '이영희', employeeId: '2505002', requestDate: '2024.05.20 10:15', plant: '해남 발전소' },
+    { id: 3, name: '박지훈', employeeId: '2505003', requestDate: '2024.05.19 16:45', plant: '삼천포 발전소' },
+  ]);
 
-  // 편집 모드 상태
-  const [isEditing, setIsEditing] = useState(false);
+  const [activeUsers, setActiveUsers] = useState([
+    { id: 1, name: '최유리', employeeId: '2401001', status: 'online', plants: ['장흥 발전소', '해남 발전소'], extraPlantCount: 1, isBlocked: false },
+    { id: 2, name: '정태호', employeeId: '2401002', status: 'online', plants: ['해남 발전소', '강진 발전소'], extraPlantCount: 0, isBlocked: false },
+    { id: 3, name: '오세훈', employeeId: '2401003', status: 'offline', plants: ['삼천포 발전소'], extraPlantCount: 0, isBlocked: true },
+    { id: 4, name: '강하나', employeeId: '2401004', status: 'online', plants: ['여수 발전소', '광양 발전소'], extraPlantCount: 1, isBlocked: false },
+    { id: 5, name: '조민석', employeeId: '2401005', status: 'offline', plants: ['태안 발전소'], extraPlantCount: 0, isBlocked: true },
+  ]);
 
-  // 사용자 정보 상태
-  const [userInfo, setUserInfo] = useState({
-    name: "홍길동",
-    employeeId: "12345678",
-    mobile: "010-1234-5678",
-    email: "admin@company.com",
-    department: "IT 운영팀",
-  });
-
-  // 입력값 변경 핸들러
-  const handleChange = (field, value) => {
-    setUserInfo((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // 연필(수정) 버튼 클릭 토글
-  const handleToggleEdit = () => {
-    if (isEditing) {
-      alert("정보 수정이 완료되었습니다.");
-    }
-    setIsEditing(!isEditing);
-  };
-
-  // 닫기(X) 버튼 클릭 - 이전 화면으로 이동
-  const handleClose = () => {
-    navigate(-1);
-  };
-
-  // 로그아웃 버튼 클릭
-  const handleLogout = () => {
-    if (window.confirm("로그아웃 하시겠습니까?")) {
-      navigate("/login");
-    }
-  };
-
-  // 관리자 페이지 진입 버튼 클릭 (사용자 관리 콘솔로 이동)
-  const handleAdminConsoleNav = () => {
-    navigate("/admin/users");
+  const handleToggleBlock = (userId) => {
+    setActiveUsers(activeUsers.map(u => u.id === userId ? { ...u, isBlocked: !u.isBlocked } : u));
   };
 
   return (
-    <div className="user-screen-overlay">
-      <div className="user-screen-card">
-        {/* 상단 헤더: 타이틀 & 우측 아이콘(연필, 닫기) */}
-        <div className="card-header">
-          <h2>내 정보 관리</h2>
-          <div className="header-icons">
-            <button
-              className={`icon-btn edit-btn ${isEditing ? "active" : ""}`}
-              onClick={handleToggleEdit}
-              title={isEditing ? "저장" : "수정"}
-            >
-              ✏️
-            </button>
-            <button
-              className="icon-btn close-btn"
-              onClick={handleClose}
-              title="닫기"
-            >
-              ✕
-            </button>
-          </div>
+    <div className="admin-container">
+      <div className="admin-card">
+        
+        {/* Header */}
+        <div className="admin-header">
+          <h1 className="admin-title">사용자 관리</h1>
+          <div className="profile-avatar"><User size={22} /></div>
         </div>
 
-        {/* 프로필 이미지 & 이름 헤더 */}
-        <div className="profile-header">
-          <div className="avatar-circle">
-            <span className="avatar-icon">👤</span>
-          </div>
-          <div className="profile-name-group">
-            <span className="profile-title">
-              {isAdmin ? "관리자" : "사용자"} {userInfo.name}
-            </span>
-            {isAdmin && <span className="admin-badge">Admin</span>}
-          </div>
-        </div>
-
-        {/* 정보 항목 리스트 */}
-        <div className="info-list">
-          {/* 이름 */}
-          <div className="info-item">
-            <span className="info-label">이름</span>
-            {isEditing ? (
-              <input
-                type="text"
-                className="info-input"
-                value={userInfo.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-              />
-            ) : (
-              <span className="info-value">{userInfo.name}</span>
-            )}
-          </div>
-
-          {/* 사번 */}
-          <div className="info-item">
-            <span className="info-label">사번</span>
-            <span className="info-value read-only">{userInfo.employeeId}</span>
-          </div>
-
-          {/* 연락처 */}
-          <div className="info-item">
-            <span className="info-label">연락처 (Mobile)</span>
-            {isEditing ? (
-              <input
-                type="text"
-                className="info-input"
-                value={userInfo.mobile}
-                onChange={(e) => handleChange("mobile", e.target.value)}
-              />
-            ) : (
-              <span className="info-value">{userInfo.mobile}</span>
-            )}
-          </div>
-
-          {/* 이메일 */}
-          <div className="info-item">
-            <span className="info-label">이메일</span>
-            {isEditing ? (
-              <input
-                type="email"
-                className="info-input"
-                value={userInfo.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-              />
-            ) : (
-              <span className="info-value">{userInfo.email}</span>
-            )}
-          </div>
-
-          {/* 소속 부서 */}
-          <div className="info-item">
-            <span className="info-label">소속 부서</span>
-            {isEditing ? (
-              <input
-                type="text"
-                className="info-input"
-                value={userInfo.department}
-                onChange={(e) => handleChange("department", e.target.value)}
-              />
-            ) : (
-              <span className="info-value">{userInfo.department}</span>
-            )}
-          </div>
-
-          {/* 비밀번호 변경 */}
-          <div
-            className="info-item clickable"
-            onClick={() => alert("비밀번호 변경 창으로 이동합니다.")}
+        {/* Tab Navigation */}
+        <div className="tab-bar">
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`tab-button ${activeTab === 'pending' ? 'active' : ''}`}
           >
-            <span className="info-label">비밀번호 변경</span>
-            <div className="pw-change-right">
-              <span className="info-value masked-pw">********</span>
-              <span className="arrow-icon">›</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 하단 액션 버튼 영역 */}
-        <div className="action-footer">
-          {/* 관리자일 때만 진입 버튼 노출 */}
-          {isAdmin && (
-            <button
-              className="admin-entry-btn"
-              onClick={handleAdminConsoleNav}
-            >
-              관리자 페이지 진입
-            </button>
-          )}
-
-          <button className="logout-link-btn" onClick={handleLogout}>
-            로그아웃
+            가입 대기 ({pendingUsers.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
+          >
+            사용자 목록 및 권한 관리 ({activeUsers.length})
           </button>
         </div>
+
+        {/* Sub Header & Search */}
+        <div className="sub-header">
+          <div>
+            <h2 className="sub-title">
+              {activeTab === 'pending' ? '가입 승인 대기 목록' : '전체 사용자 관리'}
+            </h2>
+            {activeTab === 'pending' && <p className="sub-desc">가입을 신청한 사용자의 승인을 진행하세요.</p>}
+          </div>
+
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="이름 또는 사번 검색"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+            <Search size={18} className="search-icon" />
+          </div>
+        </div>
+
+        {/* TAB: 사용자 목록 및 권한 관리 */}
+        {activeTab === 'users' && (
+          <div className="table-wrapper">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>사번</th>
+                  <th>접속 상태</th>
+                  <th>담당 발전소</th>
+                  <th style={{ textAlign: 'center' }}>제어</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeUsers.map((user) => {
+                  const isOnline = user.status === 'online';
+                  return (
+                    <tr key={user.id}>
+                      <td style={{ fontWeight: 600 }}>{user.name}</td>
+                      <td style={{ color: '#64748b' }}>{user.employeeId}</td>
+                      <td>
+                        <div className="status-badge">
+                          <span className={`dot ${isOnline ? 'online' : 'offline'}`} />
+                          <span style={{ color: isOnline ? '#334155' : '#94a3b8' }}>
+                            {isOnline ? '온라인' : '오프라인'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="plant-badge-group">
+                          {user.plants.map((p, idx) => (
+                            <span key={idx} className="plant-tag">{p}</span>
+                          ))}
+                          {user.extraPlantCount > 0 && (
+                            <span className="extra-count">+{user.extraPlantCount}</span>
+                          )}
+                          <ChevronDown size={14} color="#94a3b8" />
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
+                          <button disabled={!isOnline} className="btn-logout">로그아웃</button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#475569' }}>차단</span>
+                            <button
+                              onClick={() => handleToggleBlock(user.id)}
+                              className={`toggle-switch ${!user.isBlocked ? 'active' : ''}`}
+                            >
+                              <span className="toggle-circle" />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Pagination */}
+            <div className="pagination">
+              <div>전체 12명</div>
+              <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                <button className="page-btn"><ChevronLeft size={14} /></button>
+                <button onClick={() => setCurrentPage(1)} className={`page-btn ${currentPage === 1 ? 'active' : ''}`}>1</button>
+                <button onClick={() => setCurrentPage(2)} className={`page-btn ${currentPage === 2 ? 'active' : ''}`}>2</button>
+                <button className="page-btn"><ChevronRight size={14} /></button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
-}
+};
 
-export default UserScreen;
+export default AdminUserScreen;
