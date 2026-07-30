@@ -68,6 +68,7 @@ def get_farm_scada() -> dict:
             "turbine_code": code,
             "actual_mwh": _num(r["actual_sum"] / 1000.0),
             "expected_mwh": _num(exp / 1000.0),
+            "loss_mwh": _num((exp - r["actual_sum"]) / 1000.0),   # 손실 기여도
             "utilization_pct": _num((r["actual_sum"] / exp * 100) if exp else None),
             "availability_pct": _num((1 - r["stopped"]) * 100),
         })
@@ -100,18 +101,35 @@ def get_farm_scada() -> dict:
 
 
 def get_farm_anomaly(start, end_excl) -> dict:
-    """단지 전체 이상 이벤트 집계."""
-    df = _events[(_events["start_time"] >= start) & (_events["start_time"] < end_excl)]
-    cats = df["event_type"].map(EVENT_CATEGORY).fillna("other").value_counts().to_dict()
+    """단지 전체 이상 이벤트 집계 + 터빈별 분포."""
+    df = _events[(_events["start_time"] >= start) & (_events["start_time"] < end_excl)].copy()
+    cats = df["event_type"].map(EVENT_CATEGORY).fillna("other")
+    cat_counts = cats.value_counts().to_dict()
+
+    # 터빈별 이벤트 분포 (많은 순) — 이벤트가 어느 터빈에 몰렸나
+    by_turbine = []
+    if len(df):
+        df["cat"] = cats.values
+        for code, sub in df.groupby("turbine_code"):
+            c = sub["cat"].value_counts().to_dict()
+            by_turbine.append({
+                "turbine_code": code, "total": int(len(sub)),
+                "stop": int(c.get("stop", 0)),
+                "data_missing": int(c.get("data_missing", 0)),
+                "degradation": int(c.get("degradation", 0)),
+            })
+        by_turbine.sort(key=lambda x: -x["total"])
+
     return {
         "total": int(len(df)),
         "ongoing": int(df["end_time"].isna().sum()),
         "ended": int(df["end_time"].notna().sum()),
         "by_category": {
-            "stop": int(cats.get("stop", 0)),
-            "data_missing": int(cats.get("data_missing", 0)),
-            "degradation": int(cats.get("degradation", 0)),
+            "stop": int(cat_counts.get("stop", 0)),
+            "data_missing": int(cat_counts.get("data_missing", 0)),
+            "degradation": int(cat_counts.get("degradation", 0)),
         },
+        "by_turbine": by_turbine,
     }
 
 

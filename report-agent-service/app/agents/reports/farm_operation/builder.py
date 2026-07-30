@@ -48,14 +48,15 @@ def _worst_turbine(to):
 def fact_lines(to) -> list:
     """LLM 총평용 관측 요약 (숫자 쓰지 말 것). 단지 관점 정성 근거."""
     f = facts(to)
-    worst = _worst_turbine(to)
+    crit, low, ok, top_loss = _fleet_health(to)
     lines = [
         f"- 단지 발전 달성률(실측/기대): {_f(f['utilization'])}%",
         f"- 단지 가동률: {_f(f['availability'])}%, 관측 평균 풍속: {_f(f['avg_wind'])} m/s",
         f"- 총 손실 {_f(f['energy_loss_mwh'])} MWh 중 정지 {_f(f['downtime_loss_mwh'])} / "
         f"성능저하 {_f(f['performance_loss_mwh'])} MWh",
         f"- 이상 이벤트 {f['total_events']}건 (정지 {f['stop']}·데이터부재 {f['data_missing']}·성능저하 {f['degradation']})",
-        f"- 실적 최저 터빈: {worst} (달성률 낮은 순 1위)",
+        f"- 실적 최저 터빈: {_worst_turbine(to)} / 손실 기여 최대 터빈: {top_loss}",
+        f"- 함대 건강: 심각 {crit}기 / 저조 {low}기 / 정상 {ok}기",
     ]
     return lines
 
@@ -131,16 +132,52 @@ def build_loss_diagnosis(to) -> list:
     ]
 
 
-def build_turbine_ranking(to) -> list:
-    """터빈별 실적 순위표 (달성률 낮은 순) — 단지 보고서 핵심 기능."""
+def _fleet_health(to):
+    """(심각, 저조, 정상) 터빈 수 + 최대 손실 기여 터빈. 달성률 임계 40/80."""
     pt = (to.get("scada", {}) or {}).get("per_turbine", [])
+    crit = sum(1 for t in pt if (t.get("utilization_pct") or 0) < 40)
+    low = sum(1 for t in pt if 40 <= (t.get("utilization_pct") or 0) < 80)
+    ok = sum(1 for t in pt if (t.get("utilization_pct") or 0) >= 80)
+    top_loss = max(pt, key=lambda t: (t.get("loss_mwh") or 0), default=None)
+    return crit, low, ok, (top_loss["turbine_code"] if top_loss else "—")
+
+
+def build_fleet_health(to) -> list:
+    """함대 건강 요약 — 8기 중 심각/저조/정상 몇 기 (국소 vs 전반 문제 신호)."""
+    f = facts(to)
+    crit, low, ok, _ = _fleet_health(to)
+    return [f"- 전체 {f['n_turbines']}기 중 — 🔴 심각(달성률<40%) {crit}기 · "
+            f"🟡 저조(40~80%) {low}기 · 🟢 정상(≥80%) {ok}기"]
+
+
+def build_turbine_table(to) -> list:
+    """터빈별 실적·손실 기여도 (손실 큰 순) — 단지 보고서 핵심(조치 우선순위)."""
+    pt = list((to.get("scada", {}) or {}).get("per_turbine", []))
     if not pt:
         return ["- 터빈별 데이터 없음"]
-    lines = ["| 순위 | 터빈 | 실측(MWh) | 달성률 | 가동률 |", "|---|---|---|---|---|"]
+    farm_loss = facts(to)["energy_loss_mwh"] or 0
+    pt.sort(key=lambda t: -(t.get("loss_mwh") or 0))   # 손실 큰 순 = 조치 우선
+    lines = ["| 순위 | 터빈 | 실측(MWh) | 달성률 | 가동률 | 손실(MWh) | 손실 기여율 |",
+             "|---|---|---|---|---|---|---|"]
     for i, t in enumerate(pt, 1):
+        loss = t.get("loss_mwh") or 0
+        share = (loss / farm_loss * 100) if farm_loss else 0
         lines.append(
             f"| {i} | {t['turbine_code']} | {_f(t.get('actual_mwh'))} | "
-            f"{_f(t.get('utilization_pct'))}% | {_f(t.get('availability_pct'))}% |")
+            f"{_f(t.get('utilization_pct'))}% | {_f(t.get('availability_pct'))}% | "
+            f"{_f(loss)} | {share:.0f}% |")
+    return lines
+
+
+def build_event_distribution(to) -> list:
+    """이상 이벤트 터빈별 분포 (많은 순) — 정지·저하가 어느 터빈에 몰렸나."""
+    bt = (to.get("anomaly", {}) or {}).get("by_turbine", [])
+    if not bt:
+        return ["- 이상 이벤트 없음"]
+    lines = ["| 터빈 | 이상 건수 | 정지 | 데이터 부재 | 성능 저하 |", "|---|---|---|---|---|"]
+    for t in bt:
+        lines.append(f"| {t['turbine_code']} | {t['total']} | {t['stop']} | "
+                     f"{t['data_missing']} | {t['degradation']} |")
     return lines
 
 
@@ -195,13 +232,19 @@ def render_report(to, analysis: str = None) -> str:
         "## Ⅲ. 발전 손실 분해 진단",
         *build_loss_diagnosis(to),
         "",
-        "## Ⅳ. 터빈별 실적 (달성률 낮은 순)",
+        "## Ⅳ. 터빈별 실적·손실 기여 (손실 큰 순)",
         "",
-        *build_turbine_ranking(to),
+        *build_fleet_health(to),
+        "",
+        *build_turbine_table(to),
         "",
         "## Ⅴ. 가동 저해 현황",
         "",
         *build_status_and_bars(to),
+        "",
+        "이상 이벤트 터빈별 분포 (많은 순):",
+        "",
+        *build_event_distribution(to),
     ]
     if analysis:
         parts += ["", "## Ⅵ. 단지 운영 총평", analysis.strip()]
