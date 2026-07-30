@@ -218,7 +218,6 @@ def render_report(to, analysis: str = None) -> str:
     farm = t.get("farm_name", "발전소")
     code = t.get("turbine_code", "—")
     start, end = t.get("period_start", "—"), t.get("period_end", "—")
-    _, action = _loss_driver(f)
 
     parts = [
         f"# {farm} 터빈 {code} {start} ~ {end} 운영보고서",
@@ -250,12 +249,6 @@ def render_report(to, analysis: str = None) -> str:
     if analysis:
         parts += ["", "## Ⅴ. 운영 총평", analysis.strip()]
     parts += [
-        "",
-        "## 결함 점검 현황",
-        *build_defect_section(to),
-        "",
-        "## 운영 조치 권고",
-        f"- {action}",
         "",
         "---",
         f"_※ {DISCLAIMER}_",
