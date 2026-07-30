@@ -43,7 +43,7 @@ jobs:
   deploy-backend:
     needs: detect-changes
     ## 조건: backend 폴더에 변경점이 있는 경우에만 실행
-    if: ${{ needs.detect_changes.outputs.backend == 'true' }}
+    if: ${{ needs.detect-changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -107,7 +107,7 @@ jobs:
   deploy-report-agent:
     needs: detect-changes
     ## 조건: report-agent 폴더에 변경점이 있는 경우에만 실행
-    if: ${{ needs.detect_changes.outputs.report_agent == 'true' }}
+    if: ${{ needs.detect-changes.outputs.report_agent == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
