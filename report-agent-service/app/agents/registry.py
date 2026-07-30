@@ -21,6 +21,7 @@ from app.agents.reports.anomaly import tools as _anomaly_tools
 from app.agents.reports.anomaly import critic_rules as _anomaly_critic
 from app.agents.reports.defect import defect_agent as _defect_agent
 from app.agents.reports.defect import tools as _defect_tools
+from app.agents.reports.defect import critic_rules as _defect_critic
 from app.agents.reports.operation import operation_agent as _operation_agent
 from app.agents.reports.operation import tools as _operation_tools
 
@@ -36,7 +37,7 @@ REGISTRY = {
         "fetch": _defect_tools.fetch,
         "agent": _defect_agent.defect_agent,
         "max_retries": 2,
-        "critic": None,
+        "critic": _defect_critic.critic,   # code_checks(결정론)+llm_check(LLM). retry_policy 없음 → 기본 정책
     },
     "operation": {
         "fetch": _operation_tools.fetch,

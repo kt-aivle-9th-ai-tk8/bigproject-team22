@@ -1,48 +1,37 @@
-"""anomaly_agent — 표·차트(코드 주입) + 선택적 '분석'(LLM, 숫자 없음).
+"""anomaly_agent — facts(코드 집계 수치) 근거 '종합분석' 서술 + builder로 전체 조립.
 
-WITH_ANALYSIS on: LLM이 여러 신호를 연결한 '정성 해석·트리아지'를 쓴다. 단 숫자는 한 개도
-쓰지 않는다(모든 수치는 표·차트가 소유). critic이 '분석에 숫자 있으면 반려'로 강제한다.
-WITH_ANALYSIS off: 분석 없이 완전 결정론(narrative=None → critic 통과).
+계약: anomaly_agent(state) -> {"draft", "narrative"}
+
+역할(분석가 레이어): 수치·표·차트·최근 이력·판단유보는 builder가 코드로 주입(사실의 단일 출처).
+LLM은 '## 종합분석'에서 facts의 수치만 '인용'해 서술한다(생성 금지). critic이 grounding으로 검증.
 """
-from app.core.config import WITH_ANALYSIS
 from app.agents.llm import llm
-from app.agents.reports.anomaly.builder import render_report, fact_lines, EVENT_TYPE_KO
+from app.agents.reports.anomaly import builder
 
-_ANALYST_RULES = """당신은 풍력 이상감지 리포트의 '분석'을 쓰는 분석가다.
-아래 [관측 요약]을 근거로 여러 신호를 연결해 '무엇을 시사하는지'와 '확인 우선순위'를 2~3문장으로 쓴다.
+_SYSTEM = """당신은 풍력 발전 이상감지 '종합분석'을 쓰는 분석가다. 아래 [사실]만 근거로,
+운영 담당자가 읽을 자연스러운 서술체 분석을 4~6문장으로 작성한다.
 
-[반드시 지킬 것]
-- 숫자를 절대 쓰지 마라. 모든 수치는 이미 리포트의 표·차트에 있다.
-  크기·추세는 '크게 밑돎 / 전 구간 / 급락 / 일부 구간 / 약 절반' 같은 정성 표현으로만 한다.
-  (유형명의 시간값 '24시간·6시간'도 다시 적지 않는다.)
-- 근본 원인을 단정하지 마라: '고장 때문에 정지' (X) → '가능성/시사/정황' (O).
-  정지를 '고장'으로 단정 금지(출력제어·점검·계통 지시 등 다른 원인 가능).
-- data_missing이면 관측 자체가 부재하므로 손실·발전량을 언급하지 마라.
-"""
+[반드시 지킬 규칙]
+- 숫자는 [사실]에 있는 값만 '그대로' 인용한다. [사실]에 없는 숫자를 절대 만들지 마라
+  (반올림·계산·추정으로 새 숫자를 만드는 것도 금지). 값이 없으면 정성 표현으로만.
+- 근본 원인을 단정하지 마라(고장/원인 확정 금지). 확인 절차로 안내한다.
+- 표·머리말 없이 문단 서술로. 담당자에게 상황과 다음 행동을 전달하는 톤."""
 
 
 def anomaly_agent(state) -> dict:
     to = state["tool_outputs"]
-    if not WITH_ANALYSIS:
-        return {"draft": render_report(to), "narrative": None}
+    facts_text = "\n".join(builder.fact_lines(to))
+    parts = [f"[사실]\n{facts_text}\n\n위 사실만으로 종합분석을 작성하라."]
 
-    et = to["event"].get("event_type")
-    parts = [
-        f"event_type = {et} ({EVENT_TYPE_KO.get(et, et)})",
-        "",
-        "[관측 요약] (참고용 — 분석엔 숫자를 쓰지 말 것)",
-        "\n".join(fact_lines(to)),
-        "",
-        "위를 근거로 '분석'을 숫자 없이 2~3문장으로 작성하라.",
-    ]
+    style = builder.style_hint(to)
+    if style:
+        parts.append(f"\n[이 유형 서술 지침] {style}")
+
     feedback = state.get("retry_feedback")
     if feedback:
-        parts += ["", "[재작성 지시] 아래 이유로 반려됨. 반드시 반영:", *[f"- {x}" for x in feedback]]
+        parts.append("\n[재작성 지시] 아래 이유로 반려됨 — 반드시 반영: " + "; ".join(feedback))
 
-    analysis = llm.invoke(
-        [
-            {"role": "system", "content": _ANALYST_RULES},
-            {"role": "user", "content": "\n".join(parts)},
-        ]
+    narrative = llm.invoke(
+        [{"role": "system", "content": _SYSTEM}, {"role": "user", "content": "".join(parts)}]
     ).content.strip()
-    return {"draft": render_report(to, analysis), "narrative": analysis}
+    return {"draft": builder.render_report(to, narrative), "narrative": narrative}

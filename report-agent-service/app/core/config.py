@@ -44,3 +44,16 @@ WITH_ANALYSIS = os.getenv("REPORT_WITH_ANALYSIS", "true").lower() == "true"
 # 데이터 소스: "csv"(로컬) | "rds"(배포). tools.py 가 이 값으로 구현 분기.
 DATA_SOURCE = os.getenv("DATA_SOURCE", "csv")
 DB_URL = os.getenv("DB_URL", "")
+
+# 결함(defect) 이미지 베이스 URL. defect.image_path 앞에 붙여 보고서에 이미지를 넣는다.
+#   로컬: file:///C:/.../report-agent-service/data  (data/images/ 에 이미지)
+#   배포: https://<bucket>.s3.<region>.amazonaws.com
+# 비워두면 이미지 없이 캡션 텍스트만 렌더링(설정 하나로 켜고 끔).
+IMAGE_BASE_URL = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
+
+# anomaly 만성 탐지 통계 상수(종합분석 facts용) — 실제 탐지 파이프라인 설정값으로 교체 필요.
+CHRONIC_NATURAL_VAR_PP = float(os.getenv("CHRONIC_NATURAL_VAR_PP", "4.8"))
+CHRONIC_CONFIRM_THRESHOLD_PP = float(os.getenv("CHRONIC_CONFIRM_THRESHOLD_PP", "11.3"))
+CHRONIC_DAYS = int(os.getenv("CHRONIC_DAYS", "30"))
+# 최근 동일 유형 이력 조회 창(개월).
+RECENT_HISTORY_MONTHS = int(os.getenv("RECENT_HISTORY_MONTHS", "6"))
