@@ -24,6 +24,8 @@ from app.agents.reports.defect import tools as _defect_tools
 from app.agents.reports.operation import operation_agent as _operation_agent
 from app.agents.reports.operation import tools as _operation_tools
 from app.agents.reports.operation import critic_rules as _operation_critic
+from app.agents.reports.farm_operation import farm_operation_agent as _farm_agent
+from app.agents.reports.farm_operation import tools as _farm_tools
 
 REGISTRY = {
     "anomaly": {
@@ -45,6 +47,13 @@ REGISTRY = {
         "max_retries": 2,
         "critic": _operation_critic.critic,              # 총평 숫자 게이트(hard) + 인과/정비 가드(soft)
         "retry_policy": _operation_critic.retry_policy,  # hard/soft 소진·강등 정책
+    },
+    "farm_operation": {   # 단지(발전소 전체) 운영 — 전 터빈 집계 + 터빈별 순위
+        "fetch": _farm_tools.fetch,
+        "agent": _farm_agent.farm_operation_agent,
+        "max_retries": 2,
+        "critic": _operation_critic.critic,              # 제네릭(narrative 숫자/인과/정비) 재사용
+        "retry_policy": _operation_critic.retry_policy,  # 제네릭(report_type 기반) 재사용
     },
 }
 REPORT_TYPES = tuple(REGISTRY.keys())
