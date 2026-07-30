@@ -5,7 +5,7 @@ import MainScreen from "./screens/MainScreen";
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
 import ReportListScreen from "./screens/ReportListScreen";
-import AdminUserScreen from "./screens/AdminUserScreen"; // 관리자 내 정보 화면
+import AdminUserScreen from "./screens/UserScreen";
 
 import "./App.css";
 
@@ -25,8 +25,8 @@ function App() {
         <Route path="/reportlist" element={<ReportListScreen />} />
 
         {/* 내 정보 / 관리자 페이지 라우트 */}
-        <Route path="/admin/users" element={<AdminUserScreen />} />
-        <Route path="/user" element={<AdminUserScreen />} />
+        <Route path="/admin/users" element={<UserScreen />} />
+        <Route path="/user" element={<UserScreen />} />
       </Routes>
     </BrowserRouter>
   );
