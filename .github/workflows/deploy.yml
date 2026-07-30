@@ -23,8 +23,7 @@ jobs:
     outputs:
       ## 각 Job에서 사용할 수 있도록 outputs 설정
       backend: ${{ steps.filter.outputs.backend }}
-      anomaly-service: ${{ steps.filter.outputs.anomaly-service }}
-      report-agent: ${{ steps.filter.outputs.report-agent }}
+      report_agent: ${{ steps.filter.outputs.report_agent }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - name: Checkout code
@@ -36,8 +35,7 @@ jobs:
         with:
           filters: |
             backend: 'backend/**'
-            anomaly-service: 'anomaly-service/**'
-            report-agent: 'report-agent-service/**'
+            report_agent: 'report-agent-service/**'
             frontend: 'frontend/**'
 
   # **************************************************** #
@@ -45,7 +43,7 @@ jobs:
   deploy-backend:
     needs: detect-changes
     ## 조건: backend 폴더에 변경점이 있는 경우에만 실행
-    if: ${{ needs.detect-changes.outputs.backend == 'true' }}
+    if: ${{ needs.detect_changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -58,10 +56,10 @@ jobs:
         uses: actions/checkout@v4
 
       ### Spring Boot용 Gradle 빌드 및 Docker Push 세팅
-      - name: Set up JDK 20
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '20'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Configure AWS credentials
@@ -105,65 +103,11 @@ jobs:
           cluster: windfarm-onm-cluster           
           wait-for-service-stability: true        
 
-  # 2. FastAPI(이상감지) 배포 Job
-  deploy-anomaly-service:
-    needs: detect-changes
-    ## 조건: anomaly-service 폴더에 변경점이 있는 경우에만 실행
-    if: ${{ needs.detect-changes.outputs.anomaly-service == 'true' }}
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    defaults:
-      run:
-        working-directory: ./anomaly-service
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role
-          aws-region: ap-northeast-2
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2  
-
-      - name: Build & Push Anomaly Service Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./anomaly-service
-          push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/windfarm-onm-anomaly:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: task-def-anomaly
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ./anomaly-service/task-definition.json
-          container-name: windfarm-onm-anomaly-container
-          image: ${{ steps.login-ecr.outputs.registry }}/windfarm-onm-anomaly:${{ github.sha }}
-
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def-anomaly.outputs.task-definition }}
-          service: windfarm-onm-anomaly-service
-          cluster: windfarm-onm-cluster
-          wait-for-service-stability: true
-
-  # 3. FastAPI(리포트) 배포 Job
+  # FastAPI(리포트) 배포 Job
   deploy-report-agent:
     needs: detect-changes
     ## 조건: report-agent 폴더에 변경점이 있는 경우에만 실행
-    if: ${{ needs.detect-changes.outputs.report-agent == 'true' }}
+    if: ${{ needs.detect_changes.outputs.report_agent == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
