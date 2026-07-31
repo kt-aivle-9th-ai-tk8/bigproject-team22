@@ -1,6 +1,6 @@
 """보고서 API 라우트 (공유 — main.py가 /api/v1/reports 로 마운트).
 
-제네릭 엔드포인트: report_type + event_id로 전 타입(anomaly/defect/operation) 생성.
+제네릭 엔드포인트: report_type + event_id로 전 타입(anomaly/defect/operation/farm_operation) 생성.
   POST /api/v1/reports        {report_type, event_id}
   POST /api/v1/reports/operation/{turbine_code}   (편의 — U2 → event_id 2)
 """

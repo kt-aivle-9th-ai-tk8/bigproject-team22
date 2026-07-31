@@ -43,7 +43,7 @@ REGISTRY = {
         "max_retries": 2,
         "critic": _defect_critic.critic,   # code_checks(결정론)+llm_check(LLM). retry_policy 없음 → 기본 정책
     },
-    "operation": {
+    "operation": {   # 터빈 단위 운영 (event_id = 터빈번호)
         "fetch": _operation_tools.fetch,
         "agent": _operation_agent.operation_agent,
         "max_retries": 2,
@@ -54,8 +54,8 @@ REGISTRY = {
         "fetch": _farm_tools.fetch,
         "agent": _farm_agent.farm_operation_agent,
         "max_retries": 2,
-        "critic": _farm_critic.critic,                   # grounding=단지 builder, soft/policy는 operation 재사용
-        "retry_policy": _operation_critic.retry_policy,  # 제네릭(report_type 기반)
+        "critic": _farm_critic.critic,                   # 단지 builder grounding
+        "retry_policy": _operation_critic.retry_policy,  # 제네릭(report_type 기반) 재사용
     },
 }
 REPORT_TYPES = tuple(REGISTRY.keys())

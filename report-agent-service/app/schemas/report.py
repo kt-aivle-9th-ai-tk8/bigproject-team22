@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class ReportRequest(BaseModel):
-    report_type: str = Field(..., examples=["operation"], description="anomaly | defect | operation")
+    report_type: str = Field(..., examples=["operation"], description="anomaly | defect | operation | farm_operation")
     event_id: int = Field(
         ...,
         examples=[2],
