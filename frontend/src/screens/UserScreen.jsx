@@ -1,108 +1,98 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom'; // 1. useNavigate import 추가
 import './UserScreen.css';
 
-// 라우터를 사용하신다면 useNavigate를 사용하시고, 
-// 여기서는 테스트용으로 props로 화면 전환 함수를 받거나 바로 사용할 수 있게 구성했습니다.
-const UserScreen = ({ onNavigateToAdmin }) => {
-  // 관리자 여부 상태 (실제 서비스에선 로그인 정보에서 받아옴)
-  const [isAdmin, setIsAdmin] = useState(true);
+const UserScreen = ({ onClose }) => {
+  const navigate = useNavigate(); // 2. navigate 객체 생성
 
-  // 내 정보 더미 데이터
-  const [userInfo, setUserInfo] = useState({
-    name: '김관리',
-    employeeId: '2401000',
-    email: 'admin@powerplant.co.kr',
-    department: '관제운영팀',
+  // 사용자 데이터
+  const userData = {
+    role: '관리자',
+    name: '홍길동',
+    isAdmin: true,
+    employeeId: '12345678',
     phone: '010-1234-5678',
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setUserInfo({ ...userInfo, [name]: value });
+    email: 'admin@company.com',
+    department: 'IT 운영팀',
   };
 
-  const handleSave = () => {
-    alert('내 정보가 수정되었습니다.');
+  // 3. 관리자 페이지 이동 핸들러
+  const handleNavigateToAdmin = () => {
+    navigate('/admin/users');
   };
 
   return (
-    <div className="user-container">
-      <div className="user-card">
+    <div className="user-screen-overlay">
+      <div className="user-card-modal">
         
-        {/* 상단 헤더 & 관리자 페이지 이동 버튼 */}
-        <div className="user-header">
-          <h1 className="user-title">내 정보 관리</h1>
-          
-          {/* 관리자(Admin) 권한이 있는 경우에만 버튼 노출 */}
-          {isAdmin && (
-            <button 
-              className="btn-admin-link"
-              onClick={onNavigateToAdmin}
-            >
-              관리자 페이지 이동
+        {/* 상단 헤더 */}
+        <div className="user-modal-header">
+          <h2 className="user-modal-title">내 정보 관리</h2>
+          <div className="header-icon-group">
+            <button className="icon-btn" title="수정">✏️</button>
+            <button className="icon-btn" onClick={onClose} title="닫기">✕</button>
+          </div>
+        </div>
+
+        {/* 프로필 이미지 & 이름 섹션 */}
+        <div className="profile-summary">
+          <div className="profile-avatar-circle">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div className="profile-name-area">
+            <span className="user-role-title">{userData.role} {userData.name}</span>
+            {userData.isAdmin && <span className="admin-badge">Admin</span>}
+          </div>
+        </div>
+
+        {/* 상세 정보 항목 리스트 */}
+        <div className="info-list-container">
+          <div className="info-row">
+            <span className="info-label">이름</span>
+            <span className="info-value">{userData.name}</span>
+          </div>
+
+          <div className="info-row">
+            <span className="info-label">사번</span>
+            <span className="info-value">{userData.employeeId}</span>
+          </div>
+
+          <div className="info-row">
+            <span className="info-label">연락처 (Mobile)</span>
+            <span className="info-value">{userData.phone}</span>
+          </div>
+
+          <div className="info-row">
+            <span className="info-label">이메일</span>
+            <span className="info-value">{userData.email}</span>
+          </div>
+
+          <div className="info-row">
+            <span className="info-label">소속 부서</span>
+            <span className="info-value">{userData.department}</span>
+          </div>
+
+          <div className="info-row password-change-row">
+            <span className="info-label">비밀번호 변경</span>
+            <div className="password-val-group">
+              <span className="info-value">********</span>
+              <span className="chevron-icon">❯</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 하단 액션 버튼 영역 */}
+        <div className="action-area">
+          {userData.isAdmin && (
+            <button className="btn-admin-entry" onClick={handleNavigateToAdmin}>
+              관리자 페이지 진입
             </button>
           )}
+          <button className="btn-logout-text">로그아웃</button>
         </div>
-
-        {/* 프로필 요약 */}
-        <div className="profile-section">
-          <div className="avatar-large">👤</div>
-          <div className="profile-info">
-            <h2>{userInfo.name} {isAdmin && <span style={{ fontSize: '0.75rem', color: '#2563eb', backgroundColor: '#eff6ff', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', marginLeft: '0.5rem' }}>관리자</span>}</h2>
-            <p>사번: {userInfo.employeeId} | {userInfo.department}</p>
-          </div>
-        </div>
-
-        {/* 정보 수정 폼 */}
-        <div className="info-grid">
-          <div className="info-group">
-            <label>이름</label>
-            <input 
-              type="text" 
-              name="name" 
-              value={userInfo.name} 
-              onChange={handleChange}
-              className="info-input" 
-            />
-          </div>
-
-          <div className="info-group">
-            <label>사번 (수정 불가)</label>
-            <input 
-              type="text" 
-              value={userInfo.employeeId} 
-              disabled 
-              className="info-input"
-              style={{ opacity: 0.7, cursor: 'not-allowed' }}
-            />
-          </div>
-
-          <div className="info-group">
-            <label>이메일</label>
-            <input 
-              type="email" 
-              name="email" 
-              value={userInfo.email} 
-              onChange={handleChange}
-              className="info-input" 
-            />
-          </div>
-
-          <div className="info-group">
-            <label>연락처</label>
-            <input 
-              type="text" 
-              name="phone" 
-              value={userInfo.phone} 
-              onChange={handleChange}
-              className="info-input" 
-            />
-          </div>
-        </div>
-
-        <button className="btn-save" onClick={handleSave}>
-          회원정보 수정 저장
-        </button>
 
       </div>
     </div>
