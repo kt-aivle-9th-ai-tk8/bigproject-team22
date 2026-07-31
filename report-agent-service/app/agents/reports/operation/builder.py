@@ -7,7 +7,8 @@
 - 차트는 mermaid xychart-beta (anomaly와 동일 컨벤션, GitHub에서 렌더/ git 친화적).
 
 운영 리포트 고유 포맷(이상감지와 구분): KPI 대시보드 → 발전 성과 → 손실 분해 진단 →
-가동 저해 현황 → (총평) → 결함 → 조치.
+가동 저해 현황 → (총평).
+  결함 점검 현황·운영 조치 권고 섹션은 터빈 리포트에선 다루지 않는다(단지 리포트가 담당).
 """
 from app.agents.verify import extract_numbers
 
@@ -212,13 +213,6 @@ def build_type_bars(to) -> list:
         lines.append(f"{_pad_display(CATEGORY_KO[k], 12)} | {_bar(c, mx)} {c}")
     lines.append("```")
     return lines
-
-
-def build_defect_section(to) -> list:
-    d = to.get("defect", {}) or {}
-    if not d.get("available"):
-        return ["- 결함 진단 데이터 미연동 — 결함 건수 산출 불가 (0건으로 표기)"]
-    return [f"- 기간 내 결함 건수: {d.get('count', 0)}건"]
 
 
 def render_report(to, analysis: str = None) -> str:
