@@ -1,3 +1,7 @@
 ### Mac ###
 .DS_Store
+
 frontend/.env
+
+### vscode 설정 ###
+.vscode/settings.json
