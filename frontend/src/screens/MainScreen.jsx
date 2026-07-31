@@ -148,6 +148,26 @@ const dummyPlants = [
 
     faults: [],
   },
+  {
+    id: 5,
+    name: "장흥 발전소3",
+    coordinate: [126.912, 34.684],
+
+    weather: {
+      weatherType: WEATHER_TYPE.CLOUDY,
+      temperature: 31.0,
+      windSpeed: 4.2,
+    },
+
+    power: {
+      currentOutput: 15.8,
+      currentPower: 380,
+      monthPower: 7.9,
+      yearPower: 88.5,
+    },
+
+    faults: [],
+  },
 ];
 
 const alarmReports = [

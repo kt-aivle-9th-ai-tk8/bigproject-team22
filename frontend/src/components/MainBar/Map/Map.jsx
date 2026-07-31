@@ -22,18 +22,13 @@ import "./Map.css";
 
 function Map({
   objects = [],
-
-  /*
-   * 발전소 또는 터빈 아이콘
-   */
   iconSrc,
-
-  /*
-   * 아이콘과 클러스터 설정
-   */
   iconScale = 0.07,
   clusterDistance = 40,
   clusterMinDistance = 15,
+
+  singleMarkerFillColor,
+  singleMarkerStrokeColor,
 
   onSelectObject,
 }) {
@@ -215,6 +210,8 @@ function Map({
       iconScale,
       clusterDistance,
       clusterMinDistance,
+      singleMarkerFillColor,
+      singleMarkerStrokeColor,
     });
 
     /*

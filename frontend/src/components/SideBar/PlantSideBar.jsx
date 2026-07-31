@@ -1,14 +1,15 @@
 import { useState } from "react";
 
-import WeatherGroup from "./Weather/WeatherGroup";
 import TurbineList from "./Turbine/TurbineList";
+import PlantSummaryGroup from "./PlantSummaryGroup";
 import ReportBox from "./Report/ReportBox";
 import SideTitle from "./SideTitle";
 import ReportTitleToggle from "./Report/ReportTitleToggle";
 import InspectionReportBox from "./Report/InspectionReportBox";
 
-import { WEATHER_TYPE } from "./Weather/WeatherItem";
 import { TURBINE_STATUS } from "./Turbine/TurbineItem";
+import { WEATHER_TYPE } from "./Weather/WeatherItem";
+
 import "./PlantSideBar.css";
 
 function PlantSideBar({
@@ -20,30 +21,6 @@ function PlantSideBar({
 
   const plantName = selectedPlant?.title || selectedPlant?.name;
   const today = new Date().toISOString().slice(0, 10);
-
-  const weatherItems = [
-    {
-      id: `${selectedPlant?.id || 1}-now`,
-      title: "현재 날씨",
-      weatherType: WEATHER_TYPE.RAIN,
-      temperature: 32.0,
-      windSpeed: 5.0,
-    },
-    {
-      id: `${selectedPlant?.id || 1}-6h`,
-      title: "오후 4시",
-      weatherType: WEATHER_TYPE.CLOUDY,
-      temperature: 28.0,
-      windSpeed: 10.0,
-    },
-    {
-      id: `${selectedPlant?.id || 1}-12h`,
-      title: "오후 10시",
-      weatherType: WEATHER_TYPE.PARTLY_CLOUDY,
-      temperature: 30.0,
-      windSpeed: 5.0,
-    },
-  ];
 
   const turbineItems = [
     {
@@ -69,11 +46,32 @@ function PlantSideBar({
     },
   ];
 
+  const weatherInfo = {
+    title: plantName || "발전소",
+    weatherType: WEATHER_TYPE.RAIN,
+    temperature: 32.0,
+    windSpeed: 5.0,
+  };
+
+  const powerInfo = {
+    title: plantName || "발전소",
+    currentOutput: 1005.4,
+    currentPower: 412,
+    monthPower: 8.7,
+    yearPower: 96.4,
+  };
+
   return (
     <div className="sidebar-content plant-sidebar-content">
-      <section className="sidebar-panel plant-weather-panel">
-        <SideTitle>{plantName} 날씨</SideTitle>
-        <WeatherGroup items={weatherItems} />
+      <section className="sidebar-panel turbine-power-panel">
+        <SideTitle>
+          {plantName} 현황
+        </SideTitle>
+
+        <PlantSummaryGroup
+          weatherInfo={weatherInfo}
+          powerInfo={powerInfo}
+        />
       </section>
 
       <div className="sidebar-divider-wrap plant-divider">
