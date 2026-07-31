@@ -236,7 +236,8 @@ def _facts_data_missing(to):
 
 def _facts_chronic(to, confirmed):
     e = to["event"]
-    pct = abs((e.get("energy_ratio_30d") or 0) * 100)
+    er = e.get("energy_ratio_30d")
+    pct = abs(er * 100) if er is not None else None
     lines = [f"- 대상 호기: {e['turbine_code']}", f"- 분석 기간: 최근 {CHRONIC_DAYS}일",
              f"- 달성률 단지 평균 대비 뒤처짐: {_f(pct, 1)}%p",
              f"- 정상 호기 간 자연 변동 폭: {_f(CHRONIC_NATURAL_VAR_PP, 1)}%p",
