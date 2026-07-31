@@ -44,19 +44,24 @@ def get_farm_scada() -> dict:
     if df.empty:
         return {"found": False}
 
-    total_actual_kwh = df["power_output"].sum()
-    total_expected_kwh = df["expected_power_unit"].sum()
+    # 손실 계산은 expected/actual이 모두 있는 행만 사용 — expected에 NaN이 있으면
+    #   sum()은 NaN을 무시(0 취급)하지만 gap(뺄셈)은 NaN이 되어 총손실과 분해 합이 어긋난다.
+    valid = df[["expected_power_unit", "power_output"]].notna().all(axis=1)
+    dfv = df[valid]
+    total_actual_kwh = dfv["power_output"].sum()
+    total_expected_kwh = dfv["expected_power_unit"].sum()
     util = (total_actual_kwh / total_expected_kwh * 100) if total_expected_kwh else None
     availability = (1 - df["is_stopped"].mean()) * 100
     avg_wind = df["wind_speed"].mean()
 
-    gap = df["expected_power_unit"] - df["power_output"]
-    stopped = df["is_stopped"] == 1
+    # 손실 분해: 두 항의 합 = 총손실(기대-실측)이 되도록 양쪽 모두 순합(clip 없음, 유효 행만).
+    gap = dfv["expected_power_unit"] - dfv["power_output"]
+    stopped = dfv["is_stopped"] == 1
     downtime_loss_kwh = gap[stopped].sum()
-    perf_loss_kwh = gap[~stopped].clip(lower=0).sum()
+    perf_loss_kwh = gap[~stopped].sum()
 
-    # 터빈별 실적 (달성률 오름차순 = 부진 터빈 먼저)
-    g = df.groupby("turbine_code").agg(
+    # 터빈별 실적 (달성률 오름차순 = 부진 터빈 먼저). 손실 기여 합 = 단지 총손실이 되도록 유효 행만.
+    g = dfv.groupby("turbine_code").agg(
         actual_sum=("power_output", "sum"),
         expected_sum=("expected_power_unit", "sum"),
         stopped=("is_stopped", "mean"),
@@ -128,6 +133,8 @@ def get_farm_anomaly(start, end_excl) -> dict:
             "stop": int(cat_counts.get("stop", 0)),
             "data_missing": int(cat_counts.get("data_missing", 0)),
             "degradation": int(cat_counts.get("degradation", 0)),
+            # 미지의 event_type도 노출 — total과 유형별 합 불일치 방지
+            "other": int(cat_counts.get("other", 0)),
         },
         "by_turbine": by_turbine,
     }

@@ -72,6 +72,8 @@ def get_anomaly_summary(turbine_code, start, end_excl) -> dict:
             "stop": int(cats.get("stop", 0)),
             "data_missing": int(cats.get("data_missing", 0)),
             "degradation": int(cats.get("degradation", 0)),
+            # 미지의 event_type(EVENT_CATEGORY 미등록)도 노출 — total과 유형별 합 불일치 방지
+            "other": int(cats.get("other", 0)),
         },
     }
 
@@ -87,16 +89,22 @@ def get_scada_summary(turbine_code) -> dict:
     util = (avg_actual / avg_expected * 100) if avg_expected else None
 
     # 총 발전량 (시간별 kW 합 = kWh → /1000 = MWh)
-    total_actual_kwh = df["power_output"].sum()
-    total_expected_kwh = df["expected_power_unit"].sum()
+    #   expected에 NaN이 있으면 sum()은 무시(0 취급)하지만 gap(뺄셈)은 NaN이 되어
+    #   총손실과 분해 합이 어긋난다 → 손실 계산은 두 값이 모두 있는 행만 사용.
+    valid = df[["expected_power_unit", "power_output"]].notna().all(axis=1)
+    dfv = df[valid]
+    total_actual_kwh = dfv["power_output"].sum()
+    total_expected_kwh = dfv["expected_power_unit"].sum()
 
     # 운영 진단: 가동률 / 손실 분해(정지 vs 성능저하) / 풍황
     availability = (1 - df["is_stopped"].mean()) * 100
     avg_wind = df["wind_speed"].mean()
-    gap = df["expected_power_unit"] - df["power_output"]
-    stopped = df["is_stopped"] == 1
+    # 손실 분해: 정지 구간 gap + 가동 구간 gap. 두 항의 합 = 총손실(기대-실측)이 되도록
+    #   양쪽 모두 clip 없이 순합을 쓴다(가동 구간의 초과발전이 상쇄되어야 분해 합이 총손실과 일치).
+    gap = dfv["expected_power_unit"] - dfv["power_output"]
+    stopped = dfv["is_stopped"] == 1
     downtime_loss_kwh = gap[stopped].sum()
-    perf_loss_kwh = gap[~stopped].clip(lower=0).sum()
+    perf_loss_kwh = gap[~stopped].sum()
 
     df["month"] = df["timestamp"].dt.strftime("%Y-%m")
     grp = df.groupby("month").agg(expected=("expected_power_unit", "mean"),

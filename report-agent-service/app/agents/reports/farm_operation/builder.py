@@ -47,9 +47,9 @@ def _worst_turbine(to):
 
 
 def fact_lines(to) -> list:
-    """LLM 총평용 관측 요약 (숫자 쓰지 말 것). 단지 관점 정성 근거."""
+    """LLM 종합분석이 '인용'할 수 있는 facts 블록(수치 포함). 이 수치만 인용 가능(생성 금지)."""
     f = facts(to)
-    crit, low, ok, top_loss = _fleet_health(to)
+    crit, low, ok, na, top_loss = _fleet_health(to)
     lines = [
         f"- 단지 총 실측 발전량: {_f(f['total_actual_mwh'])} MWh / 총 기대 발전량: {_f(f['total_expected_mwh'])} MWh",
         f"- 단지 발전 달성률(실측/기대): {_f(f['utilization'])}%",
@@ -64,11 +64,20 @@ def fact_lines(to) -> list:
 
 
 def allowed_numbers(to) -> set:
-    """종합분석이 인용해도 되는 수치(절대값) 집합 = facts 블록 + 기간 날짜 (critic grounding)."""
+    """종합분석이 인용해도 되는 수치(절대값) 집합 = facts 블록 + 기간 날짜 + 터빈 코드 번호.
+
+    터빈 코드는 'U5'로 쓰면 extract_numbers가 걸러내지만, LLM이 '터빈 5'로 풀어 쓰면 숫자 5가
+    추출돼 환각으로 오반려된다. 코드 번호(U5→5)를 허용집합에 넣어 식별자 언급을 막지 않는다.
+    """
     text = "\n".join(fact_lines(to))
     t = to.get("farm", {}) or {}
     text += "\n" + str(t.get("period_start", "")) + "\n" + str(t.get("period_end", ""))
-    return {abs(n) for n in extract_numbers(text)}
+    allowed = {abs(n) for n in extract_numbers(text)}
+    for tr in (to.get("scada", {}) or {}).get("per_turbine", []):
+        digits = "".join(ch for ch in str(tr.get("turbine_code", "")) if ch.isdigit())
+        if digits:
+            allowed.add(float(digits))
+    return allowed
 
 
 def build_kpi_table(to) -> list:
@@ -143,21 +152,30 @@ def build_loss_diagnosis(to) -> list:
 
 
 def _fleet_health(to):
-    """(심각, 저조, 정상) 터빈 수 + 최대 손실 기여 터빈. 달성률 임계 40/80."""
+    """(심각, 저조, 정상, 미가용) 터빈 수 + 최대 손실 기여 터빈. 달성률 임계 40/80.
+
+    달성률이 None(기대발전량 0 등으로 산출 불가)인 터빈은 '미가용'으로 분리한다
+    — 0으로 간주하면 '심각'으로 오분류돼 함대 건강·LLM 총평 근거가 왜곡된다.
+    """
     pt = (to.get("scada", {}) or {}).get("per_turbine", [])
-    crit = sum(1 for t in pt if (t.get("utilization_pct") or 0) < 40)
-    low = sum(1 for t in pt if 40 <= (t.get("utilization_pct") or 0) < 80)
-    ok = sum(1 for t in pt if (t.get("utilization_pct") or 0) >= 80)
+    vals = [t.get("utilization_pct") for t in pt]
+    crit = sum(1 for v in vals if v is not None and v < 40)
+    low = sum(1 for v in vals if v is not None and 40 <= v < 80)
+    ok = sum(1 for v in vals if v is not None and v >= 80)
+    na = sum(1 for v in vals if v is None)
     top_loss = max(pt, key=lambda t: (t.get("loss_mwh") or 0), default=None)
-    return crit, low, ok, (top_loss["turbine_code"] if top_loss else "—")
+    return crit, low, ok, na, (top_loss["turbine_code"] if top_loss else "—")
 
 
 def build_fleet_health(to) -> list:
-    """함대 건강 요약 — 8기 중 심각/저조/정상 몇 기 (국소 vs 전반 문제 신호)."""
+    """함대 건강 요약 — 심각/저조/정상(+미가용) 몇 기 (국소 vs 전반 문제 신호)."""
     f = facts(to)
-    crit, low, ok, _ = _fleet_health(to)
-    return [f"- 전체 {f['n_turbines']}기 중 — 🔴 심각(달성률<40%) {crit}기 · "
-            f"🟡 저조(40~80%) {low}기 · 🟢 정상(≥80%) {ok}기"]
+    crit, low, ok, na, _ = _fleet_health(to)
+    line = (f"- 전체 {f['n_turbines']}기 중 — 🔴 심각(달성률<40%) {crit}기 · "
+            f"🟡 저조(40~80%) {low}기 · 🟢 정상(≥80%) {ok}기")
+    if na:
+        line += f" · ⚪ 산출 불가 {na}기"
+    return [line]
 
 
 def build_turbine_table(to) -> list:

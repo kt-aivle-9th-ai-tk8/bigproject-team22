@@ -97,7 +97,12 @@ def allowed_numbers(to) -> set:
     text = "\n".join(fact_lines(to))
     t = to.get("turbine", {}) or {}
     text += "\n" + str(t.get("period_start", "")) + "\n" + str(t.get("period_end", ""))
-    return {abs(n) for n in extract_numbers(text)}
+    allowed = {abs(n) for n in extract_numbers(text)}
+    # 터빈 코드('U2')를 LLM이 '터빈 2'로 풀어 써도 환각으로 오반려되지 않도록 코드 번호를 허용.
+    digits = "".join(ch for ch in str(t.get("turbine_code", "")) if ch.isdigit())
+    if digits:
+        allowed.add(float(digits))
+    return allowed
 
 
 def _loss_driver(f) -> tuple:
