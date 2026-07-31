@@ -51,8 +51,8 @@ def get_farm_scada() -> dict:
     total_actual_kwh = dfv["power_output"].sum()
     total_expected_kwh = dfv["expected_power_unit"].sum()
     util = (total_actual_kwh / total_expected_kwh * 100) if total_expected_kwh else None
-    availability = (1 - df["is_stopped"].mean()) * 100
-    avg_wind = df["wind_speed"].mean()
+    availability = (1 - dfv["is_stopped"].mean()) * 100
+    avg_wind = dfv["wind_speed"].mean()
 
     # 손실 분해: 두 항의 합 = 총손실(기대-실측)이 되도록 양쪽 모두 순합(clip 없음, 유효 행만).
     gap = dfv["expected_power_unit"] - dfv["power_output"]
@@ -80,7 +80,7 @@ def get_farm_scada() -> dict:
     per_turbine.sort(key=lambda x: (x["utilization_pct"] is None, x["utilization_pct"]))
 
     # 월별 단지 총 발전량 (MWh)
-    dfm = df.copy()
+    dfm = dfv.copy()   # 월별 추이도 같은 유효 행 모집단 사용
     dfm["month"] = dfm["timestamp"].dt.strftime("%Y-%m")
     grp = dfm.groupby("month").agg(expected=("expected_power_unit", "sum"),
                                    actual=("power_output", "sum"))
@@ -89,7 +89,7 @@ def get_farm_scada() -> dict:
 
     return {
         "found": True,
-        "n_turbines": int(df["turbine_code"].nunique()),
+        "n_turbines": int(dfv["turbine_code"].nunique()),
         "period_start": _num(df["timestamp"].min()),
         "period_end": _num(df["timestamp"].max()),
         "total_actual_mwh": _num(total_actual_kwh / 1000.0),
