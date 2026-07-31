@@ -24,6 +24,10 @@ from app.agents.reports.defect import tools as _defect_tools
 from app.agents.reports.defect import critic_rules as _defect_critic
 from app.agents.reports.operation import operation_agent as _operation_agent
 from app.agents.reports.operation import tools as _operation_tools
+from app.agents.reports.operation import critic_rules as _operation_critic
+from app.agents.reports.farm_operation import farm_operation_agent as _farm_agent
+from app.agents.reports.farm_operation import tools as _farm_tools
+from app.agents.reports.farm_operation import critic_rules as _farm_critic
 
 REGISTRY = {
     "anomaly": {
@@ -39,11 +43,19 @@ REGISTRY = {
         "max_retries": 2,
         "critic": _defect_critic.critic,   # code_checks(결정론)+llm_check(LLM). retry_policy 없음 → 기본 정책
     },
-    "operation": {
+    "operation": {   # 터빈 단위 운영 (event_id = 터빈번호)
         "fetch": _operation_tools.fetch,
         "agent": _operation_agent.operation_agent,
         "max_retries": 2,
-        "critic": None,
+        "critic": _operation_critic.critic,              # 총평 숫자 게이트(hard) + 인과/정비 가드(soft)
+        "retry_policy": _operation_critic.retry_policy,  # hard/soft 소진·강등 정책
+    },
+    "farm_operation": {   # 단지(발전소 전체) 운영 — 전 터빈 집계 + 터빈별 순위
+        "fetch": _farm_tools.fetch,
+        "agent": _farm_agent.farm_operation_agent,
+        "max_retries": 2,
+        "critic": _farm_critic.critic,                   # 단지 builder grounding
+        "retry_policy": _operation_critic.retry_policy,  # 제네릭(report_type 기반) 재사용
     },
 }
 REPORT_TYPES = tuple(REGISTRY.keys())
