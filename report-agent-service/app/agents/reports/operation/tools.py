@@ -72,6 +72,8 @@ def get_anomaly_summary(turbine_code, start, end_excl) -> dict:
             "stop": int(cats.get("stop", 0)),
             "data_missing": int(cats.get("data_missing", 0)),
             "degradation": int(cats.get("degradation", 0)),
+            # 미지의 event_type(EVENT_CATEGORY 미등록)도 노출 — total과 유형별 합 불일치 방지
+            "other": int(cats.get("other", 0)),
         },
     }
 
@@ -82,31 +84,40 @@ def get_scada_summary(turbine_code) -> dict:
     if df.empty:
         return {"found": False, "n_rows": 0}
 
-    avg_actual = df["power_output"].mean()
-    avg_expected = df["expected_power_unit"].mean()
+    # 유효 행(expected/actual 모두 존재)만 사용 — 리포트의 모든 발전 지표가 같은 모집단을 쓰도록.
+    #   expected에 NaN이 있으면 sum()은 무시(0 취급)하지만 gap(뺄셈)은 NaN이 되어
+    #   총손실과 분해 합이 어긋나고, 평균·월별과도 모집단이 달라진다.
+    valid = df[["expected_power_unit", "power_output"]].notna().all(axis=1)
+    dfv = df[valid]
+
+    avg_actual = dfv["power_output"].mean()
+    avg_expected = dfv["expected_power_unit"].mean()
     util = (avg_actual / avg_expected * 100) if avg_expected else None
 
     # 총 발전량 (시간별 kW 합 = kWh → /1000 = MWh)
-    total_actual_kwh = df["power_output"].sum()
-    total_expected_kwh = df["expected_power_unit"].sum()
+    total_actual_kwh = dfv["power_output"].sum()
+    total_expected_kwh = dfv["expected_power_unit"].sum()
 
     # 운영 진단: 가동률 / 손실 분해(정지 vs 성능저하) / 풍황
-    availability = (1 - df["is_stopped"].mean()) * 100
-    avg_wind = df["wind_speed"].mean()
-    gap = df["expected_power_unit"] - df["power_output"]
-    stopped = df["is_stopped"] == 1
+    availability = (1 - dfv["is_stopped"].mean()) * 100
+    avg_wind = dfv["wind_speed"].mean()
+    # 손실 분해: 정지 구간 gap + 가동 구간 gap. 두 항의 합 = 총손실(기대-실측)이 되도록
+    #   양쪽 모두 clip 없이 순합을 쓴다(가동 구간의 초과발전이 상쇄되어야 분해 합이 총손실과 일치).
+    gap = dfv["expected_power_unit"] - dfv["power_output"]
+    stopped = dfv["is_stopped"] == 1
     downtime_loss_kwh = gap[stopped].sum()
-    perf_loss_kwh = gap[~stopped].clip(lower=0).sum()
+    perf_loss_kwh = gap[~stopped].sum()
 
-    df["month"] = df["timestamp"].dt.strftime("%Y-%m")
-    grp = df.groupby("month").agg(expected=("expected_power_unit", "mean"),
-                                  actual=("power_output", "mean"))
+    dfm = dfv.copy()   # 월별 추이도 같은 유효 행 모집단 사용
+    dfm["month"] = dfm["timestamp"].dt.strftime("%Y-%m")
+    grp = dfm.groupby("month").agg(expected=("expected_power_unit", "mean"),
+                                   actual=("power_output", "mean"))
     monthly = [{"month": m, "expected": _num(r["expected"]), "actual": _num(r["actual"])}
                for m, r in grp.iterrows()]
 
     return {
         "found": True,
-        "n_rows": int(len(df)),
+        "n_rows": int(len(dfv)),
         "period_start": _num(df["timestamp"].min()),
         "period_end": _num(df["timestamp"].max()),
         "avg_actual_power": _num(avg_actual),
