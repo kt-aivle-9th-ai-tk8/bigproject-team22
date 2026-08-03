@@ -20,7 +20,6 @@ public enum ErrorCode {
 
     // User
     DUPLICATE_EMPLOYEE_ID(HttpStatus.CONFLICT, "U001", "이미 존재하는 사번입니다."),
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U002", "사용자를 찾을 수 없습니다.");
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U002", "사용자를 찾을 수 없습니다."),
 
     // Monitoring - WindFarm / Turbine / Blade
