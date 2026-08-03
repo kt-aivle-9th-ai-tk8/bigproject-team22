@@ -3,9 +3,24 @@
   padding: 7px 20px 15px;
   box-sizing: border-box;
 
-  text-align: right;
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 
   font-size: 18px;
   font-weight: 750;
   color: #000;
+}
+
+.side-title-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.side-title-text {
+  flex: 1;
+  text-align: right;
 }
