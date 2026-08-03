@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,9 +40,12 @@ public class PowerQueryService {
     private final DailyGenerationRepository dailyGenerationRepository;
     private final MonthlyGenerationRepository monthlyGenerationRepository;
 
+    /** 발전량 집계 배치와 동일한 기준 시간대(당일/당월 키 조회). 서버 기본 시간대 의존을 피한다. */
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
+
     /** 단일 터빈의 발전량 요약(현재/당일/당월). */
     public PowerSummary summaryByTurbine(Long turbineId) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZONE);
         Double current = scadaRecordRepository.findLatestByTurbineId(turbineId)
                 .map(ScadaRecord::getPowerOutput)
                 .orElse(null);
@@ -59,7 +63,7 @@ public class PowerQueryService {
         if (turbineIds == null || turbineIds.isEmpty()) {
             return PowerSummary.empty();
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZONE);
         Double current = sum(turbineIds.stream()
                 .map(id -> scadaRecordRepository.findLatestByTurbineId(id)
                         .map(ScadaRecord::getPowerOutput)
