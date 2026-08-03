@@ -57,8 +57,13 @@ public class WindFarmQueryService {
         // top-n 은 단지 용량(capacity) 기준 상위 n개. capacity 미상(null)은 뒤로 정렬.
         windFarms.sort(Comparator.comparingDouble(
                 (WindFarm wf) -> wf.getCapacity() == null ? Double.NEGATIVE_INFINITY : wf.getCapacity()).reversed());
-        if (topN != null && topN >= 0 && windFarms.size() > topN) {
-            windFarms = windFarms.subList(0, topN);
+        if (topN != null) {
+            if (topN <= 0) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT);
+            }
+            if (windFarms.size() > topN) {
+                windFarms = windFarms.subList(0, topN);
+            }
         }
 
         // 상위 n개로 좁힌 뒤에만 발전량/날씨를 계산(불필요한 조회 방지).
