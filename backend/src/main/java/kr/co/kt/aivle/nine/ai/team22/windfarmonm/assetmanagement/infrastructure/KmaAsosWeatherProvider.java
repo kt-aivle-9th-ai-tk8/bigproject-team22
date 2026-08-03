@@ -2,10 +2,12 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.infrastructure
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.application.dto.WeatherInfo;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.application.port.WeatherProvider;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.domain.WeatherType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -17,8 +19,9 @@ import java.util.List;
  * {@link WeatherProvider} 어댑터. 기상청 지상관측 시간자료(ASOS, kma_sfctm2.php)로 대시보드 날씨를 조회한다.
  * <p>
  * 발전소별 빈번 호출/호출 제한을 고려해 ASOS 지점별 Redis 10분 TTL 캐싱을 병행한다(관측이 시간자료이므로 충분).
- * 조회 실패/무자료는 UNKNOWN 으로 폴백(과거 날씨 오인 방지)하며, 이 결과도 캐싱한다(의도적 — KMA 재호출 억제).
- * Redis 장애 시에도 단지 조회 전체를 실패시키지 않도록 캐시 접근을 감싼다.
+ * 조회 실패/무자료는 UNKNOWN 으로 폴백(과거 날씨 오인 방지)하되 <b>캐싱하지 않아</b> 다음 요청에서 자연히 재조회된다
+ * (성공 결과만 캐싱 = 명시적 재시도 로직 없이 캐시-미스가 재시도 역할). Redis 장애 시에도 단지 조회 전체를 실패시키지 않도록 캐시 접근을 감싼다.
+ * HTTP 는 Boot 자동구성 {@link RestClient.Builder} 를 주입받고, 타임아웃만 KMA 전용({@link KmaProperties})으로 지정한다.
  */
 @Slf4j
 @Component
@@ -28,22 +31,22 @@ public class KmaAsosWeatherProvider implements WeatherProvider {
     private static final String ASOS_HOURLY_PATH = "/kma_sfctm2.php";
     private static final String CACHE_KEY_PREFIX = "weather:asos:";
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
-    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
 
     private final KmaProperties properties;
     private final RedisTemplate<Object, Object> redisTemplate;
     private final RestClient restClient;
 
-    public KmaAsosWeatherProvider(KmaProperties properties, RedisTemplate<Object, Object> redisTemplate) {
+    public KmaAsosWeatherProvider(KmaProperties properties, RedisTemplate<Object, Object> redisTemplate,
+                                  RestClient.Builder restClientBuilder) {
         this.properties = properties;
         this.redisTemplate = redisTemplate;
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(CONNECT_TIMEOUT);
-        factory.setReadTimeout(READ_TIMEOUT);
-        this.restClient = RestClient.builder()
+        // 타임아웃은 KMA 전용(전역 spring.http.clients.* 대신 kma.*). 요청 팩토리 구현체 선택은 프레임워크에 위임(detect).
+        HttpClientSettings settings = HttpClientSettings.defaults()
+                .withConnectTimeout(properties.connectTimeout())
+                .withReadTimeout(properties.readTimeout());
+        this.restClient = restClientBuilder
                 .baseUrl(properties.baseUrl() != null ? properties.baseUrl() : "")
-                .requestFactory(factory)
+                .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
                 .build();
     }
 
@@ -65,10 +68,13 @@ public class KmaAsosWeatherProvider implements WeatherProvider {
 
         WeatherInfo fetched = fetch(asosStationId);
 
-        try {
-            redisTemplate.opsForValue().set(cacheKey, fetched, CACHE_TTL);
-        } catch (RuntimeException e) {
-            log.warn("ASOS 날씨 캐시 저장 실패(stn={}): {}", asosStationId, e.getMessage());
+        // 성공(유효 날씨)만 캐싱한다. 실패(UNKNOWN)는 캐싱하지 않아 다음 요청에서 자연히 재조회된다(캐시-미스 = 재시도).
+        if (fetched.weatherType() != WeatherType.UNKNOWN) {
+            try {
+                redisTemplate.opsForValue().set(cacheKey, fetched, CACHE_TTL);
+            } catch (RuntimeException e) {
+                log.warn("ASOS 날씨 캐시 저장 실패(stn={}): {}", asosStationId, e.getMessage());
+            }
         }
         return fetched;
     }

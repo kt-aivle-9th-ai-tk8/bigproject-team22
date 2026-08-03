@@ -22,3 +22,5 @@ spring:
 kma:
   api-key: ${KMA_API_KEY:} # 미설정 시 어댑터는 빈 날씨 결과로 폴백
   base-url: ${KMA_BASE_URL:} # 예: https://apihub.kma.go.kr/api/typ01/url
+  connect-timeout: ${KMA_CONNECT_TIMEOUT:3s} # KMA 전용 fail-fast(전역 spring.http.clients.* 대신 KMA 한정)
+  read-timeout: ${KMA_READ_TIMEOUT:5s}
