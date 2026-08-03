@@ -12,12 +12,14 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "jszip": "^3.10.1",
+    "lucide-react": "^1.27.0",
     "ol": "^10.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-gauge-component": "^2.0.29",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.1",
+    "recharts": "^3.10.1",
     "three": "^0.185.1"
   },
   "devDependencies": {
