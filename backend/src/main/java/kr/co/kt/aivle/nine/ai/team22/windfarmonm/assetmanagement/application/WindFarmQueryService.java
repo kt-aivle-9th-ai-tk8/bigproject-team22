@@ -84,9 +84,10 @@ public class WindFarmQueryService {
      */
     @Transactional(readOnly = true)
     public WindFarmDetailResult getWindFarm(Long userId, boolean admin, Long windFarmId) {
+        // 인가 검사를 존재 확인보다 먼저 수행한다(미배정 사용자에게 404/403 차이로 단지 존재를 노출하지 않도록).
+        accessGuard.checkWindFarmAccess(userId, admin, windFarmId);
         WindFarm windFarm = windFarmRepository.findById(windFarmId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WIND_FARM_NOT_FOUND));
-        accessGuard.checkWindFarmAccess(userId, admin, windFarmId);
 
         List<Turbine> turbines = turbineRepository.findByWindFarmId(windFarmId);
         Map<Long, String> modelNames = modelNamesOf(turbines);
@@ -118,9 +119,9 @@ public class WindFarmQueryService {
      */
     @Transactional(readOnly = true)
     public List<PowerPoint> getWindFarmPower(Long userId, boolean admin, Long windFarmId, PowerQuery query) {
+        accessGuard.checkWindFarmAccess(userId, admin, windFarmId);
         windFarmRepository.findById(windFarmId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WIND_FARM_NOT_FOUND));
-        accessGuard.checkWindFarmAccess(userId, admin, windFarmId);
         List<Long> turbineIds = turbineIdsOf(windFarmId);
         return powerQueryService.seriesByTurbines(turbineIds, query.start(), query.end(), query.term());
     }
