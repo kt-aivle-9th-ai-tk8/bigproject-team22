@@ -5,6 +5,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.domain.TurbineR
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,5 +23,10 @@ public class TurbineRepositoryImpl implements TurbineRepository {
     @Override
     public List<Turbine> findByWindFarmId(Long windFarmId) {
         return jpaRepository.findByWindFarmId(windFarmId);
+    }
+
+    @Override
+    public List<Turbine> findByWindFarmIdIn(Collection<Long> windFarmIds) {
+        return jpaRepository.findByWindFarmIdIn(windFarmIds);
     }
 }

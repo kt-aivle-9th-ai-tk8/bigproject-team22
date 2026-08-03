@@ -12,6 +12,9 @@ public interface ScadaRecordRepository {
     /** 단일 터빈의 최신 계측 레코드(현재 출력용) */
     Optional<ScadaRecord> findLatestByTurbineId(Long turbineId);
 
+    /** 여러 터빈의 최신 계측 레코드(터빈당 1건). 통합조회 N+1 방지용 배치 조회. */
+    List<ScadaRecord> findLatestByTurbineIds(List<Long> turbineIds);
+
     /** 단일 터빈의 기간 raw 계측 레코드 */
     List<ScadaRecord> findByTurbineIdAndTimeBetween(Long turbineId, LocalDateTime start, LocalDateTime end);
 

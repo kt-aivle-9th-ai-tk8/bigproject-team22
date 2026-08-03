@@ -21,6 +21,14 @@ public class ScadaRecordRepositoryImpl implements ScadaRecordRepository {
     }
 
     @Override
+    public List<ScadaRecord> findLatestByTurbineIds(List<Long> turbineIds) {
+        if (turbineIds == null || turbineIds.isEmpty()) {
+            return List.of();
+        }
+        return jpaRepository.findLatestByTurbineIds(turbineIds);
+    }
+
+    @Override
     public List<ScadaRecord> findByTurbineIdAndTimeBetween(Long turbineId, LocalDateTime start, LocalDateTime end) {
         return jpaRepository.findByTurbineIdAndTimeBetween(turbineId, start, end);
     }

@@ -64,10 +64,8 @@ public class PowerQueryService {
             return PowerSummary.empty();
         }
         LocalDate today = LocalDate.now(ZONE);
-        Double current = sum(turbineIds.stream()
-                .map(id -> scadaRecordRepository.findLatestByTurbineId(id)
-                        .map(ScadaRecord::getPowerOutput)
-                        .orElse(null))
+        Double current = sum(scadaRecordRepository.findLatestByTurbineIds(turbineIds).stream()
+                .map(ScadaRecord::getPowerOutput)
                 .toList());
         Double todayPower = sum(dailyGenerationRepository.findByTurbineIdsAndTime(turbineIds, today.atStartOfDay()).stream()
                 .map(DailyGeneration::getDailyPowerOutput)

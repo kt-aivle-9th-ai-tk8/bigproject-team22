@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -70,6 +71,20 @@ public class WindFarmQueryService {
         }
 
         // 상위 n개로 좁힌 뒤에만 발전량/날씨를 계산(불필요한 조회 방지).
+        // N+1 방지: 터빈은 대상 단지들을 한 번에 조회해 단지별로 그룹화하고,
+        // 날씨는 관측소 ID 기준 중복 제거 후 지점당 1회만 조회한다.
+        List<Long> farmIds = windFarms.stream().map(WindFarm::getId).toList();
+        Map<Long, List<Long>> turbineIdsByFarm = power
+                ? turbineRepository.findByWindFarmIdIn(farmIds).stream()
+                        .collect(Collectors.groupingBy(Turbine::getWindFarmId,
+                                Collectors.mapping(Turbine::getId, Collectors.toList())))
+                : Map.of();
+        Map<Long, WeatherInfo> weatherByStation = new HashMap<>();
+        if (weather) {
+            windFarms.stream().map(WindFarm::getAsosStationId).distinct()
+                    .forEach(stationId -> weatherByStation.put(stationId, weatherProvider.getWeather(stationId)));
+        }
+
         return windFarms.stream()
                 .map(wf -> new WindFarmSummaryResult(
                         wf.getId(),
@@ -77,8 +92,9 @@ public class WindFarmQueryService {
                         location ? wf.getLatitude() : null,
                         location ? wf.getLongitude() : null,
                         wf.getCapacity(),
-                        weather ? weatherProvider.getWeather(wf.getAsosStationId()) : null,
-                        power ? powerQueryService.summaryByTurbines(turbineIdsOf(wf.getId())) : null))
+                        weather ? weatherByStation.get(wf.getAsosStationId()) : null,
+                        power ? powerQueryService.summaryByTurbines(
+                                turbineIdsByFarm.getOrDefault(wf.getId(), List.of())) : null))
                 .toList();
     }
 
