@@ -29,6 +29,7 @@ public enum ErrorCode {
     TURBINE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "M004", "해당 터빈에 대한 접근 권한이 없습니다."),
     BLADE_NOT_FOUND(HttpStatus.NOT_FOUND, "M005", "블레이드를 찾을 수 없습니다."),
     INVALID_TIME_RANGE(HttpStatus.BAD_REQUEST, "M006", "조회 기간이 올바르지 않습니다."),
+    INVALID_TIME_RANGE(HttpStatus.BAD_REQUEST, "M006", "조회 기간이 올바르지 않습니다.");
 
     private final HttpStatus status;
     private final String code;
