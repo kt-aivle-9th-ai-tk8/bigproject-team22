@@ -20,7 +20,9 @@ public record PowerQuery(
      * - 시간 누락/ISO8601 미준수 → 400
      * - 알 수 없는 term → 400
      * - 기간 역전(start > end) → 400
-     * 파싱된 start/end 는 term 단위로 절삭한다.
+     * start/end 는 원시값 그대로 보존한다(절삭하지 않음). 이렇게 해야 조회 상한이 실제 end 가 되어
+     * HOURLY 마지막 버킷이 end 직전까지의 데이터를 포함한다. 버킷 그리드 정렬은
+     * 집계 단계(PowerQueryService.aggregate)의 term.truncate 가 담당한다.
      */
     public static PowerQuery of(String startTime, String endTime, String term) {
         if (startTime == null || startTime.isBlank() || endTime == null || endTime.isBlank()) {
@@ -32,7 +34,7 @@ public record PowerQuery(
         if (start.isAfter(end)) {
             throw new BusinessException(ErrorCode.INVALID_TIME_RANGE);
         }
-        return new PowerQuery(parsedTerm.truncate(start), parsedTerm.truncate(end), parsedTerm);
+        return new PowerQuery(start, end, parsedTerm);
     }
 
     private static PowerTerm parseTerm(String term) {
