@@ -25,7 +25,7 @@ const dummyPlants = [
     coordinate: [126.907, 34.681],
 
     weather: {
-      weatherType: WEATHER_TYPE.RAIN,
+      weatherType: WEATHER_TYPE.BLIZZARD,
       temperature: 32.0,
       windSpeed: 5.0,
     },

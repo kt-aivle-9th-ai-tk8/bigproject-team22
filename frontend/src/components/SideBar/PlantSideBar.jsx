@@ -26,23 +26,20 @@ function PlantSideBar({
     {
       id: 1,
       name: "터빈 A",
-      status: TURBINE_STATUS.ALERT,
-      alertCount: 6,
-      hasEmergency: true,
+      status: TURBINE_STATUS.NORMAL,
+      abnormalDetected: false,
     },
     {
       id: 2,
       name: "터빈 B",
-      status: TURBINE_STATUS.WARNING,
-      alertCount: 3,
-      hasEmergency: false,
+      status: TURBINE_STATUS.ZERO_POWER,
+      abnormalDetected: true,
     },
     {
       id: 3,
       name: "터빈 C",
-      status: TURBINE_STATUS.ALERT,
-      alertCount: 2,
-      hasEmergency: true,
+      status: TURBINE_STATUS.NO_DATA,
+      abnormalDetected: false,
     },
   ];
 

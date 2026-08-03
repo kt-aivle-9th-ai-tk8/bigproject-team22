@@ -1,9 +1,15 @@
 .plant-summary-group {
   width: 100%;
-  padding: 0 31px;
+  padding: 20px 31px;
 
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  grid-template-columns:
+    minmax(0, 1fr)
+    1px
+    minmax(0, 1fr)
+    1px
+    minmax(0, 1fr);
+
   align-items: stretch;
 
   box-sizing: border-box;
@@ -33,8 +39,8 @@
   max-width: 100%;
 }
 
-/* 양쪽 공통 박스 */
-.plant-summary-power {
+/* 각 칸 공통 박스 */
+.plant-summary-column {
   width: fit-content;
   min-width: 90px;
 
@@ -46,53 +52,57 @@
   font-weight: 500;
 }
 
-/* 현재 날씨 / 현재 출력 라벨 위치 고정 */
+/* 현재 날씨 / 현재 출력 / 발전량 라벨 */
 .plant-summary-section-label {
   width: 100%;
   height: 24px;
 
-  margin-bottom: 8px;
-  padding-right: 3px;
+  margin-bottom: 18px;
   box-sizing: border-box;
 
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
 
-  text-align: left;
-
-  font-size: 15px;
-  font-weight: 550;
+  font-size: 20px;
+  font-weight: 600;
   color: #000;
   line-height: 1.2;
 }
 
-/* 출력 쪽 */
-.plant-summary-power-label {
-  width: 100%;
-  text-align: left;
-  padding-right: 3px;
-  box-sizing: border-box;
-
-  font-size: 12px;
-  font-weight: 550;
-  color: #000;
-  margin-bottom: 3px;
-}
-
+/* 현재 출력 값 */
 .plant-summary-power-output-value {
   color: #000;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 550;
   line-height: 1;
+  margin-top: 0px;
+  text-align: center;
+}
 
-  margin-top: -6px;
-  margin-bottom: 8px;
+/* 세 번째 칸 발전량 */
+.plant-summary-generation-list {
+  margin-top: -13px;
 }
 
 .plant-summary-power-data {
   width: 100%;
   margin-top: 8px;
+
   text-align: center;
+}
+
+.plant-summary-power-label {
+  width: 100%;
+
+  margin-bottom: 3px;
+  padding-right: 0px;
+  box-sizing: border-box;
+
+  font-size: 12px;
+  font-weight: 550;
+  color: #000;
+  text-align: right;
 }
 
 .plant-summary-power-value {
@@ -100,5 +110,6 @@
   font-size: 18px;
   font-weight: 550;
   line-height: 1;
+
   text-align: center;
 }

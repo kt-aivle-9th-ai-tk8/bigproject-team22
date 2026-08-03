@@ -1,0 +1,30 @@
+.weather-help-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.weather-help-button {
+  width: 22px;
+  height: 22px;
+
+  border: 1.5px solid var(--color-text-point-dark);
+  border-radius: 50%;
+
+  background-color: #ffffff;
+  color: var(--color-text-point-dark);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.weather-help-button:hover {
+  background-color: var(--color-point-bright);
+}
