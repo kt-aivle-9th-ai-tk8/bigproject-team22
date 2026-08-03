@@ -1,0 +1,56 @@
+package kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.application.dto;
+
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Locale;
+
+/**
+ * 발전량 시계열 조회 조건. 원시 문자열 입력을 검증/파싱하고 term 절삭 규칙을 적용한다.
+ */
+public record PowerQuery(
+        LocalDateTime start,
+        LocalDateTime end,
+        PowerTerm term
+) {
+    /**
+     * 원시 쿼리 파라미터를 검증/파싱한다.
+     * - 시간 누락/ISO8601 미준수 → 400
+     * - 알 수 없는 term → 400
+     * - 기간 역전(start > end) → 400
+     * 파싱된 start/end 는 term 단위로 절삭한다.
+     */
+    public static PowerQuery of(String startTime, String endTime, String term) {
+        if (startTime == null || startTime.isBlank() || endTime == null || endTime.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_TIME_RANGE);
+        }
+        PowerTerm parsedTerm = parseTerm(term);
+        LocalDateTime start = parse(startTime);
+        LocalDateTime end = parse(endTime);
+        if (start.isAfter(end)) {
+            throw new BusinessException(ErrorCode.INVALID_TIME_RANGE);
+        }
+        return new PowerQuery(parsedTerm.truncate(start), parsedTerm.truncate(end), parsedTerm);
+    }
+
+    private static PowerTerm parseTerm(String term) {
+        if (term == null || term.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        try {
+            return PowerTerm.valueOf(term.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+    }
+
+    private static LocalDateTime parse(String iso8601) {
+        try {
+            return LocalDateTime.parse(iso8601);
+        } catch (DateTimeParseException e) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+    }
+}

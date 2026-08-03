@@ -16,3 +16,9 @@ spring:
     # null 필드도 항상 응답에 포함한다("key": null). FE 가 '데이터 없음(null)'과 '값 0'을 구분하고,
     # 플래그로 꺼진 필드의 존재를 인지할 수 있도록 정책을 명시적으로 고정한다.
     default-property-inclusion: always
+
+# 기상청(KMA) 실시간 날씨 API 설정. WeatherProvider(KmaWeatherProvider) 어댑터가 사용한다.
+# 발전소별 빈번 호출/호출 제한을 고려해 관측소별 Redis 10분 TTL 캐싱을 병행한다.
+kma:
+  api-key: ${KMA_API_KEY:} # 미설정 시 어댑터는 빈 날씨 결과로 폴백
+  base-url: ${KMA_BASE_URL:} # 예: https://apihub.kma.go.kr/api/typ01/url
