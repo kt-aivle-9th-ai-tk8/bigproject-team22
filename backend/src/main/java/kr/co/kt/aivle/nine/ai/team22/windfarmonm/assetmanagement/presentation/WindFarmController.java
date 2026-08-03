@@ -43,7 +43,7 @@ public class WindFarmController {
             @RequestParam(name = "power", required = false) Integer power,
             @Login LoginMember member) {
         List<WindFarmSummaryResponse> body = windFarmQueryService
-                .getWindFarms(member.userId(), topN, flag(location), flag(weather), flag(power)).stream()
+                .getWindFarms(member.userId(), isAdmin(member), topN, flag(location), flag(weather), flag(power)).stream()
                 .map(WindFarmSummaryResponse::from)
                 .toList();
         return ResponseEntity.ok(ApiResponse.success(body));

@@ -24,4 +24,9 @@ public class WindFarmRepositoryImpl implements WindFarmRepository {
     public List<WindFarm> findAllByIdIn(Collection<Long> ids) {
         return jpaRepository.findAllById(ids);
     }
+
+    @Override
+    public List<WindFarm> findAll() {
+        return jpaRepository.findAll();
+    }
 }

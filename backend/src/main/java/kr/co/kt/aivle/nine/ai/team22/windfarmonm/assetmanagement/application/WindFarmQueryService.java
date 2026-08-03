@@ -41,18 +41,21 @@ public class WindFarmQueryService {
     private final AssetAccessGuard accessGuard;
 
     /**
-     * 담당 풍력단지 통합조회. 담당(Assignment) 단지만 대상으로 하며,
-     * location/weather/power 플래그로 각 필드 포함 여부를 제어한다.
+     * 풍력단지 통합조회. 열람 범위는 {@link AssetAccessGuard#viewableWindFarmIds(Long, boolean)} 규약을 따른다
+     * — ADMIN 은 전체 단지, 그 외 사용자는 담당(Assignment) 단지만 대상으로 한다.
+     * location/weather/power 플래그로 각 필드 포함 여부를 제어하고,
      * top-n 이 지정되면 단지 용량(capacity) 기준 상위 n개만 반환한다.
      */
     @Transactional(readOnly = true)
-    public List<WindFarmSummaryResult> getWindFarms(Long userId, Integer topN,
+    public List<WindFarmSummaryResult> getWindFarms(Long userId, boolean admin, Integer topN,
                                                     boolean location, boolean weather, boolean power) {
-        List<Long> assignedIds = accessGuard.assignedWindFarmIds(userId);
-        if (assignedIds.isEmpty()) {
-            return List.of();
+        List<Long> viewableIds = accessGuard.viewableWindFarmIds(userId, admin);
+        if (viewableIds != null && viewableIds.isEmpty()) {
+            return List.of(); // 담당 단지가 없는 비-ADMIN 사용자
         }
-        List<WindFarm> windFarms = new ArrayList<>(windFarmRepository.findAllByIdIn(assignedIds));
+        // viewableIds == null → ADMIN(전체 열람), 그 외 → 담당 단지로 한정.
+        List<WindFarm> windFarms = new ArrayList<>(
+                viewableIds == null ? windFarmRepository.findAll() : windFarmRepository.findAllByIdIn(viewableIds));
 
         // top-n 은 단지 용량(capacity) 기준 상위 n개. capacity 미상(null)은 뒤로 정렬.
         windFarms.sort(Comparator.comparingDouble(
@@ -74,7 +77,7 @@ public class WindFarmQueryService {
                         location ? wf.getLatitude() : null,
                         location ? wf.getLongitude() : null,
                         wf.getCapacity(),
-                        weather ? weatherProvider.getWeather(wf.getAwsStationId(), wf.getAsosStationId()) : null,
+                        weather ? weatherProvider.getWeather(wf.getAsosStationId()) : null,
                         power ? powerQueryService.summaryByTurbines(turbineIdsOf(wf.getId())) : null))
                 .toList();
     }
@@ -102,7 +105,7 @@ public class WindFarmQueryService {
 
         List<Long> turbineIds = turbines.stream().map(Turbine::getId).toList();
         PowerSummary power = powerQueryService.summaryByTurbines(turbineIds);
-        WeatherInfo weather = weatherProvider.getWeather(windFarm.getAwsStationId(), windFarm.getAsosStationId());
+        WeatherInfo weather = weatherProvider.getWeather(windFarm.getAsosStationId());
 
         return new WindFarmDetailResult(
                 windFarm.getId(),

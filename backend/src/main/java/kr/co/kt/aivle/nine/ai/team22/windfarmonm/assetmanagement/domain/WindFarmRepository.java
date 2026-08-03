@@ -12,4 +12,7 @@ public interface WindFarmRepository {
     Optional<WindFarm> findById(Long id);
 
     List<WindFarm> findAllByIdIn(Collection<Long> ids);
+
+    /** 전체 단지(ADMIN 통합조회 등 "전체 열람" 스코프에서 사용). */
+    List<WindFarm> findAll();
 }

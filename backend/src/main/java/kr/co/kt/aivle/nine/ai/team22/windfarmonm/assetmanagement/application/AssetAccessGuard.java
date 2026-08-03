@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * 담당(Assignment) 기반 접근 통제. ADMIN 은 전체 단지를 열람할 수 있으므로 검사를 건너뛴다.
  */
@@ -16,9 +18,17 @@ public class AssetAccessGuard {
 
     private final AssignmentRepository assignmentRepository;
 
-    /** 사용자가 담당하는 단지 id 목록(ADMIN 은 null 을 반환하여 "전체" 의미로 사용) */
+    /**
+     * 사용자가 열람 가능한(viewable/accessible) 단지 id 목록.
+     * ADMIN 은 전체 열람이 가능하므로 {@code null}(= 제한 없음, "전체")을 반환한다.
+     * 그 외 사용자는 담당(Assignment) 단지 id 목록을 반환한다(없으면 빈 목록).
+     * "열람 범위"가 필요한 유스케이스는 이 메서드를 재사용해 admin=null(전체)/일반=목록 규약을 공유한다.
+     */
     @Transactional(readOnly = true)
-    public java.util.List<Long> assignedWindFarmIds(Long userId) {
+    public List<Long> viewableWindFarmIds(Long userId, boolean admin) {
+        if (admin) {
+            return null;
+        }
         return assignmentRepository.findWindFarmIdsByUserId(userId);
     }
 
