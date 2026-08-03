@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.AdminUserService;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.AdminUserResult;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.response.ApiResponse;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.web.ApiIds;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.presentation.dto.AdminUserResponse;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.presentation.dto.ChangeRoleRequest;
 import lombok.RequiredArgsConstructor;
@@ -40,16 +41,16 @@ public class AdminUserController {
 
     /** 사용자 권한 관리(승인/변경): PATCH /api/admin/users/{userId} */
     @PatchMapping("/{userId}")
-    public ResponseEntity<ApiResponse<AdminUserResponse>> changeRole(@PathVariable Long userId,
+    public ResponseEntity<ApiResponse<AdminUserResponse>> changeRole(@PathVariable String userId,
                                                                      @Valid @RequestBody ChangeRoleRequest request) {
-        AdminUserResult result = adminUserService.changeRole(userId, request.role());
+        AdminUserResult result = adminUserService.changeRole(ApiIds.toLong(userId), request.role());
         return ResponseEntity.ok(ApiResponse.success("권한이 변경되었습니다.", AdminUserResponse.from(result)));
     }
 
     /** 사용자 강제 로그아웃: DELETE /api/admin/users/{userId}/sessions */
     @DeleteMapping("/{userId}/sessions")
-    public ResponseEntity<ApiResponse<Void>> forceLogout(@PathVariable Long userId) {
-        adminUserService.forceLogout(userId);
+    public ResponseEntity<ApiResponse<Void>> forceLogout(@PathVariable String userId) {
+        adminUserService.forceLogout(ApiIds.toLong(userId));
         return ResponseEntity.ok(ApiResponse.success("사용자 세션이 강제 종료되었습니다.", null));
     }
 }
