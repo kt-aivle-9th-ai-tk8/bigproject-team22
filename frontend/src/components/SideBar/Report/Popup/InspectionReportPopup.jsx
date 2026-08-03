@@ -3,7 +3,6 @@ import { useState } from "react";
 import InspectionArchiveUploader from "./InspectionArchiveUploader";
 import InspectionPeriodField from "./InspectionPeriodField";
 import InspectionTurbineField from "./InspectionTurbineField";
-import InspectionNoteField from "./InspectionNoteField";
 
 import "./InspectionReportPopup.css";
 
@@ -185,11 +184,6 @@ function InspectionReportPopup({
               onChangeFiles={setSelectedFiles}
             />
           </div>
-
-          <InspectionNoteField
-            content={content}
-            onChangeContent={(event) => setContent(event.target.value)}
-          />
         </div>
 
         <div className="inspection-popup-footer">

@@ -120,8 +120,6 @@ function InspectionReportBox({
       ? inspectionInfo.turbines.join(", ")
       : turbineName;
 
-  const displayContent = inspectionInfo.content?.trim() || "-";
-
   return (
     <>
       <div className="inspection-report-box">
@@ -141,11 +139,7 @@ function InspectionReportBox({
             <span className="inspection-info-label">터빈</span>
             <span className="inspection-info-value">{displayTurbineName}</span>
           </div>
-
-          <div className="inspection-info-row">
-            <span className="inspection-info-label">추가 내용</span>
-            <span className="inspection-info-value">{displayContent}</span>
-          </div>
+          
         </button>
 
         <button

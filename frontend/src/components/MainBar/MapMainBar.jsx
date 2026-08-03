@@ -20,7 +20,7 @@ function MapMainBar({
     onSelectPlant?.(plant);
     setIsPlantListOpen(false);
   };
-
+  
   if (isLoading) {
     return (
       <div className="map-main-bar">
@@ -42,7 +42,7 @@ function MapMainBar({
       <Map
         objects={plants}
         iconSrc={plantIcon}
-        iconScale={0.07}
+        iconScale={0.05}
         clusterDistance={40}
         clusterMinDistance={15}
         onSelectObject={onSelectPlant}

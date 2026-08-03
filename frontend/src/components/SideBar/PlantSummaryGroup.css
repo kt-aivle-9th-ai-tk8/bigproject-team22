@@ -1,0 +1,104 @@
+.plant-summary-group {
+  width: 100%;
+  padding: 0 31px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  align-items: stretch;
+
+  box-sizing: border-box;
+}
+
+.plant-summary-item {
+  min-width: 0;
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+
+  overflow: visible;
+}
+
+.plant-summary-divider {
+  width: 1px;
+  height: 110px;
+  align-self: center;
+
+  background-color: var(--color-light-divider);
+}
+
+.plant-summary-item > * {
+  max-width: 100%;
+}
+
+/* 양쪽 공통 박스 */
+.plant-summary-power {
+  width: fit-content;
+  min-width: 90px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  color: #000;
+  font-weight: 500;
+}
+
+/* 현재 날씨 / 현재 출력 라벨 위치 고정 */
+.plant-summary-section-label {
+  width: 100%;
+  height: 24px;
+
+  margin-bottom: 8px;
+  padding-right: 3px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: flex-start;
+
+  text-align: left;
+
+  font-size: 15px;
+  font-weight: 550;
+  color: #000;
+  line-height: 1.2;
+}
+
+/* 출력 쪽 */
+.plant-summary-power-label {
+  width: 100%;
+  text-align: left;
+  padding-right: 3px;
+  box-sizing: border-box;
+
+  font-size: 12px;
+  font-weight: 550;
+  color: #000;
+  margin-bottom: 3px;
+}
+
+.plant-summary-power-output-value {
+  color: #000;
+  font-size: 20px;
+  font-weight: 550;
+  line-height: 1;
+
+  margin-top: -6px;
+  margin-bottom: 8px;
+}
+
+.plant-summary-power-data {
+  width: 100%;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.plant-summary-power-value {
+  color: var(--color-text-point-dark);
+  font-size: 18px;
+  font-weight: 550;
+  line-height: 1;
+  text-align: center;
+}
