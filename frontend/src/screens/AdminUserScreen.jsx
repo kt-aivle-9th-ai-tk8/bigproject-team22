@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import './AdminUserScreen.css';
 
 // 샘플 발전소 목록
@@ -9,27 +9,27 @@ const PLANT_OPTIONS = [
   '서귀포 발전소', '신안 발전소', '영광 발전소', '함평 발전소'
 ];
 
-// 1. 가입 대기 사용자 샘플 데이터
+// 1. 가입 대기 사용자 샘플 데이터 (카드 내부 발전소 지정 제거)
 const INITIAL_PENDING_USERS = [
-  { id: 'p1', name: '김민수', employeeId: '2505001', createdAt: '2024.05.20 14:30', plants: ['장흥 발전소'] },
-  { id: 'p2', name: '이영희', employeeId: '2505002', createdAt: '2024.05.20 10:15', plants: ['해남 발전소'] },
-  { id: 'p3', name: '박지훈', employeeId: '2505003', createdAt: '2024.05.19 16:45', plants: ['삼천포 발전소'] },
-  { id: 'p4', name: '최유리', employeeId: '2505004', createdAt: '2024.05.19 11:20', plants: ['보령 발전소'] },
-  { id: 'p5', name: '정태호', employeeId: '2505005', createdAt: '2024.05.18 15:05', plants: ['여수 발전소'] },
+  { id: 'p1', name: '김민수', employeeId: '2505001', createdAt: '2024.05.20 14:30' },
+  { id: 'p2', name: '이영희', employeeId: '2505002', createdAt: '2024.05.20 10:15' },
+  { id: 'p3', name: '박지훈', employeeId: '2505003', createdAt: '2024.05.19 16:45' },
+  { id: 'p4', name: '최유리', employeeId: '2505004', createdAt: '2024.05.19 11:20' },
+  { id: 'p5', name: '정태호', employeeId: '2505005', createdAt: '2024.05.18 15:05' },
 ];
 
-// 2. 승인된 전체 사용자 샘플 데이터
+// 2. 전체 사용자 샘플 데이터 (차단 상태 = 로그인 5회 실패)
 const INITIAL_APPROVED_USERS = [
-  { id: 1, name: '최유리', employeeId: '2401001', isOnline: true, plants: ['장흥 발전소', '해남 발전소', '강진 발전소'], isBlocked: true },
-  { id: 2, name: '정태호', employeeId: '2401002', isOnline: true, plants: ['해남 발전소', '강진 발전소'], isBlocked: true },
-  { id: 3, name: '오세훈', employeeId: '2401003', isOnline: false, plants: ['삼천포 발전소'], isBlocked: false },
-  { id: 4, name: '강하나', employeeId: '2401004', isOnline: true, plants: ['여수 발전소', '광양 발전소', '태안 발전소'], isBlocked: true },
-  { id: 5, name: '조민석', employeeId: '2401005', isOnline: false, plants: ['태안 발전소'], isBlocked: false },
-  { id: 6, name: '김민수', employeeId: '2401006', isOnline: true, plants: ['당진 발전소', '평택 발전소'], isBlocked: true },
-  { id: 7, name: '이영희', employeeId: '2401007', isOnline: false, plants: ['보령 발전소', '서천 발전소', '당진 발전소', '평택 발전소'], isBlocked: false },
-  { id: 8, name: '박지훈', employeeId: '2401008', isOnline: true, plants: ['제주 발전소', '서귀포 발전소'], isBlocked: true },
-  { id: 9, name: '한지민', employeeId: '2401009', isOnline: false, plants: ['신안 발전소'], isBlocked: false },
-  { id: 10, name: '윤대영', employeeId: '2401010', isOnline: true, plants: ['영광 발전소', '함평 발전소', '신안 발전소'], isBlocked: true },
+  { id: 1, name: '최유리', employeeId: '2401001', isOnline: true, plants: ['장흥 발전소', '해남 발전소'], loginFailCount: 5, isBlocked: true },
+  { id: 2, name: '정태호', employeeId: '2401002', isOnline: true, plants: ['해남 발전소', '강진 발전소'], loginFailCount: 0, isBlocked: false },
+  { id: 3, name: '오세훈', employeeId: '2401003', isOnline: false, plants: ['삼천포 발전소'], loginFailCount: 2, isBlocked: false },
+  { id: 4, name: '강하나', employeeId: '2401004', isOnline: true, plants: ['여수 발전소', '광양 발전소'], loginFailCount: 5, isBlocked: true },
+  { id: 5, name: '조민석', employeeId: '2401005', isOnline: false, plants: ['태안 발전소'], loginFailCount: 0, isBlocked: false },
+  { id: 6, name: '김민수', employeeId: '2401006', isOnline: true, plants: ['당진 발전소', '평택 발전소'], loginFailCount: 0, isBlocked: false },
+  { id: 7, name: '이영희', employeeId: '2401007', isOnline: false, plants: ['보령 발전소', '서천 발전소'], loginFailCount: 0, isBlocked: false },
+  { id: 8, name: '박지훈', employeeId: '2401008', isOnline: true, plants: ['제주 발전소', '서귀포 발전소'], loginFailCount: 5, isBlocked: true },
+  { id: 9, name: '한지민', employeeId: '2401009', isOnline: false, plants: ['신안 발전소'], loginFailCount: 1, isBlocked: false },
+  { id: 10, name: '윤대영', employeeId: '2401010', isOnline: true, plants: ['영광 발전소', '함평 발전소'], loginFailCount: 0, isBlocked: false },
 ];
 
 export default function AdminUserScreen() {
@@ -37,16 +37,105 @@ export default function AdminUserScreen() {
   const [pendingUsers, setPendingUsers] = useState(INITIAL_PENDING_USERS);
   const [approvedUsers, setApprovedUsers] = useState(INITIAL_APPROVED_USERS);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // 정렬 및 필터 상태
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' (가나다순) | 'desc' (역순)
+  const [selectedPlantFilter, setSelectedPlantFilter] = useState('ALL'); // 발전소 필터링
+
+  // 모달 팝업 상태
+  const [selectedUserForApproval, setSelectedUserForApproval] = useState(null);
+  const [selectedPlants, setSelectedPlants] = useState([]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
-  // 드롭다운 토글
-  const toggleDropdown = (id) => {
-    setOpenDropdownId(openDropdownId === id ? null : id);
+  // --- [정렬 및 필터링 계산] ---
+  const processedApprovedUsers = useMemo(() => {
+    let result = [...approvedUsers];
+
+    // 1. 검색어 필터링
+    if (searchTerm) {
+      result = result.filter(u => 
+        u.name.includes(searchTerm) || u.employeeId.includes(searchTerm)
+      );
+    }
+
+    // 2. 발전소 필터링
+    if (selectedPlantFilter !== 'ALL') {
+      result = result.filter(u => u.plants.includes(selectedPlantFilter));
+    }
+
+    // 3. 이름 정렬 (가나다순 / 역순)
+    result.sort((a, b) => {
+      if (sortOrder === 'asc') {
+        return a.name.localeCompare(b.name, 'ko');
+      } else {
+        return b.name.localeCompare(a.name, 'ko');
+      }
+    });
+
+    return result;
+  }, [approvedUsers, searchTerm, selectedPlantFilter, sortOrder]);
+
+  // --- [제어 및 모달 이벤트 핸들러] ---
+  const handleOpenApproveModal = (user) => {
+    setSelectedUserForApproval(user);
+    setSelectedPlants([]);
   };
 
-  // 발전소 선택/해제 공통 함수
-  const handleTogglePlant = (userId, plantName, isPending = false) => {
-    const updateFn = (list) => list.map(u => {
+  const handleCloseModal = () => {
+    setSelectedUserForApproval(null);
+    setSelectedPlants([]);
+  };
+
+  const handleTogglePlantInModal = (plantName) => {
+    setSelectedPlants(prev => 
+      prev.includes(plantName) ? prev.filter(p => p !== plantName) : [...prev, plantName]
+    );
+  };
+
+  const handleConfirmApproval = () => {
+    if (selectedPlants.length === 0) {
+      alert('최소 하나 이상의 담당 발전소를 선택해 주세요.');
+      return;
+    }
+
+    alert(`${selectedUserForApproval.name} 님의 가입이 승인되었습니다.`);
+
+    setPendingUsers(prev => prev.filter(u => u.id !== selectedUserForApproval.id));
+    const newUser = {
+      id: Date.now(),
+      name: selectedUserForApproval.name,
+      employeeId: selectedUserForApproval.employeeId,
+      isOnline: false,
+      plants: selectedPlants,
+      loginFailCount: 0,
+      isBlocked: false,
+    };
+    setApprovedUsers(prev => [newUser, ...prev]);
+    handleCloseModal();
+  };
+
+  const handleReject = (id, name) => {
+    if (window.confirm(`${name} 님의 가입 신청을 거절하시겠습니까?`)) {
+      setPendingUsers(prev => prev.filter(u => u.id !== id));
+    }
+  };
+
+  // 강제 로그아웃
+  const handleForceLogout = (name) => {
+    alert(`${name} 님을 강제 로그아웃 시켰습니다.`);
+  };
+
+  // 로그인 5회 실패 차단 해제
+  const handleUnblockUser = (id, name) => {
+    if (window.confirm(`${name} 님의 로그인 차단을 해제하시겠습니까?`)) {
+      setApprovedUsers(prev => prev.map(u => 
+        u.id === id ? { ...u, isBlocked: false, loginFailCount: 0 } : u
+      ));
+    }
+  };
+
+  const handleTogglePlantInList = (userId, plantName) => {
+    setApprovedUsers(prev => prev.map(u => {
       if (u.id === userId) {
         const exists = u.plants.includes(plantName);
         const updated = exists 
@@ -55,64 +144,16 @@ export default function AdminUserScreen() {
         return { ...u, plants: updated };
       }
       return u;
-    });
-
-    if (isPending) {
-      setPendingUsers(updateFn);
-    } else {
-      setApprovedUsers(updateFn);
-    }
+    }));
   };
 
-  // 가입 승인 처리
-  const handleApprove = (user) => {
-    if (user.plants.length === 0) {
-      alert('최소 하나 이상의 담당 발전소를 지정해야 합니다.');
-      return;
-    }
-    alert(`${user.name} 님의 가입이 승인되었습니다.`);
-    setPendingUsers(prev => prev.filter(u => u.id !== user.id));
-    
-    // 승인 목록으로 이동
-    const newUser = {
-      id: Date.now(),
-      name: user.name,
-      employeeId: user.employeeId,
-      isOnline: false,
-      plants: user.plants,
-      isBlocked: false,
-    };
-    setApprovedUsers(prev => [newUser, ...prev]);
-  };
-
-  // 가입 거절 처리
-  const handleReject = (id, name) => {
-    if (window.confirm(`${name} 님의 가입 신청을 거절하시겠습니까?`)) {
-      setPendingUsers(prev => prev.filter(u => u.id !== id));
-    }
-  };
-
-  // 차단 토글
-  const handleToggleBlock = (id) => {
-    setApprovedUsers(prev => prev.map(u => u.id === id ? { ...u, isBlocked: !u.isBlocked } : u));
-  };
-
-  // 강제 로그아웃
-  const handleForceLogout = (name) => {
-    alert(`${name} 님을 강제 로그아웃 시켰습니다.`);
-  };
-
-  // 검색 필터링
   const filteredPending = pendingUsers.filter(u => 
-    u.name.includes(searchTerm) || u.employeeId.includes(searchTerm)
-  );
-  const filteredApproved = approvedUsers.filter(u => 
     u.name.includes(searchTerm) || u.employeeId.includes(searchTerm)
   );
 
   return (
     <div className="aus-container">
-      {/* 상단 헤더 영역 */}
+      {/* 헤더 */}
       <header className="aus-header">
         <h1 className="aus-title">사용자 관리</h1>
         <div className="aus-profile-icon">
@@ -123,18 +164,18 @@ export default function AdminUserScreen() {
         </div>
       </header>
 
-      {/* 탭 & 검색창 바 */}
+      {/* 탭 & 검색바 */}
       <div className="aus-top-bar">
         <div className="aus-tabs">
           <button 
             className={`aus-tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('pending'); setOpenDropdownId(null); }}
+            onClick={() => setActiveTab('pending')}
           >
             가입 대기 ({pendingUsers.length})
           </button>
           <button 
             className={`aus-tab-btn ${activeTab === 'list' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('list'); setOpenDropdownId(null); }}
+            onClick={() => setActiveTab('list')}
           >
             사용자 목록 및 권한 관리 ({approvedUsers.length})
           </button>
@@ -166,77 +207,31 @@ export default function AdminUserScreen() {
             {filteredPending.length === 0 ? (
               <div className="aus-empty-state">가입 승인 대기 중인 사용자가 없습니다.</div>
             ) : (
-              filteredPending.map((user) => {
-                const firstTwo = user.plants.slice(0, 2);
-                const extraCount = user.plants.length - 2;
-
-                return (
-                  <div key={user.id} className="aus-pending-card">
-                    {/* 프로필 및 사용자 정보 */}
-                    <div className="user-info-group">
-                      <div className="avatar-circle">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#718096" strokeWidth="1.5">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                          <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                      </div>
-                      <div className="user-details">
-                        <span className="user-name">{user.name}</span>
-                        <div className="user-meta">
-                          <span>사번 {user.employeeId}</span>
-                          <span className="meta-divider"></span>
-                          <span>가입 신청일 {user.createdAt}</span>
-                        </div>
-                      </div>
+              filteredPending.map((user) => (
+                <div key={user.id} className="aus-pending-card">
+                  <div className="user-info-group">
+                    <div className="avatar-circle">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#718096" strokeWidth="1.5">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
                     </div>
-
-                    {/* 담당 발전소 지정 (다중 선택 셀렉트) */}
-                    <div className="plant-assign-group">
-                      <label className="assign-label">담당 발전소 지정</label>
-                      <div className="plant-select-container">
-                        <div className="plant-tags-box" onClick={() => toggleDropdown(user.id)}>
-                          {user.plants.length === 0 ? (
-                            <span className="plant-placeholder">발전소 선택</span>
-                          ) : (
-                            <>
-                              {firstTwo.map((plant, idx) => (
-                                <span key={idx} className="plant-tag">{plant}</span>
-                              ))}
-                              {extraCount > 0 && <span className="plant-badge">+{extraCount}</span>}
-                            </>
-                          )}
-                          <span className="arrow-icon">∨</span>
-                        </div>
-
-                        {/* 드롭다운 메뉴 */}
-                        {openDropdownId === user.id && (
-                          <div className="plant-dropdown-menu">
-                            {PLANT_OPTIONS.map((plantOption) => {
-                              const checked = user.plants.includes(plantOption);
-                              return (
-                                <label key={plantOption} className="plant-checkbox-item">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={checked} 
-                                    onChange={() => handleTogglePlant(user.id, plantOption, true)}
-                                  />
-                                  <span>{plantOption}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
+                    <div className="user-details">
+                      <span className="user-name">{user.name}</span>
+                      <div className="user-meta">
+                        <span>사번 {user.employeeId}</span>
+                        <span className="meta-divider"></span>
+                        <span>가입 신청일 {user.createdAt}</span>
                       </div>
-                    </div>
-
-                    {/* 승인 / 거절 버튼 */}
-                    <div className="pending-actions">
-                      <button className="btn-approve" onClick={() => handleApprove(user)}>승인</button>
-                      <button className="btn-reject" onClick={() => handleReject(user.id, user.name)}>거절</button>
                     </div>
                   </div>
-                );
-              })
+
+                  <div className="pending-actions">
+                    <button className="btn-approve" onClick={() => handleOpenApproveModal(user)}>승인</button>
+                    <button className="btn-reject" onClick={() => handleReject(user.id, user.name)}>거절</button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
@@ -246,8 +241,33 @@ export default function AdminUserScreen() {
       {activeTab === 'list' && (
         <div className="aus-tab-content">
           <div className="aus-card">
+            {/* 박스 우측 상단 정렬 및 필터 컨트롤 바 */}
             <div className="aus-card-header">
               <h2 className="aus-sub-title">전체 사용자 관리</h2>
+              
+              <div className="aus-filter-group">
+                {/* 발전소 필터 드롭다운 */}
+                <select 
+                  className="aus-select-filter"
+                  value={selectedPlantFilter}
+                  onChange={(e) => setSelectedPlantFilter(e.target.value)}
+                >
+                  <option value="ALL">전체 발전소 필터</option>
+                  {PLANT_OPTIONS.map(plant => (
+                    <option key={plant} value={plant}>{plant}</option>
+                  ))}
+                </select>
+
+                {/* 이름 정렬 드롭다운 */}
+                <select 
+                  className="aus-select-filter"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                >
+                  <option value="asc">이름순 ▲</option>
+                  <option value="desc">이름순 ▼</option>
+                </select>
+              </div>
             </div>
 
             <div className="aus-table-wrapper">
@@ -257,17 +277,17 @@ export default function AdminUserScreen() {
                     <th style={{ width: '12%' }}>이름</th>
                     <th style={{ width: '14%' }}>사번</th>
                     <th style={{ width: '14%' }}>접속 상태</th>
-                    <th style={{ width: '38%' }}>담당 발전소</th>
-                    <th style={{ width: '22%' }}>제어</th>
+                    <th style={{ width: '36%' }}>담당 발전소</th>
+                    <th style={{ width: '24%' }}>제어</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredApproved.length === 0 ? (
+                  {processedApprovedUsers.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="aus-empty-td">조건에 일치하는 사용자가 없습니다.</td>
                     </tr>
                   ) : (
-                    filteredApproved.map((user) => {
+                    processedApprovedUsers.map((user) => {
                       const firstTwo = user.plants.slice(0, 2);
                       const extraCount = user.plants.length - 2;
 
@@ -282,9 +302,8 @@ export default function AdminUserScreen() {
                             </span>
                           </td>
                           <td>
-                            {/* 발전소 다중 선택 셀렉트 */}
                             <div className="plant-select-container">
-                              <div className="plant-tags-box" onClick={() => toggleDropdown(user.id)}>
+                              <div className="plant-tags-box" onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}>
                                 {user.plants.length === 0 ? (
                                   <span className="plant-placeholder">발전소 선택</span>
                                 ) : (
@@ -298,27 +317,24 @@ export default function AdminUserScreen() {
                                 <span className="arrow-icon">∨</span>
                               </div>
 
-                              {/* 드롭다운 메뉴 */}
                               {openDropdownId === user.id && (
                                 <div className="plant-dropdown-menu">
-                                  {PLANT_OPTIONS.map((plantOption) => {
-                                    const checked = user.plants.includes(plantOption);
-                                    return (
-                                      <label key={plantOption} className="plant-checkbox-item">
-                                        <input 
-                                          type="checkbox" 
-                                          checked={checked} 
-                                          onChange={() => handleTogglePlant(user.id, plantOption, false)}
-                                        />
-                                        <span>{plantOption}</span>
-                                      </label>
-                                    );
-                                  })}
+                                  {PLANT_OPTIONS.map((plantOption) => (
+                                    <label key={plantOption} className="plant-checkbox-item">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={user.plants.includes(plantOption)} 
+                                        onChange={() => handleTogglePlantInList(user.id, plantOption)}
+                                      />
+                                      <span>{plantOption}</span>
+                                    </label>
+                                  ))}
                                 </div>
                               )}
                             </div>
                           </td>
                           <td>
+                            {/* 제어 컬럼: 강제 로그아웃 & 차단 해제 */}
                             <div className="action-cell">
                               <button 
                                 className="btn-logout"
@@ -326,17 +342,14 @@ export default function AdminUserScreen() {
                               >
                                 로그아웃
                               </button>
-                              <div className="block-toggle">
-                                <span className="toggle-label">차단</span>
-                                <label className="switch">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={user.isBlocked} 
-                                    onChange={() => handleToggleBlock(user.id)}
-                                  />
-                                  <span className="slider round"></span>
-                                </label>
-                              </div>
+
+                              {user.isBlocked ? (
+                                <button className="btn-unblock" onClick={() => handleUnblockUser(user.id, user.name)}>
+                                  차단 해제
+                                </button>
+                              ) : (
+                                <span className="text-normal">정상</span>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -348,14 +361,46 @@ export default function AdminUserScreen() {
             </div>
           </div>
 
-          {/* 하단 푸터 (전체 인원 + 페이지네이션) */}
           <div className="aus-footer">
-            <div className="total-count">전체 {filteredApproved.length}명</div>
+            <div className="total-count">전체 {processedApprovedUsers.length}명</div>
             <div className="pagination">
               <button className="page-nav">&lt;</button>
               <button className="page-num active">1</button>
               <button className="page-num">2</button>
               <button className="page-nav">&gt;</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 담당 발전소 지정 모달 */}
+      {selectedUserForApproval && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 className="modal-title">담당 발전소 지정</h3>
+            <p className="modal-desc">
+              <strong>{selectedUserForApproval.name}</strong> ({selectedUserForApproval.employeeId}) 님이 담당할 발전소를 선택해 주세요.
+            </p>
+
+            <div className="modal-plant-grid">
+              {PLANT_OPTIONS.map((plant) => {
+                const checked = selectedPlants.includes(plant);
+                return (
+                  <label key={plant} className={`modal-plant-item ${checked ? 'selected' : ''}`}>
+                    <input 
+                      type="checkbox" 
+                      checked={checked} 
+                      onChange={() => handleTogglePlantInModal(plant)}
+                    />
+                    <span>{plant}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-modal-cancel" onClick={handleCloseModal}>취소</button>
+              <button className="btn-modal-confirm" onClick={handleConfirmApproval}>승인 완료</button>
             </div>
           </div>
         </div>
