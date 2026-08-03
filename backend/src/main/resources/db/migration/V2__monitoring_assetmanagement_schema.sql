@@ -116,39 +116,3 @@ CREATE TABLE assignments
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
-
-CREATE TABLE notifications
-(
-    notification_id BIGINT       NOT NULL AUTO_INCREMENT,
-    user_id         BIGINT       NOT NULL,
-    -- report_id: ERD 는 INT FK. 스펙 응답에선 String 으로 표기되나 저장은 숫자 식별자이므로 BIGINT 로 두고 응답에서 String 변환.
-    report_id       BIGINT       DEFAULT NULL,
-    report_title    VARCHAR(200) DEFAULT NULL,
-    is_read         BOOLEAN      NOT NULL,
-    sent_at         DATETIME(6)  NOT NULL,
-    PRIMARY KEY (notification_id),
-    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users (id)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci;
-
-CREATE TABLE defects
-(
-    defect_id     BIGINT       NOT NULL AUTO_INCREMENT,
-    inspection_id BIGINT       NOT NULL,
-    blade_id      BIGINT       NOT NULL,
-    defect_type   VARCHAR(50)  NOT NULL,
-    severity      INT          DEFAULT NULL,
-    part_side     VARCHAR(10)  DEFAULT NULL,
-    bbox_x        DOUBLE       DEFAULT NULL,
-    bbox_y        DOUBLE       DEFAULT NULL,
-    bbox_w        DOUBLE       DEFAULT NULL,
-    bbox_h        DOUBLE       DEFAULT NULL,
-    confidence    DOUBLE       DEFAULT NULL,
-    image_path    VARCHAR(500) DEFAULT NULL,
-    created_at    DATETIME(6)  DEFAULT NULL,
-    PRIMARY KEY (defect_id),
-    CONSTRAINT fk_defects_blade FOREIGN KEY (blade_id) REFERENCES blades (blade_id)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci;
