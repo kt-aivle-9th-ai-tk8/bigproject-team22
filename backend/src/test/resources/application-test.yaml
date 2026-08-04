@@ -1,0 +1,9 @@
+# 테스트 프로파일 오버레이. main 의 application.yaml 을 '대체'하지 않고 그 위에 덧씌운다.
+# (예전처럼 같은 파일명으로 두면 테스트 클래스패스가 우선해 main 설정 전체가 가려지고,
+#  jackson snake_case 같은 JSON 계약 설정이 테스트에 적용되지 않아 계약 회귀를 잡지 못한다.)
+# DataSource/Redis 접속은 IntegrationTestSupport 의 @ServiceConnection 이 주입한다.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate # Flyway 가 만든 스키마와 엔티티 일치를 교차검증
+    show-sql: false
