@@ -1,9 +1,11 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.infrastructure;
 
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.domain.Assignment;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.domain.AssignmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -30,5 +32,20 @@ public class AssignmentRepositoryImpl implements AssignmentRepository {
     @Override
     public boolean existsByUserIdAndBladeId(Long userId, Long bladeId) {
         return jpaRepository.existsByUserIdAndBladeId(userId, bladeId);
+    }
+
+    @Override
+    public List<Assignment> findByUserIdIn(Collection<Long> userIds) {
+        return jpaRepository.findByUserIdIn(userIds);
+    }
+
+    @Override
+    public void deleteByUserIdAndWindFarmIdIn(Long userId, Collection<Long> windFarmIds) {
+        jpaRepository.deleteByUserIdAndWindFarmIdIn(userId, windFarmIds);
+    }
+
+    @Override
+    public void saveAll(List<Assignment> assignments) {
+        jpaRepository.saveAll(assignments);
     }
 }
