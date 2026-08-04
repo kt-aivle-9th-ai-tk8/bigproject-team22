@@ -1,5 +1,10 @@
-import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import React, { Suspense, lazy } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
 import MainScreen from "./screens/MainScreen";
 import LoginScreen from "./screens/LoginScreen";
@@ -9,6 +14,12 @@ import AdminUserScreen from "./screens/AdminUserScreen";
 import UserScreen from "./screens/UserScreen";
 
 import "./App.css";
+
+const MainScreen = lazy(() => import("./screens/MainScreen"));
+const LoginScreen = lazy(() => import("./screens/LoginScreen"));
+const SignupScreen = lazy(() => import("./screens/SignupScreen"));
+const ReportListScreen = lazy(() => import("./screens/ReportListScreen"));
+const AdminUserScreen = lazy(() => import("./screens/AdminUserScreen"));
 
 function App() {
   return (
