@@ -34,7 +34,7 @@ function App() {
           {/* 회원 관련 라우트 */}
           <Route
             path="/login"
-            element={<LoadingOverlay/>}
+            element={<LoginScreen />}
           />
 
           <Route
