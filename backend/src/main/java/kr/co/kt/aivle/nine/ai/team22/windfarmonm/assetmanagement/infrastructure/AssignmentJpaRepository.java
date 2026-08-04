@@ -6,9 +6,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface AssignmentJpaRepository extends JpaRepository<Assignment, UserWindFarmId> {
+
+    List<Assignment> findByUserIdIn(Collection<Long> userIds);
+
+    void deleteByUserIdAndWindFarmIdIn(Long userId, Collection<Long> windFarmIds);
 
     // get only wind_farm_id
     @Query("select a.windFarmId from Assignment a where a.userId = :userId")
