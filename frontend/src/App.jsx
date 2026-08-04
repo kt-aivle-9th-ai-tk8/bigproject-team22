@@ -6,7 +6,12 @@ import {
   Navigate,
 } from "react-router-dom";
 
-import LoadingOverlay from "./components/common/LoadingOverlay";
+import MainScreen from "./screens/MainScreen";
+import LoginScreen from "./screens/LoginScreen";
+import SignupScreen from "./screens/SignupScreen";
+import ReportListScreen from "./screens/ReportListScreen";
+import AdminUserScreen from "./screens/AdminUserScreen";
+import UserScreen from "./screens/UserScreen";
 
 import "./App.css";
 
@@ -19,52 +24,22 @@ const AdminUserScreen = lazy(() => import("./screens/AdminUserScreen"));
 function App() {
   return (
     <BrowserRouter>
-      <Suspense
-        fallback={
-          <LoadingOverlay message="화면을 불러오는 중입니다..." />
-        }
-      >
-        <Routes>
-          {/* 기본 루트 진입 시 로그인 페이지로 이동 */}
-          <Route
-            path="/"
-            element={<Navigate to="/login" replace />}
-          />
+      <Routes>
+        {/* 기본 루트 진입 시 로그인 페이지로 이동 */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
-          {/* 회원 관련 라우트 */}
-          <Route
-            path="/login"
-            element={<LoginScreen />}
-          />
+        {/* 회원 관련 라우트 */}
+        <Route path="/login" element={<LoginScreen />} />
+        <Route path="/signup" element={<SignupScreen />} />
 
-          <Route
-            path="/signup"
-            element={<SignupScreen />}
-          />
+        {/* 대시보드 및 보고서 목록 라우트 */}
+        <Route path="/main" element={<MainScreen />} />
+        <Route path="/reportlist" element={<ReportListScreen />} />
 
-          {/* 대시보드 및 보고서 목록 라우트 */}
-          <Route
-            path="/main"
-            element={<MainScreen />}
-          />
-
-          <Route
-            path="/reportlist"
-            element={<ReportListScreen />}
-          />
-
-          {/* 내 정보 / 관리자 페이지 라우트 */}
-          <Route
-            path="/admin/users"
-            element={<AdminUserScreen />}
-          />
-
-          <Route
-            path="/user"
-            element={<AdminUserScreen />}
-          />
-        </Routes>
-      </Suspense>
+        {/* 마이페이지 및 관리자 페이지 라우트 */}
+        <Route path="/user" element={<UserScreen />} />
+        <Route path="/admin/users" element={<AdminUserScreen />} />
+      </Routes>
     </BrowserRouter>
   );
 }
