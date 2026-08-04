@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.AdminUserResult;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.port.SessionManager;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserRepository;
@@ -31,6 +32,14 @@ public class AdminUserService {
         return userRepository.findAll().stream()
                 .map(user -> AdminUserResult.of(user, sessionManager.exists(user.getLatestSessionId())))
                 .toList();
+    }
+
+    /** 단일 사용자 조회(세션 활성 여부 포함). 없으면 {@link ErrorCode#USER_NOT_FOUND}. */
+    @Transactional(readOnly = true)
+    public AdminUserResult getUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        return AdminUserResult.of(user, sessionManager.exists(user.getLatestSessionId()));
     }
 
     /**

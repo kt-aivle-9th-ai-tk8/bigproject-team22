@@ -1,6 +1,6 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.infrastructure;
 
-import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.SessionManager;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.port.SessionManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
