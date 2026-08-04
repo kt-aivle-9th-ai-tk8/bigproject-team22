@@ -7,6 +7,7 @@ import SignupScreen from "./screens/SignupScreen";
 import ReportListScreen from "./screens/ReportListScreen";
 import AdminUserScreen from "./screens/AdminUserScreen";
 import UserScreen from "./screens/UserScreen";
+import ReportEditScreen from './screens/ReportEditScreen';
 
 import "./App.css";
 
@@ -28,6 +29,9 @@ function App() {
         {/* 마이페이지 및 관리자 페이지 라우트 */}
         <Route path="/user" element={<UserScreen />} />
         <Route path="/admin/users" element={<AdminUserScreen />} />
+
+        {/* 2. 보고서 상세/수정 화면 라우터 */}
+        <Route path="/report-edit" element={<ReportEditScreen />} />
       </Routes>
     </BrowserRouter>
   );
