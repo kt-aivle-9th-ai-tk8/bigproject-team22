@@ -58,3 +58,10 @@
   gap: 2px;
   white-space: nowrap;
 }
+
+.weather-item:not(.weather-item-clickable),
+.weather-item:not(.weather-item-clickable) .weather-item-emoji,
+.weather-item:not(.weather-item-clickable) .weather-item-wind,
+.weather-item:not(.weather-item-clickable) .weather-item-wind-emoji {
+  cursor: default;
+}

@@ -109,8 +109,8 @@ function WeatherItem({
       <div className="weather-item-wind">
         <span
           className="weather-item-wind-emoji"
-          aria-label="wind"
-          title="wind"
+          aria-label="풍속"
+          title="풍속"
         >
           💨
         </span>

@@ -27,7 +27,7 @@ function PlantSummaryGroup({
       <div className="plant-summary-item">
         <div className="plant-summary-column">
           <div className="plant-summary-section-label">
-            현재 출력
+            현재 발전량
           </div>
 
           <PowerGauge value={powerInfo.currentOutput} />
