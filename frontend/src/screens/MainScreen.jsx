@@ -220,6 +220,7 @@ const alarmReports = [
 `,
   },
 ];
+
 function MainScreen() {
   const navigate = useNavigate();
 
@@ -235,21 +236,15 @@ function MainScreen() {
   });
 
   const [selectedPlant, setSelectedPlant] = useState(() => {
-    const savedPlant =
-      localStorage.getItem("selectedPlant");
+    const savedPlant = localStorage.getItem("selectedPlant");
 
-    return savedPlant
-      ? JSON.parse(savedPlant)
-      : null;
+    return savedPlant ? JSON.parse(savedPlant) : null;
   });
 
   const [selectedTurbine, setSelectedTurbine] = useState(() => {
-    const savedTurbine =
-      localStorage.getItem("selectedTurbine");
+    const savedTurbine = localStorage.getItem("selectedTurbine");
 
-    return savedTurbine
-      ? JSON.parse(savedTurbine)
-      : null;
+    return savedTurbine ? JSON.parse(savedTurbine) : null;
   });
 
   useEffect(() => {
@@ -278,34 +273,21 @@ function MainScreen() {
       }
 
       setScreenMode(state.screenMode || "map");
-      setSelectedPlant(
-        state.selectedPlant || null
-      );
-      setSelectedTurbine(
-        state.selectedTurbine || null
-      );
+      setSelectedPlant(state.selectedPlant || null);
+      setSelectedTurbine(state.selectedTurbine || null);
     };
 
-    window.addEventListener(
-      "popstate",
-      handlePopState
-    );
+    window.addEventListener("popstate", handlePopState);
 
     return () => {
-      window.removeEventListener(
-        "popstate",
-        handlePopState
-      );
+      window.removeEventListener("popstate", handlePopState);
     };
   }, []);
-  const turbines =
-    selectedPlant?.turbines || [];
+
+  const turbines = selectedPlant?.turbines || [];
 
   useEffect(() => {
-    localStorage.setItem(
-      "screenMode",
-      screenMode
-    );
+    localStorage.setItem("screenMode", screenMode);
   }, [screenMode]);
 
   useEffect(() => {
@@ -315,9 +297,7 @@ function MainScreen() {
         JSON.stringify(selectedPlant)
       );
     } else {
-      localStorage.removeItem(
-        "selectedPlant"
-      );
+      localStorage.removeItem("selectedPlant");
     }
   }, [selectedPlant]);
 
@@ -328,17 +308,11 @@ function MainScreen() {
         JSON.stringify(selectedTurbine)
       );
     } else {
-      localStorage.removeItem(
-        "selectedTurbine"
-      );
+      localStorage.removeItem("selectedTurbine");
     }
   }, [selectedTurbine]);
 
-  const moveMode = (
-    nextMode,
-    nextPlant,
-    nextTurbine
-  ) => {
+  const moveMode = (nextMode, nextPlant, nextTurbine) => {
     const nextState = {
       screenMode: nextMode,
       selectedPlant: nextPlant,
@@ -369,11 +343,7 @@ function MainScreen() {
   };
 
   const handleSelectTurbine = (turbine) => {
-    moveMode(
-      "turbine",
-      selectedPlant,
-      turbine
-    );
+    moveMode("turbine", selectedPlant, turbine);
   };
 
   const handleBackToMap = () => {
@@ -389,21 +359,24 @@ function MainScreen() {
     if (reportData.file) {
       formData.append("file", reportData.file);
     }
-
-    // 나중에 API 연결 시 사용
-    // fetch("/api/inspection/report", {
-    //   method: "POST",
-    //   body: formData,
-    // });
   };
+
   const handleCreateRepairReport = (repairReportData) => {
     console.log("MainScreen에서 받은 수리 보고서 JSON:", repairReportData);
   };
+
+  // 1. 내 정보 페이지 이동 함수
+  const handleNavigateUser = () => {
+    navigate("/user");
+  };
+
   return (
     <div className="main-screen">
+      {/* 2. Header 컴포넌트에 onMyPage 전달 */}
       <Header
         onLogout={handleLogout}
         onTitleClick={handleBackToMap}
+        onMyPage={handleNavigateUser}
         alarm={alarmReports}
       />
 
@@ -427,7 +400,7 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
-          onCreateInspectionReport = {handleCreateInspectionReport}
+          onCreateInspectionReport={handleCreateInspectionReport}
           onCreateRepairReport={handleCreateRepairReport}
         />
 
