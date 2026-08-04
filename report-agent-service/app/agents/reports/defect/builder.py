@@ -222,17 +222,21 @@ def report_title(e) -> str:
 
 
 def subtitle_lines(to) -> list:
-    """제목 밑 부제 — 점검 식별·기간. anomaly 의 `유형` · 상태 · 발생시각 줄과 같은 자리.
+    """제목 밑 부제 — 보고서 식별·기간. anomaly 의 `유형` · 상태 · 발생시각 줄과 같은 자리.
 
-    보고서 부제에만 쓰고 LLM facts에는 넣지 않는다 → 분석이 점검번호·날짜를 다시 쓰면
-    allowed_numbers에 없어 환각 후보로 걸린다(의도된 동작).
+    보고서 부제에만 쓰고 LLM facts에는 넣지 않는다 → 분석이 보고서번호·점검번호·날짜를
+    다시 쓰면 allowed_numbers에 없어 환각 후보로 걸린다(의도된 동작).
+
+    점검번호를 함께 남기는 이유: 보고서 1건이 점검 여러 건을 묶으므로(드론 1회 출동에
+    터빈 2대) 어느 점검이 들어갔는지 밝혀야 대시보드·원본과 대조할 수 있다.
     """
     e = to["event"]
     status = e.get("status")
-    # 발전소는 제목에 이미 있으므로, 여기서는 점검 대상 터빈(inspection.turbine_id)을 밝힌다.
+    # 발전소는 제목에 이미 있으므로, 여기서는 보고서 식별자와 묶인 점검을 밝힌다.
+    ids = e.get("inspection_ids") or []
+    insp = f"점검 {len(ids)}건" + (f" (#{', #'.join(str(i) for i in ids)})" if ids else "")
     return [
-        f"`점검 #{e.get('inspection_id')}` · 보고서 {e.get('report_id')} · "
-        f"대상 터빈 {e.get('turbine_code') or '미상'} · {STATUS_KO.get(status, status)}",
+        f"`보고서 #{e.get('report_id')}` · {insp} · {STATUS_KO.get(status, status)}",
         "",
         f"점검 기간 {e.get('inspection_start')} ~ {e.get('inspection_end')}",
     ]
