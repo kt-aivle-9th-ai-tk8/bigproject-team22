@@ -6,6 +6,8 @@ import ReportBox from "./Report/ReportBox";
 import SideTitle from "./SideTitle";
 import ReportTitleToggle from "./Report/ReportTitleToggle";
 import InspectionReportBox from "./Report/InspectionReportBox";
+import WeatherHelpButton from "./Weather/WeatherHelpButton";
+import WeatherHelpPopup from "./Weather/WeatherHelpPopup";
 
 import { TURBINE_STATUS } from "./Turbine/TurbineItem";
 import { WEATHER_TYPE } from "./Weather/WeatherItem";
@@ -17,6 +19,7 @@ function PlantSideBar({
   onSelectTurbine,
   onCreateInspectionReport,
 }) {
+  const [isWeatherHelpOpen, setIsWeatherHelpOpen] = useState(false);
   const [reportMode, setReportMode] = useState("operation");
 
   const plantName = selectedPlant?.title || selectedPlant?.name;
@@ -61,7 +64,14 @@ function PlantSideBar({
   return (
     <div className="sidebar-content plant-sidebar-content">
       <section className="sidebar-panel turbine-power-panel">
-        <SideTitle>
+        <SideTitle
+          leftContent={
+            <WeatherHelpButton
+              isOpen={isWeatherHelpOpen}
+              onToggle={() => setIsWeatherHelpOpen((prev) => !prev)}
+              onClose={() => setIsWeatherHelpOpen(false)}
+            />
+          }>
           {plantName} 현황
         </SideTitle>
 

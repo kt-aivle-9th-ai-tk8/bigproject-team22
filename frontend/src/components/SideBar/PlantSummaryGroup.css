@@ -1,13 +1,13 @@
 .plant-summary-group {
   width: 100%;
-  padding: 20px 31px;
+  padding: 10px 20px;
 
   display: grid;
   grid-template-columns:
     minmax(0, 1fr)
-    1px
+    3px
     minmax(0, 1fr)
-    1px
+    3px
     minmax(0, 1fr);
 
   align-items: stretch;
@@ -27,12 +27,22 @@
   overflow: visible;
 }
 
-.plant-summary-divider {
+.weather-divider {
+  position: absolute;
+  top: 36px;
+  right: -10px;
   width: 1px;
-  height: 110px;
+  height: 120px;
+  background-color: var(--color-divider);
+}
+
+.plant-summary-divider {
+  top: 36px;
+  width: 1px;
+  height: 120px;
   align-self: center;
 
-  background-color: var(--color-light-divider);
+  background-color: var(--color-divider);
 }
 
 .plant-summary-item > * {
@@ -55,10 +65,10 @@
 /* 현재 날씨 / 현재 출력 / 발전량 라벨 */
 .plant-summary-section-label {
   width: 100%;
-  height: 24px;
 
   margin-bottom: 18px;
   box-sizing: border-box;
+  padding-top: 3px;
 
   display: flex;
   align-items: center;
