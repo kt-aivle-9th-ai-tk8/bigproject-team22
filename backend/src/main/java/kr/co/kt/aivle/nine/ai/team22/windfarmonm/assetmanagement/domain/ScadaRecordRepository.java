@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.domain;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -9,11 +10,14 @@ import java.util.Optional;
  */
 public interface ScadaRecordRepository {
 
-    /** 단일 터빈의 최신 계측 레코드(현재 출력용) */
-    Optional<ScadaRecord> findLatestByTurbineId(Long turbineId);
-
-    /** 여러 터빈의 최신 계측 레코드(터빈당 1건). 통합조회 N+1 방지용 배치 조회. */
-    List<ScadaRecord> findLatestByTurbineIds(List<Long> turbineIds);
+    /**
+     * 여러 터빈의 <b>지정 시각</b> 계측 레코드(현재 출력용).
+     * <p>
+     * '가장 마지막 행'을 찾지 않고 조회할 시각을 지정한다 — SCADA 적재가 정시 단위이므로 (turbine_id, recorded_at)
+     * 복합 PK 에 대한 직접 조회가 되어 비용이 이력 크기와 무관해지고, 오래된 값이 현재 출력으로 둔갑하지 않는다.
+     * 일/월 집계 조회가 이미 쓰는 방식과도 일관된다.
+     */
+    List<ScadaRecord> findByTurbineIdsAndTimeIn(Collection<Long> turbineIds, Collection<LocalDateTime> times);
 
     /** 단일 터빈의 기간 raw 계측 레코드 */
     List<ScadaRecord> findByTurbineIdAndTimeBetween(Long turbineId, LocalDateTime start, LocalDateTime end);

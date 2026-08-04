@@ -10,11 +10,14 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.domain.MonthlyG
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.domain.ScadaRecord;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.assetmanagement.domain.ScadaRecordRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -28,9 +31,11 @@ import java.util.function.Function;
  *   <li>DAILY   → daily_generation(daily_power_output)</li>
  *   <li>MONTHLY → monthly_generation(monthly_power_output)</li>
  * </ul>
- * 요약(current/today/month)은 현재출력=scada 최신값, 당일=daily_generation, 당월=monthly_generation 을 사용한다.
- * 단지 발전량은 소속 터빈들의 값을 합산한다.
+ * 요약(current/today/month)은 세 값 모두 <b>조회할 시각을 지정</b>해 PK 로 직접 읽는다 —
+ * 현재출력=scada_record 의 직전 정시(없으면 한 시간 전으로 1단계 폴백), 당일=daily_generation 의 당일 00:00,
+ * 당월=monthly_generation 의 당월 1일 00:00. 단지 발전량은 소속 터빈들의 값을 합산한다.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PowerQueryService {
@@ -42,12 +47,13 @@ public class PowerQueryService {
     /** 발전량 집계 배치와 동일한 기준 시간대(당일/당월 키 조회). 서버 기본 시간대 의존을 피한다. */
     private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
 
+    /** 정시 직후 적재 배치가 끝나지 않았을 때 되돌아볼 시간(정시 단위). */
+    private static final int LOOKBACK_HOURS = 1;
+
     /** 단일 터빈의 발전량 요약(현재/당일/당월). */
     public PowerSummary summaryByTurbine(Long turbineId) {
         LocalDate today = LocalDate.now(ZONE);
-        Double current = scadaRecordRepository.findLatestByTurbineId(turbineId)
-                .map(ScadaRecord::getPowerOutput)
-                .orElse(null);
+        Double current = currentPower(List.of(turbineId));
         Double todayPower = dailyGenerationRepository.findByTurbineIdAndTime(turbineId, today.atStartOfDay())
                 .map(DailyGeneration::getDailyPowerOutput)
                 .orElse(null);
@@ -63,12 +69,7 @@ public class PowerQueryService {
             return PowerSummary.empty();
         }
         LocalDate today = LocalDate.now(ZONE);
-        // TODO(성능): findLatestByTurbineIds 는 대상 터빈의 전 이력을 훑는다(ScadaRecordJpaRepository 주석 참조).
-        //  또한 이 메서드가 단지마다 호출되어 단지 수 × 3쿼리(최신/일/월)가 나간다. 통합조회는 전체 터빈 id 를
-        //  한 번에 모아 3쿼리로 끝내고 단지별로 합산하는 배치 조회로 정리할 것.
-        Double current = sum(scadaRecordRepository.findLatestByTurbineIds(turbineIds).stream()
-                .map(ScadaRecord::getPowerOutput)
-                .toList());
+        Double current = currentPower(turbineIds);
         Double todayPower = sum(dailyGenerationRepository.findByTurbineIdsAndTime(turbineIds, today.atStartOfDay()).stream()
                 .map(DailyGeneration::getDailyPowerOutput)
                 .toList());
@@ -138,6 +139,37 @@ public class PowerQueryService {
         return sums.entrySet().stream()
                 .map(e -> new PowerPoint(e.getKey(), e.getValue()))
                 .toList();
+    }
+
+    /**
+     * 터빈들의 '현재 출력' 합산. 가장 마지막 행을 찾지 않고 <b>조회 시각을 지정</b>한다.
+     * <p>
+     * 기준은 직전 정시({@code now} 절삭)이며, 해당 행이 없으면 한 시간 전으로 1단계만 폴백한다.
+     * 정시 직후에는 적재 배치가 아직 끝나지 않았을 수 있기 때문이다. 폴백은 <b>터빈별로</b> 독립 적용해
+     * 일부 터빈만 적재된 상황에서도 가용한 값을 최대한 사용한다.
+     * <p>
+     * 구분에 유의: <b>행은 있는데 값이 null</b> 이면 계측 결측이므로 그 행을 그대로 쓴다(폴백하지 않는다).
+     * <b>행 자체가 없을 때만</b> 폴백하며, 두 시각 모두 없으면 적재 배치 이상 신호이므로 경고 로그를 남긴다
+     * (응답 계약은 유지 — 사용자에게는 값 없음(null)으로 나간다).
+     */
+    private Double currentPower(List<Long> turbineIds) {
+        LocalDateTime at = LocalDateTime.now(ZONE).truncatedTo(ChronoUnit.HOURS);
+        LocalDateTime fallback = at.minusHours(LOOKBACK_HOURS);
+
+        Map<Long, ScadaRecord> newestByTurbine = new HashMap<>();
+        for (ScadaRecord record : scadaRecordRepository.findByTurbineIdsAndTimeIn(turbineIds, List.of(at, fallback))) {
+            newestByTurbine.merge(record.getTurbineId(), record,
+                    (kept, candidate) -> candidate.getTime().isAfter(kept.getTime()) ? candidate : kept);
+        }
+
+        int missing = turbineIds.size() - newestByTurbine.size();
+        if (missing > 0) {
+            log.warn("SCADA 미적재 터빈 {}/{}개(기준 {}, 폴백 {}). 적재 배치 동작을 확인할 것.",
+                    missing, turbineIds.size(), at, fallback);
+        }
+        return sum(newestByTurbine.values().stream()
+                .map(ScadaRecord::getPowerOutput)
+                .toList());
     }
 
     /** null 을 무시하고 합산한다. 유효 값이 하나도 없으면 null 을 반환한다. */

@@ -6,8 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -16,16 +16,11 @@ public class ScadaRecordRepositoryImpl implements ScadaRecordRepository {
     private final ScadaRecordJpaRepository jpaRepository;
 
     @Override
-    public Optional<ScadaRecord> findLatestByTurbineId(Long turbineId) {
-        return jpaRepository.findTopByTurbineIdOrderByTimeDesc(turbineId);
-    }
-
-    @Override
-    public List<ScadaRecord> findLatestByTurbineIds(List<Long> turbineIds) {
-        if (turbineIds == null || turbineIds.isEmpty()) {
+    public List<ScadaRecord> findByTurbineIdsAndTimeIn(Collection<Long> turbineIds, Collection<LocalDateTime> times) {
+        if (turbineIds == null || turbineIds.isEmpty() || times == null || times.isEmpty()) {
             return List.of();
         }
-        return jpaRepository.findLatestByTurbineIds(turbineIds);
+        return jpaRepository.findByTurbineIdInAndTimeIn(turbineIds, times);
     }
 
     @Override
