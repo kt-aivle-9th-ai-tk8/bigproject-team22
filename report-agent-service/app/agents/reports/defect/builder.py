@@ -206,15 +206,19 @@ def overview_charts(to) -> list:
 
 
 def report_title(e) -> str:
-    """'1발전소 2023-04-19 점검 보고서'.
+    """'강원 풍력 발전소 2023-04-19 점검 보고서'.
 
     점검일자는 inspection_start 의 날짜 부분. 점검이 자정을 넘겨 이틀에 걸치는 건이
     있어 '시작일' 기준으로 고정한다(정확한 구간은 부제의 '점검 기간'에 그대로 남는다).
-    발전소는 현재 windfarm_id(숫자)뿐이라 'N발전소'로 쓴다. 발전소명 컬럼이 생기면
-    여기만 이름으로 바꾸면 된다.
+    발전소명은 tools._load() 의 조인(inspection→turbine→wind_farm)이 붙여준다.
+    조인이 비면 id로, 그것도 없으면 '발전소 미상'으로 떨어진다 — 제목이 깨지지 않게.
     """
     date = (e.get("inspection_start") or "")[:10] or "일자 미상"
-    return f"{e.get('windfarm_id')}발전소 {date} 점검 보고서"
+    farm = e.get("wind_farm_name")
+    if not farm:
+        fid = e.get("wind_farm_id")
+        farm = f"{fid}발전소" if fid is not None else "발전소 미상"
+    return f"{farm} {date} 점검 보고서"
 
 
 def subtitle_lines(to) -> list:
@@ -225,9 +229,10 @@ def subtitle_lines(to) -> list:
     """
     e = to["event"]
     status = e.get("status")
+    # 발전소는 제목에 이미 있으므로, 여기서는 점검 대상 터빈(inspection.turbine_id)을 밝힌다.
     return [
         f"`점검 #{e.get('inspection_id')}` · 보고서 {e.get('report_id')} · "
-        f"단지 {e.get('windfarm_id')} · {STATUS_KO.get(status, status)}",
+        f"대상 터빈 {e.get('turbine_code') or '미상'} · {STATUS_KO.get(status, status)}",
         "",
         f"점검 기간 {e.get('inspection_start')} ~ {e.get('inspection_end')}",
     ]
@@ -242,10 +247,10 @@ def stat_pairs(to) -> list:
     s = to.get("summary", {}) or {}
     pairs = []
 
-    # inspection에 '점검 대상 터빈' 목록이 없어, 결함이 검출된 터빈만 알 수 있다.
+    # 점검 대상 터빈은 inspection.turbine_id 로 확정된다 — 결함 0건이어도 여기 표기된다.
     codes = s.get("turbine_codes") or []
     pairs.append((
-        "결함 검출 터빈",
+        "점검 대상 터빈",
         f"{s.get('n_turbines', 0)}대" + (f" ({', '.join(codes)})" if codes else ""),
     ))
     pairs.append((
