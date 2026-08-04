@@ -54,8 +54,11 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.success("수정되었습니다.", AdminUserResponse.from(result)));
     }
 
-    /** 사용자 강제 로그아웃: DELETE /api/admin/users/{userId}/sessions */
-    @DeleteMapping("/{userId}/sessions")
+    /**
+     * 사용자 강제 로그아웃: DELETE /api/admin/users/{userId}/session
+     * 1인 1세션 정책이므로 대상은 항상 단수다(경로도 단수). 활성 세션이 없었더라도 200 으로 응답한다.
+     */
+    @DeleteMapping("/{userId}/session")
     public ResponseEntity<ApiResponse<Void>> forceLogout(@PathVariable String userId) {
         adminUserManagementService.forceLogout(ApiIds.toLong(userId));
         return ResponseEntity.ok(ApiResponse.success("사용자 세션이 강제 종료되었습니다.", null));
