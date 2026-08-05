@@ -38,6 +38,8 @@ def facts(to) -> dict:
         "degradation": int(by.get("degradation", 0)),
         "defect_count": int(d.get("count", 0)),
         "defect_available": bool(d.get("available", False)),
+        "n_inspections": int(d.get("n_inspections", 0)),
+        "high_severity": int(d.get("high_severity", 0)),
     }
 
 
@@ -229,10 +231,20 @@ def build_status_and_bars(to) -> list:
 
 
 def build_defect_section(to) -> list:
+    """결함 및 유지보수 — 드론 점검 횟수 / 신규 결함 수 / 고위험 결함 유무."""
     d = to.get("defect", {}) or {}
     if not d.get("available"):
         return ["- 결함 진단 데이터 미연동 — 결함 건수 산출 불가 (0건으로 표기)"]
-    return [f"- 단지 기간 내 결함 건수: {d.get('count', 0)}건"]
+    high = int(d.get("high_severity", 0))
+    lines = [
+        f"- 드론 점검 횟수: {d.get('n_inspections', 0)}회",
+        f"- 신규 발견 결함: {d.get('count', 0)}건",
+        f"- 고위험 결함(심각도 3 이상): {high}건" + (" ⚠️" if high else " — 없음"),
+    ]
+    by_type = d.get("by_type") or {}
+    if by_type:
+        lines.append("- 주요 결함 유형: " + ", ".join(f"{k} {v}건" for k, v in by_type.items()))
+    return lines
 
 
 def render_report(to, analysis: str = None) -> str:

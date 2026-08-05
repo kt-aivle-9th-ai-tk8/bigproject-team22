@@ -1,14 +1,15 @@
 """operation(운영) 데이터 조회 — LLM 절대 사용 안 함.
 
-터빈별 운영 보고서는 '터빈 + 기간' 단위지만, 공유 계약은 fetch(event_id: int) 하나다.
-그래서 event_id를 '터빈 번호'로 해석한다: event_id=2 → 터빈 U2, 기간=해당 터빈 scada 전 구간.
-(입력 일반화(터빈+기간 params)는 shared State 변경이라 팀 합의 후 별도 진행.)
+실제 ERD 스키마 기준(turbine_id FK). 공유 계약은 fetch(event_id: int) 하나이므로
+event_id를 'turbine_id'로 해석한다: event_id=2 → turbine_id 2 (turbine.turbine_code로 표기).
+기간은 해당 터빈 scada 전 구간.
 
-집계(요구사항 + 고도화):
+집계:
   1) anomaly_event : 기간 내 유지중(end_time NULL)/종료 건수 + 유형별(정지/데이터부재/저하)
   2) scada_record  : power_output/expected_power_unit 평균·총량(MWh),
                      가동률(is_stopped)·손실 분해(정지/성능저하)·평균 풍속·월별 시계열
-  3) defect        : 기간 내 결함 건수 (ERD Defect→Inspection→Turbine, 데이터 없으면 미가용)
+  3) inspection/defect : 기간 내 드론 점검 횟수, 신규 결함 수, 고위험 결함 수
+                         (ERD Defect→Inspection→Turbine 조인)
 
 반환 dict가 그대로 state['tool_outputs'] = critic 검증 기준. 원본 수치 그대로(가공 최소).
 배포(RDS): DATA_SOURCE=="rds"면 조회부만 SELECT로 교체(시그니처·반환 dict 유지).
@@ -27,11 +28,32 @@ _events = pd.read_csv(
 _scada = pd.read_csv(
     os.path.join(DATA_DIR, "scada_record.csv"),
     encoding="utf-8-sig",
-    parse_dates=["timestamp"],
+    parse_dates=["recorded_at"],
 )
+_turbine = pd.read_csv(os.path.join(DATA_DIR, "turbine.csv"), encoding="utf-8-sig").dropna(
+    subset=["turbine_id"]
+)
+_turbine["turbine_id"] = _turbine["turbine_id"].astype(int)
+_farm = pd.read_csv(os.path.join(DATA_DIR, "wind_farm.csv"), encoding="utf-8-sig")
 
-KNOWN_TURBINES = sorted(_scada["turbine_code"].unique().tolist())
-DEFAULT_FARM = "화순풍력발전소"   # 데이터는 화순 U1~U8 (ERD WindFarm.wind_farm_name 대응)
+# 결함 계열(있으면 사용, 없으면 미가용 처리)
+def _try_read(name, **kw):
+    path = os.path.join(DATA_DIR, name)
+    if not os.path.exists(path):
+        return None
+    try:
+        return pd.read_csv(path, encoding="utf-8-sig", **kw)
+    except Exception:
+        return None
+
+
+_inspection = _try_read("inspection.csv", parse_dates=["inspection_start", "inspection_end"])
+_defect = _try_read("defect.csv")
+
+KNOWN_TURBINE_IDS = sorted(_scada["turbine_id"].unique().tolist())
+
+# 심각도 임계 — severity가 이 값 이상이면 '고위험'으로 집계 (ERD: 1~4 CNN 분류)
+HIGH_SEVERITY = 3
 
 # event_type → 운영 보고서용 3개 범주 (정지 / 데이터 부재 / 저하)
 EVENT_CATEGORY = {
@@ -51,15 +73,28 @@ def _num(v):
     return v.item() if hasattr(v, "item") else v
 
 
-def turbine_code_for(event_id: int) -> str:
-    """event_id(정수) → 터빈 코드. 규칙: N → 'U{N}'."""
-    return f"U{int(event_id)}"
+def get_turbine_info(turbine_id: int) -> dict:
+    """turbine + wind_farm 조인 → 터빈 코드·발전소명. 없으면 {'found': False}."""
+    row = _turbine[_turbine["turbine_id"] == int(turbine_id)]
+    if row.empty:
+        return {"found": False}
+    r = row.iloc[0]
+    farm_name = None
+    fr = _farm[_farm["wind_farm_id"] == r["wind_farm_id"]]
+    if not fr.empty:
+        farm_name = fr.iloc[0]["wind_farm_name"]
+    return {
+        "found": True,
+        "turbine_id": int(turbine_id),
+        "turbine_code": r["turbine_code"],
+        "farm_name": farm_name or "발전소",
+    }
 
 
-def get_anomaly_summary(turbine_code, start, end_excl) -> dict:
+def get_anomaly_summary(turbine_id, start, end_excl) -> dict:
     """기간 내 이상 이벤트 집계 — 상태별/유형별."""
     df = _events[
-        (_events["turbine_code"] == turbine_code)
+        (_events["turbine_id"] == int(turbine_id))
         & (_events["start_time"] >= start)
         & (_events["start_time"] < end_excl)
     ]
@@ -78,9 +113,9 @@ def get_anomaly_summary(turbine_code, start, end_excl) -> dict:
     }
 
 
-def get_scada_summary(turbine_code) -> dict:
+def get_scada_summary(turbine_id) -> dict:
     """터빈 전 구간 scada 집계 + 운영 진단 지표 + 월별 시계열."""
-    df = _scada[_scada["turbine_code"] == turbine_code].copy()
+    df = _scada[_scada["turbine_id"] == int(turbine_id)].copy()
     if df.empty:
         return {"found": False, "n_rows": 0}
 
@@ -109,7 +144,7 @@ def get_scada_summary(turbine_code) -> dict:
     perf_loss_kwh = gap[~stopped].sum()
 
     dfm = dfv.copy()   # 월별 추이도 같은 유효 행 모집단 사용
-    dfm["month"] = dfm["timestamp"].dt.strftime("%Y-%m")
+    dfm["month"] = dfm["recorded_at"].dt.strftime("%Y-%m")
     grp = dfm.groupby("month").agg(expected=("expected_power_unit", "mean"),
                                    actual=("power_output", "mean"))
     monthly = [{"month": m, "expected": _num(r["expected"]), "actual": _num(r["actual"])}
@@ -118,8 +153,8 @@ def get_scada_summary(turbine_code) -> dict:
     return {
         "found": True,
         "n_rows": int(len(dfv)),
-        "period_start": _num(df["timestamp"].min()),
-        "period_end": _num(df["timestamp"].max()),
+        "period_start": _num(df["recorded_at"].min()),
+        "period_end": _num(df["recorded_at"].max()),
         "avg_actual_power": _num(avg_actual),
         "avg_expected_power": _num(avg_expected),
         "utilization_pct": _num(util),
@@ -134,54 +169,56 @@ def get_scada_summary(turbine_code) -> dict:
     }
 
 
-def get_defect_count(turbine_code, start, end_excl) -> dict:
-    """기간 내 결함 건수. 데이터 없으면 {'available': False, 'count': 0}.
+def get_defect_summary(turbine_id, start, end_excl) -> dict:
+    """기간 내 드론 점검 횟수·신규 결함 수·고위험 결함 수 (Defect→Inspection→Turbine).
 
-    RDS: SELECT COUNT(*) FROM defect d JOIN inspection i ON d.inspection_id=i.inspection_id
-         JOIN turbine t ON i.turbine_id=t.turbine_id
-         WHERE t.turbine_code=:code AND i.inspection_start >= :start AND < :end
+    RDS: SELECT ... FROM defect d JOIN inspection i ON d.inspection_id = i.inspection_id
+         WHERE i.turbine_id = :tid AND i.inspection_start >= :start AND < :end
     """
-    dpath = os.path.join(DATA_DIR, "defect.csv")
-    ipath = os.path.join(DATA_DIR, "inspection.csv")
-    if not (os.path.exists(dpath) and os.path.exists(ipath)):
-        return {"available": False, "count": 0}
-    try:
-        defects = pd.read_csv(dpath, encoding="utf-8-sig")
-        insp = pd.read_csv(ipath, encoding="utf-8-sig", parse_dates=["inspection_start"])
-        insp = insp[(insp["turbine_code"] == turbine_code)
-                    & (insp["inspection_start"] >= start)
-                    & (insp["inspection_start"] < end_excl)]
-        merged = defects[defects["inspection_id"].isin(insp["inspection_id"])]
-        return {"available": True, "count": int(len(merged))}
-    except Exception:
-        return {"available": False, "count": 0}
+    if _inspection is None or _defect is None:
+        return {"available": False, "n_inspections": 0, "count": 0, "high_severity": 0}
+
+    insp = _inspection[
+        (_inspection["turbine_id"] == int(turbine_id))
+        & (_inspection["inspection_start"] >= start)
+        & (_inspection["inspection_start"] < end_excl)
+    ]
+    d = _defect[_defect["inspection_id"].isin(insp["inspection_id"])]
+    high = int((d["severity"] >= HIGH_SEVERITY).sum()) if "severity" in d.columns else 0
+    types = d["defect_type"].value_counts().to_dict() if "defect_type" in d.columns else {}
+    return {
+        "available": True,
+        "n_inspections": int(len(insp)),      # 드론 점검 횟수
+        "count": int(len(d)),                  # 신규 발견 결함 수
+        "high_severity": high,                 # 고위험 결함 수(severity >= 3)
+        "by_type": {str(k): int(v) for k, v in list(types.items())[:5]},
+    }
 
 
 def fetch(event_id: int) -> dict:
-    """event_id(=터빈 번호) → tool_outputs. 이상 이벤트·발전 실적·결함 집계.
+    """event_id(=turbine_id) → tool_outputs. 이상 이벤트·발전 실적·결함 집계.
 
     'event' 키는 공유 service가 존재 여부(found)를 읽는 계약이라 함께 노출한다.
     """
-    code = turbine_code_for(event_id)
-    if code not in KNOWN_TURBINES:
-        return {"event": {"found": False}, "turbine": {"found": False, "turbine_code": code}}
+    info = get_turbine_info(event_id)
+    if not info.get("found") or int(event_id) not in KNOWN_TURBINE_IDS:
+        return {"event": {"found": False}, "turbine": {"found": False, "turbine_id": event_id}}
 
-    scada = get_scada_summary(code)
+    scada = get_scada_summary(event_id)
     start = pd.to_datetime(scada["period_start"])
     end_excl = pd.to_datetime(scada["period_end"]) + pd.Timedelta(seconds=1)
-    start_str = start.strftime("%Y-%m-%d")
-    end_str = pd.to_datetime(scada["period_end"]).strftime("%Y-%m-%d")
 
     return {
         "event": {"found": True},   # service의 generic found-체크용
         "turbine": {
             "found": True,
-            "farm_name": DEFAULT_FARM,
-            "turbine_code": code,
-            "period_start": start_str,
-            "period_end": end_str,
+            "turbine_id": info["turbine_id"],
+            "turbine_code": info["turbine_code"],
+            "farm_name": info["farm_name"],
+            "period_start": start.strftime("%Y-%m-%d"),
+            "period_end": pd.to_datetime(scada["period_end"]).strftime("%Y-%m-%d"),
         },
-        "anomaly": get_anomaly_summary(code, start, end_excl),
+        "anomaly": get_anomaly_summary(event_id, start, end_excl),
         "scada": scada,
-        "defect": get_defect_count(code, start, end_excl),
+        "defect": get_defect_summary(event_id, start, end_excl),
     }
