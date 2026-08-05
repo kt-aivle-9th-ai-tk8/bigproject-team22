@@ -43,8 +43,9 @@ public class AdminUserController {
     }
 
     /**
-     * 사용자 통합 수정(권한 + 담당 단지): PATCH /api/admin/users/{userId}
+     * 사용자 통합 수정(권한 + 계정 상태 + 담당 단지): PATCH /api/admin/users/{userId}
      * 본문에 없는 항목은 변경하지 않으며, wind_farm_ids 를 빈 배열/null 로 보내면 담당이 전체 해제된다.
+     * status 를 SUSPENDED 로 바꾸면 해당 사용자의 세션도 함께 파기된다(재로그인까지 차단).
      */
     @PatchMapping("/{userId}")
     public ResponseEntity<ApiResponse<AdminUserResponse>> updateUser(@PathVariable String userId,

@@ -3,6 +3,7 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.infrastructure;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.AdminUserService;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.AdminUserResult;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserStatus;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.port.UserAdminPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -37,6 +38,11 @@ public class UserAdminAdapter implements UserAdminPort {
     }
 
     @Override
+    public UserAccount changeStatus(Long userId, UserStatus status) {
+        return toAccount(adminUserService.changeStatus(userId, status));
+    }
+
+    @Override
     public void forceLogout(Long userId) {
         adminUserService.forceLogout(userId);
     }
@@ -47,6 +53,7 @@ public class UserAdminAdapter implements UserAdminPort {
                 result.employeeId(),
                 result.userName(),
                 result.role(),
+                result.status(),
                 result.sessionActive());
     }
 }

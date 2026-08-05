@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.port;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserStatus;
 
 import java.util.List;
 
@@ -18,6 +19,9 @@ public interface UserAdminPort {
     /** 권한 변경(활성 세션은 파기되어 재로그인 시 새 권한이 적용된다). */
     UserAccount changeRole(Long userId, Role role);
 
+    /** 계정 상태 변경. 정지 시 활성 세션도 파기된다. */
+    UserAccount changeStatus(Long userId, UserStatus status);
+
     /** 강제 로그아웃(세션 파기). */
     void forceLogout(Long userId);
 
@@ -27,6 +31,7 @@ public interface UserAdminPort {
             String employeeId,
             String userName,
             Role role,
+            UserStatus status,
             boolean sessionActive
     ) {
         public boolean isAdmin() {
