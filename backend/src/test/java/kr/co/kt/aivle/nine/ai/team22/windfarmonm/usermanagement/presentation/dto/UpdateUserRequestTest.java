@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.presentation.dto;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserStatus;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.dto.UpdateUserCommand;
@@ -94,6 +95,28 @@ class UpdateUserRequestTest {
 
         UpdateUserCommand absent = parse("{}");
         assertThat(absent.windFarmIdsProvided()).isFalse(); // 키가 없었음 → 미수정
+    }
+
+    @Test
+    @DisplayName("status 만 보내면 나머지는 건드리지 않는다")
+    void statusOnly_doesNotTouchOthers() {
+        UpdateUserCommand command = parse("{\"status\":\"SUSPENDED\"}");
+
+        assertThat(command.statusProvided()).isTrue();
+        assertThat(command.status()).isEqualTo(UserStatus.SUSPENDED);
+        assertThat(command.roleProvided()).isFalse();
+        assertThat(command.windFarmIdsProvided()).isFalse();
+    }
+
+    @Test
+    @DisplayName("status 는 키가 없으면 미수정, 명시적 null 은 '키 있음'으로 전달된다(서비스가 400 처리)")
+    void status_absentVsExplicitNull() {
+        UpdateUserCommand absent = parse("{}");
+        assertThat(absent.statusProvided()).isFalse();
+
+        UpdateUserCommand explicitNull = parse("{\"status\":null}");
+        assertThat(explicitNull.statusProvided()).isTrue();
+        assertThat(explicitNull.status()).isNull();
     }
 
     @Test
