@@ -52,7 +52,7 @@ public class AdminUserManagementService {
     }
 
     /**
-     * 사용자 통합 수정(권한 + 담당 단지). 본문에 없는 항목은 변경하지 않는다.
+     * 사용자 통합 수정(권한 + 계정 상태 + 담당 단지). 본문에 없는 항목은 변경하지 않는다.
      * <p>
      * ADMIN 은 전체 단지를 열람하므로 담당 배정을 가질 수 없다 — ADMIN 에게 단지를 배정하려 하면
      * {@link ErrorCode#INVALID_INPUT}. (ADMIN 으로 승격하면서 배정을 비우는 것은 허용된다.)
@@ -67,6 +67,15 @@ public class AdminUserManagementService {
             }
             if (command.role() != account.role()) {
                 account = userAdminPort.changeRole(userId, command.role());
+            }
+        }
+
+        if (command.statusProvided()) {
+            if (command.status() == null) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT); // status 는 NN — 명시적 null 은 계약 위반
+            }
+            if (command.status() != account.status()) {
+                account = userAdminPort.changeStatus(userId, command.status());
             }
         }
 
@@ -97,6 +106,7 @@ public class AdminUserManagementService {
                 account.employeeId(),
                 account.userName(),
                 account.role(),
+                account.status(),
                 account.sessionActive(),
                 assignments);
     }

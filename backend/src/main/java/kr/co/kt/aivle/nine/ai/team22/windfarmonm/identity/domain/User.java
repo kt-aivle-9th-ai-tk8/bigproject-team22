@@ -24,11 +24,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 
-    /** 로그인 실패 허용 횟수. 초과 시 계정 잠금 */
+    /** 로그인 실패 허용 횟수. 도달 시 계정이 {@link UserStatus#SUSPENDED} 로 전이된다. */
     public static final int MAX_LOGIN_FAIL_COUNT = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
     private Long id;
 
     /** 사번 */
@@ -42,6 +43,13 @@ public class User {
     @Column(nullable = false)
     private String userName;
 
+    /**
+     * 연락처. 회원가입 시 필수로 받는다(요청 검증).
+     * 컬럼이 nullable 인 것은 이 필드가 없던 시절의 기존 계정 때문이다.
+     */
+    @Column(length = 20)
+    private String phone;
+
     // @JdbcTypeCode(VARCHAR): Hibernate 6.3+ 가 MySQL 네이티브 ENUM 컬럼을 생성하지 않도록 강제.
     // 표준 VARCHAR 로 저장해 DB 이식성(PostgreSQL 등)·구버전 호환·enum 값 추가 시 무마이그레이션 확보.
     @Enumerated(EnumType.STRING)
@@ -49,6 +57,16 @@ public class User {
     @Column(nullable = false, length = 20)
     private Role role;
 
+    /** 로그인 가능 여부의 단일 근거. {@link #loginFailCount} 는 잠금 판단에 쓰이지 않는다. */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(nullable = false, length = 20)
+    private UserStatus status;
+
+    /**
+     * 로그인 실패 누적 횟수. 임계 도달 시 {@link #status} 를 SUSPENDED 로 전이시키는 트리거이자
+     * <b>감사 기록</b>이다. 잠긴 뒤에도 값을 유지하며, 관리자가 계정을 다시 활성화할 때만 0 이 된다.
+     */
     @Column(nullable = false)
     private int loginFailCount;
 
@@ -72,28 +90,51 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    private User(String employeeId, String encodedPassword, String userName, Role role) {
+    private User(String employeeId, String encodedPassword, String userName, String phone, Role role) {
         this.employeeId = employeeId;
         this.password = encodedPassword;
         this.userName = userName;
+        this.phone = phone;
         this.role = role;
+        this.status = UserStatus.ACTIVE;
         this.loginFailCount = 0;
     }
 
-    public static User create(String employeeId, String encodedPassword, String userName, Role role) {
-        return new User(employeeId, encodedPassword, userName, role);
+    public static User create(String employeeId, String encodedPassword, String userName, String phone, Role role) {
+        return new User(employeeId, encodedPassword, userName, phone, role);
     }
 
+    /** 로그인 차단 여부. 자동 잠금과 관리자 차단을 구분하지 않고 상태 하나로 판단한다. */
     public boolean isLocked() {
-        return loginFailCount >= MAX_LOGIN_FAIL_COUNT;
+        return status == UserStatus.SUSPENDED;
     }
 
+    /**
+     * 로그인 실패 누적. 임계에 도달하면 계정을 정지시킨다.
+     * 카운트는 잠긴 뒤에도 감사 목적으로 그대로 남긴다.
+     */
     public void increaseLoginFailCount() {
         this.loginFailCount++;
+        if (this.loginFailCount >= MAX_LOGIN_FAIL_COUNT) {
+            this.status = UserStatus.SUSPENDED;
+        }
     }
 
     public void resetLoginFailCount() {
         this.loginFailCount = 0;
+    }
+
+    /**
+     * 계정 상태 변경(관리자).
+     * <p>
+     * 활성화할 때 실패 카운트를 함께 0 으로 되돌린다. 그러지 않으면 카운트가 임계에 머문 채 풀려
+     * <b>다음 1회 실패만으로 즉시 재잠금</b>되기 때문이다.
+     */
+    public void changeStatus(UserStatus status) {
+        this.status = status;
+        if (status == UserStatus.ACTIVE) {
+            this.loginFailCount = 0;
+        }
     }
 
     /** 관리자 승인/권한 변경 */

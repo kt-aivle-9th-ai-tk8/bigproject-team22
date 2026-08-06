@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.presentation.dto;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserStatus;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.web.ApiIds;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.dto.UpdateUserCommand;
 
@@ -21,12 +22,20 @@ public class UpdateUserRequest {
     private Role role;
     private boolean roleProvided;
 
+    private UserStatus status;
+    private boolean statusProvided;
+
     private List<String> windFarmIds;
     private boolean windFarmIdsProvided;
 
     public void setRole(Role role) {
         this.role = role;
         this.roleProvided = true;
+    }
+
+    public void setStatus(UserStatus status) {
+        this.status = status;
+        this.statusProvided = true;
     }
 
     public void setWindFarmIds(List<String> windFarmIds) {
@@ -38,6 +47,10 @@ public class UpdateUserRequest {
         return role;
     }
 
+    public UserStatus getStatus() {
+        return status;
+    }
+
     public List<String> getWindFarmIds() {
         return windFarmIds;
     }
@@ -46,6 +59,6 @@ public class UpdateUserRequest {
         List<Long> ids = windFarmIds == null ? null : windFarmIds.stream()
                 .map(ApiIds::toLong)
                 .toList();
-        return new UpdateUserCommand(roleProvided, role, windFarmIdsProvided, ids);
+        return new UpdateUserCommand(roleProvided, role, statusProvided, status, windFarmIdsProvided, ids);
     }
 }

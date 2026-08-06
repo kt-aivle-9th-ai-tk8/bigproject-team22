@@ -21,19 +21,23 @@ public class AuthService {
     private final SessionManager sessionManager;
 
     /**
-     * 사번/비밀번호 확인 후 로그인. 실패 시 실패 카운트를 누적하고, 임계치 초과 시 계정을 잠근다.
+     * 사번/비밀번호 확인 후 로그인. 실패 시 실패 카운트를 누적하고, 임계치 도달 시 계정이 정지된다.
      * 실제 세션 발급(쿠키)은 프레젠테이션 계층에서 HttpSession 에 결과를 저장하며 이루어진다.
      * <p>
+     * 차단 판단은 {@code status} 하나로 일원화되어 있다(실패 누적에 의한 자동 정지와 관리자의 명시적
+     * 차단이 같은 경로로 걸린다). 실패 카운트는 감사 기록으로만 남는다.
+     * <p>
      * {@code noRollbackFor}: 비밀번호 불일치 시 던지는 {@link BusinessException}(런타임 예외)이
-     * 트랜잭션을 롤백시키면 {@code increaseLoginFailCount()} 증가분이 사라져 계정 잠금이 동작하지 않는다.
-     * 따라서 이 예외에 한해 롤백하지 않고 실패 카운트 증가를 커밋한다.
+     * 트랜잭션을 롤백시키면 {@code increaseLoginFailCount()} 증가분과 그에 따른 상태 전이가 사라져
+     * 계정 잠금이 동작하지 않는다. 따라서 이 예외에 한해 롤백하지 않고 커밋한다.
      */
     @Transactional(noRollbackFor = BusinessException.class)
     public LoginResult login(LoginCommand command) {
         User user = userRepository.findByEmployeeId(command.employeeId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
-        // TODO: 잠금/실패사유 노출이 보안상 문제라는 PR 리뷰 존재. 계정 열거 방지를 위해 미존재/불일치/잠김을 동일 응답으로 통일하는 방안 검토 필요
+        // 잠김을 별도 코드(A003)로 알리는 것은 FE 요구사항이다(사용자에게 관리자 문의를 안내해야 함).
+        // 계정 열거 관점에서는 미존재/불일치와 구분되지 않는 편이 안전하지만, 화면 요구가 우선한다.
         if (user.isLocked()) {
             throw new BusinessException(ErrorCode.ACCOUNT_LOCKED);
         }

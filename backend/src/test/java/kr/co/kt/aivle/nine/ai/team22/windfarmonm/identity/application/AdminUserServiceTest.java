@@ -35,7 +35,7 @@ class AdminUserServiceTest {
     AdminUserService adminUserService;
 
     private User userWithSession(String sessionId) {
-        User user = User.create("E1001", "hashed", "홍길동", Role.MANAGER);
+        User user = User.create("E1001", "hashed", "홍길동", "010-1234-5678", Role.MANAGER);
         if (sessionId != null) {
             user.updateLatestSessionId(sessionId);
         }

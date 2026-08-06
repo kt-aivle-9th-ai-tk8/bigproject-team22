@@ -44,7 +44,7 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
     }
 
     private void seed(String employeeId, Role role) {
-        userJpaRepository.save(User.create(employeeId, passwordEncoder.encode("pw12345!"), employeeId, role));
+        userJpaRepository.save(User.create(employeeId, passwordEncoder.encode("pw12345!"), employeeId, "010-1234-5678", role));
     }
 
     /** exchange 로 상태코드/헤더/본문을 예외 없이 그대로 받는다. */
@@ -84,7 +84,7 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
     @DisplayName("회원가입은 항상 GUEST 로 생성된다")
     void signUp_createsGuest() {
         ResponseEntity<String> response = send(HttpMethod.POST, "/users",
-                "{\"employee_id\":\"E1001\",\"password\":\"pw12345!\",\"user_name\":\"홍길동\",\"role\":\"ADMIN\"}", null);
+                "{\"employee_id\":\"E1001\",\"password\":\"pw12345!\",\"user_name\":\"홍길동\",\"phone\":\"010-1234-5678\",\"role\":\"ADMIN\"}", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).contains("\"role\":\"GUEST\"");
