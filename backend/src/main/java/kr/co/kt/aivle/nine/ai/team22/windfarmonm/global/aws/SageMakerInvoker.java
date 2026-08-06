@@ -69,8 +69,9 @@ public class SageMakerInvoker {
             return response.body().asString(StandardCharsets.UTF_8);
         } catch (RuntimeException e) {
             // 엔드포인트 이름 등 내부 정보가 응답에 새지 않도록 상세는 로그로만 남긴다.
+            // '미설정'과 구분되는 코드를 쓴다 — 타임아웃·권한오류를 설정 문제로 보고하면 원인 추적이 어긋난다.
             log.error("SageMaker 추론 호출 실패 endpoint={}", endpoint, e);
-            throw new BusinessException(ErrorCode.INFERENCE_NOT_CONFIGURED);
+            throw new BusinessException(ErrorCode.INFERENCE_FAILURE);
         }
     }
 
@@ -80,9 +81,13 @@ public class SageMakerInvoker {
             synchronized (this) {
                 local = client;
                 if (local == null) {
+                    // 소켓 제한시간을 명시한다. SDK 기본값은 SageMaker 의 모델 응답 상한(60초)보다 짧아,
+                    // 콜드스타트나 긴 추론이 성공할 수 있는데도 클라이언트가 먼저 끊어버린다.
                     local = SageMakerRuntimeClient.builder()
                             .region(Region.of(properties.region()))
-                            .httpClient(UrlConnectionHttpClient.create())
+                            .httpClient(UrlConnectionHttpClient.builder()
+                                    .socketTimeout(properties.sagemaker().invokeTimeout())
+                                    .build())
                             .build();
                     client = local;
                 }

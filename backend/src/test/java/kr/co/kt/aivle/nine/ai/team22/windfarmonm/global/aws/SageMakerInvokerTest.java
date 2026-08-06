@@ -16,7 +16,7 @@ class SageMakerInvokerTest {
         return new AwsProperties(
                 region,
                 new AwsProperties.S3("", "content", Duration.ofMinutes(15)),
-                new AwsProperties.Sagemaker(endpoint));
+                new AwsProperties.Sagemaker(endpoint, Duration.ofSeconds(70)));
     }
 
     @Test

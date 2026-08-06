@@ -33,9 +33,14 @@ public record AwsProperties(
     ) {
     }
 
-    /** @param anomalyEndpoint 이상감지 Serverless Inference 엔드포인트 이름. 비어 있으면 미설정. */
+    /**
+     * @param anomalyEndpoint 이상감지 Serverless Inference 엔드포인트 이름. 비어 있으면 미설정.
+     * @param invokeTimeout   호출 소켓 제한시간. SageMaker 는 모델 응답 상한이 60초이므로 그보다 넉넉히 잡는다 —
+     *                        더 짧으면 성공할 수 있는 추론을 클라이언트가 먼저 끊어버린다(콜드스타트 포함).
+     */
     public record Sagemaker(
-            @DefaultValue("") String anomalyEndpoint
+            @DefaultValue("") String anomalyEndpoint,
+            @DefaultValue("70s") Duration invokeTimeout
     ) {
     }
 

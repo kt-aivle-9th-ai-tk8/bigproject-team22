@@ -51,7 +51,8 @@ public enum ErrorCode {
     // Infrastructure — 외부 자원 미설정/장애. 앱 기동은 막지 않고 해당 엔드포인트만 실패시킨다.
     STORAGE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "S001", "파일 저장소가 설정되지 않았습니다."),
     STORAGE_FAILURE(HttpStatus.SERVICE_UNAVAILABLE, "S002", "파일 저장소 접근에 실패했습니다."),
-    INFERENCE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "S003", "추론 엔드포인트가 설정되지 않았습니다.");
+    INFERENCE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "S003", "추론 엔드포인트가 설정되지 않았습니다."),
+    INFERENCE_FAILURE(HttpStatus.SERVICE_UNAVAILABLE, "S004", "추론 엔드포인트 호출에 실패했습니다.");
 
     private final HttpStatus status;
     private final String code;
