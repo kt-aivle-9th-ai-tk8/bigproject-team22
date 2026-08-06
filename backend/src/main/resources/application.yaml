@@ -24,3 +24,27 @@ kma:
   base-url: ${KMA_BASE_URL:} # 예: https://apihub.kma.go.kr/api/typ01/url
   connect-timeout: ${KMA_CONNECT_TIMEOUT:3s} # KMA 전용 fail-fast(전역 spring.http.clients.* 대신 KMA 한정)
   read-timeout: ${KMA_READ_TIMEOUT:5s}
+
+# AWS 연동(aws.*). 자격증명은 여기서 다루지 않는다 — 운영은 ECS Task Role, 로컬은 개발자 프로파일을
+# AWS SDK 기본 자격증명 체인이 집는다. 아래 값이 비어 있으면 앱은 정상 기동하고 해당 엔드포인트만 503 이다.
+aws:
+  region: ${AWS_REGION:}
+  s3:
+    bucket: ${AWS_S3_BUCKET:} # 미설정 시 presigned URL 발급/객체 읽기가 503
+    prefix: ${AWS_S3_PREFIX:content} # 키 규약: {prefix}/inspections/{inspection_id}/{blade_id}/{part_side}/...
+    presign-ttl: ${AWS_S3_PRESIGN_TTL:15m} # 업로드는 다건이라 넉넉히
+  sagemaker:
+    anomaly-endpoint: ${AWS_SAGEMAKER_ANOMALY_ENDPOINT:} # 이상감지 Serverless Inference 엔드포인트명
+    invoke-timeout: ${AWS_SAGEMAKER_INVOKE_TIMEOUT:70s} # 모델 응답 상한(60s)보다 길게 — 짧으면 성공할 추론을 먼저 끊는다
+
+# 스케줄러 분산 락. 여러 환경이 같은 Redis 를 공유할 수 있으므로 키 접두어를 환경별로 다르게 주입한다
+# (고정값이면 스테이징 배치가 운영 배치를 막는다). 기본값은 로컬 개발용이다.
+scheduling:
+  lock:
+    key-prefix: ${SCHEDULING_LOCK_KEY_PREFIX:windfarmonm-local}
+
+# 이상감지 배치. 기본 비활성이며 운영에서만 켠다.
+# (테스트/로컬에서 켜지면 매시각 SageMaker 를 호출하게 되므로 opt-in 으로 둔다)
+anomaly:
+  scheduler:
+    enabled: ${ANOMALY_SCHEDULER_ENABLED:false}
