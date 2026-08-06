@@ -195,6 +195,7 @@ jobs:
           npm ci
           npm run build
         env:
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
           VITE_VWORLD_API_KEY: ${{ secrets.VITE_VWORLD_API_KEY }}
       
       - name: Configure AWS credentials
