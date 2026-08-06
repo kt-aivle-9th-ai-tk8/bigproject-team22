@@ -40,6 +40,10 @@
                 {
                     "name": "REDIS_PORT",
                     "value":"6379"
+                },
+                {
+                    "name": "SCHEDULING_LOCK_KEY_PREFIX",
+                    "value":"windfarmonm-prod"
                 }
             ],
 
