@@ -6,7 +6,7 @@ import "./LoginScreen.css";
 function LoginScreen() {
   const navigate = useNavigate();
 
-  const [employeeId, setEmployeeId] = useState("");
+  const [employee_id, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
 
   // 보안 및 오류 관련 상태 관리
@@ -58,14 +58,14 @@ function LoginScreen() {
     }
 
     // 아이디나 비밀번호 중 하나만 비어있는 경우
-    if (!employeeId.trim() || !password.trim()) {
+    if (!employee_id.trim() || !password.trim()) {
       setModalType("fail");
       setModalMessage("사번과 비밀번호를 모두 입력해주세요.");
       return;
     }
 
     // ⚡ [테스트 계정 우회 처리] (123 / 123!)
-    if (employeeId === "123" && password === "123!") {
+    if (employee_id === "123" && password === "123!") {
       setErrorCount(0);
       setModalType("success");
       setModalMessage("로그인에 성공했습니다!");
@@ -75,27 +75,26 @@ function LoginScreen() {
     setLoading(true);
 
     try {
-      // 실제 백엔드 API 호출
-      const data = await loginApi({
-        username: employeeId,
-        password: password,
+      const responseBody = await loginApi({
+        employee_id,
+        password,
       });
 
-      if (data.accessToken) {
-        localStorage.setItem("accessToken", data.accessToken);
-      }
-      if (data.user) {
-        localStorage.setItem("userInfo", JSON.stringify(data.user));
+      console.log("[로그인 응답]", responseBody);
+
+      if (responseBody.data) {
+        localStorage.setItem("userInfo", JSON.stringify(responseBody.data));
       }
 
       setErrorCount(0);
       setModalType("success");
-      setModalMessage(data.message || "로그인에 성공했습니다!");
+      setModalMessage(responseBody.message || "로그인에 성공했습니다!");
     } catch (err) {
       const nextErrorCount = errorCount + 1;
       setErrorCount(nextErrorCount);
 
       setModalType("fail");
+
       if (nextErrorCount >= 5) {
         setIsLocked(true);
         setModalMessage(
@@ -131,7 +130,7 @@ function LoginScreen() {
             <input
               type="text"
               placeholder="사번"
-              value={employeeId}
+              value={employee_id}
               onChange={(e) => setEmployeeId(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLocked || loading}
@@ -178,7 +177,7 @@ function LoginScreen() {
             <p>홈페이지 전산 이용 문의 1234-1234 (평일 09시 - 18시)</p>
           </div>
           <div className="footer-links">
-            <span>이용약관</span>
+            <span className="policy-highlight">이용약관</span>
             <span className="policy-highlight">개인정보처리방침</span>
             <span>사이트맵</span>
           </div>
