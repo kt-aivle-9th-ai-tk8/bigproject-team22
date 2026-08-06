@@ -18,19 +18,23 @@ export const loginApi = async (credentials) => {
 
 // 2. 회원가입 API 호출
 export const signupApi = async (userData) => {
-  // userData: { username: '', password: '', name: '', email: '' 등 }
-  const response = await fetch('/api/auth/signup', {
-    method: 'POST',
+  const response = await fetch("/api/users", {
+    method: "POST",
+    credentials: "include",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify(userData),
   });
 
+  const responseBody = await response.json().catch(() => null);
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || '회원가입 오류가 발생했습니다.');
+    throw new Error(
+      responseBody?.message || "회원가입 오류가 발생했습니다."
+    );
   }
 
-  return await response.json();
+  return responseBody;
 };
