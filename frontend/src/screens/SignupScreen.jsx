@@ -9,77 +9,58 @@ function SignupScreen() {
     employeeId: "",
     password: "",
     confirmPassword: "",
-    username: "",
+    name: "",
     department: "",
     phone: "",
     email: "",
+    agreedToTerms: false,
   });
 
-  // 동의 여부 및 모달 상태 관리
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
 
-  // 실시간 비밀번호 유효성 검사 상태
-  const [isPasswordValid, setIsPasswordValid] = useState(null);
-  const [isConfirmValid, setIsConfirmValid] = useState(null);
-
-  // 입력 변경 핸들러
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
-  // 비밀번호 복잡도 실시간 검증
-  useEffect(() => {
-    const pwd = formData.password;
-    if (!pwd) {
-      setIsPasswordValid(null);
+  const validateForm = () => {
+    if (!formData.employeeId.trim()) {
+      alert("사번을 입력해 주세요.");
+      return false;
+    }
+
+    if (!formData.password) {
+      alert("비밀번호를 입력해 주세요.");
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      alert("비밀번호가 일치하지 않습니다.");
+      return false;
+    }
+
+    if (!formData.name.trim()) {
+      alert("사용자 이름을 입력해 주세요.");
+      return false;
+    }
+
+    if (!formData.agreedToTerms) {
+      alert("개인정보 수집 및 이용 동의가 필요합니다.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
-    const hasLetter = /[a-zA-Z]/.test(pwd) ? 1 : 0;
-    const hasNumber = /[0-9]/.test(pwd) ? 1 : 0;
-    const hasSpecial = /[{}[\]/?.,;:|)*~`!^\-_+<>@#\$%&\\\=\(\'\"]/.test(pwd) ? 1 : 0;
-    const typesCount = hasLetter + hasNumber + hasSpecial;
-
-    const condition1 = typesCount >= 2 && pwd.length >= 10;
-    const condition2 = typesCount >= 3 && pwd.length >= 8;
-
-    setIsPasswordValid(condition1 || condition2);
-  }, [formData.password]);
-
-  // 비밀번호 확인 일치 검증
-  useEffect(() => {
-    const { password, confirmPassword } = formData;
-    if (!confirmPassword) {
-      setIsConfirmValid(null);
-      return;
-    }
-    setIsConfirmValid(password === confirmPassword && isPasswordValid);
-  }, [formData.password, formData.confirmPassword, isPasswordValid]);
-
-  // 회원가입 제출 핸들러 (API 연동 적용)
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const { employeeId, password, confirmPassword, username, department, phone, email } = formData;
-
-    if (!employeeId || !password || !confirmPassword || !username || !department || !phone || !email) {
-      alert("모든 정보를 입력해주세요.");
-      return;
-    }
-
-    if (!isPasswordValid || !isConfirmValid) {
-      alert("비밀번호 규칙을 확인해 주세요.");
-      return;
-    }
-
-    if (!agreeTerms) {
-      alert("개인정보 수집 및 이용에 동의해야 가입이 가능합니다.");
-      return;
-    }
-
-    // API 명세서 param 기준 Key 값 매핑 (스네이크 케이스)
     const payload = {
       employee_id: employeeId,
       password: password,
@@ -88,16 +69,17 @@ function SignupScreen() {
       // 백엔드 명세 추가 필드가 필요할 경우 이곳에 추가
     };
 
-    try {
-      // API 명세서 URL: POST /api/users
-      const response = await axios.post("/api/users", payload);
+    console.log("[회원가입 요청 payload]", payload);
 
-      if (response.status === 200 || response.status === 201) {
-        setShowSuccessModal(true);
-      }
+    try {
+      const responseBody = await signupApi(payload);
+
+      console.log("[회원가입 응답]", responseBody);
+
+      alert(responseBody?.message || "회원가입이 완료되었습니다!");
     } catch (error) {
-      console.error("회원가입 요청 에러:", error);
-      alert(error.response?.data?.message || "회원가입 중 오류가 발생했습니다.");
+      console.error("회원가입 실패:", error);
+      alert(error.message || "회원가입 처리 중 오류가 발생했습니다.");
     }
   };
 

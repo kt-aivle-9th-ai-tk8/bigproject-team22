@@ -4,14 +4,18 @@ import { fetchWindFarms } from "../api/windFarmApi";
 import { dummyWindFarms } from "../mocks/dummyWindFarms";
 import { convertWindFarmToPlant } from "../utils/windFarmMapper";
 
-const USE_DUMMY_WIND_FARMS = true;
+const USE_DUMMY_WIND_FARMS = false;
 
-const getWindFarmListFromResponse = (data) => {
-  if (Array.isArray(data)) {
-    return data;
+const getWindFarmListFromResponse = (responseBody) => {
+  if (Array.isArray(responseBody)) {
+    return responseBody;
   }
 
-  return data.data || data.windFarms || [];
+  if (Array.isArray(responseBody.data)) {
+    return responseBody.data;
+  }
+
+  return [];
 };
 
 export const useWindFarms = ({
@@ -38,14 +42,16 @@ export const useWindFarms = ({
           return;
         }
 
-        const data = await fetchWindFarms({
+        const responseBody = await fetchWindFarms({
           topN,
           location,
           power,
           weather,
         });
 
-        const windFarmList = getWindFarmListFromResponse(data);
+        const windFarmList =
+          getWindFarmListFromResponse(responseBody);
+
         const convertedPlants =
           windFarmList.map(convertWindFarmToPlant);
 
