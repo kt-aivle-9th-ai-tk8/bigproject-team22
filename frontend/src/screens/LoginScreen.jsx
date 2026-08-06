@@ -77,7 +77,7 @@ function LoginScreen() {
     try {
       // 실제 백엔드 API 호출
       const data = await loginApi({
-        username: employeeId,
+        employee_id: employeeId,
         password: password,
       });
 
