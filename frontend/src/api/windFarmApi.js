@@ -10,22 +10,21 @@ export const fetchWindFarms = async ({
     params.append("top-n", String(topN));
   }
 
-  if (location !== undefined && location !== null) {
-    params.append("location", String(location));
-  }
-
-  if (power !== undefined && power !== null) {
-    params.append("power", String(power));
-  }
-
-  if (weather !== undefined && weather !== null) {
-    params.append("weather", String(weather));
-  }
+  params.append("location", String(location));
+  params.append("power", String(power));
+  params.append("weather", String(weather));
 
   const queryString = params.toString();
 
   const response = await fetch(
-    `/api/wind-farms${queryString ? `?${queryString}` : ""}`
+    `/api/wind-farms${queryString ? `?${queryString}` : ""}`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+      },
+    }
   );
 
   if (!response.ok) {
