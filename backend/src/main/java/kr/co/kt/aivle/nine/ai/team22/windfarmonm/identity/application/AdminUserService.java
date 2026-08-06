@@ -1,9 +1,11 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.AdminUserResult;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.port.SessionManager;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserRepository;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserStatus;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,14 @@ public class AdminUserService {
                 .toList();
     }
 
+    /** 단일 사용자 조회(세션 활성 여부 포함). 없으면 {@link ErrorCode#USER_NOT_FOUND}. */
+    @Transactional(readOnly = true)
+    public AdminUserResult getUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        return AdminUserResult.of(user, sessionManager.exists(user.getLatestSessionId()));
+    }
+
     /**
      * 사용자 권한 승인/변경. 변경이 즉시 반영되도록(세션에는 이전 권한이 스냅샷됨)
      * 대상 사용자의 활성 세션을 강제 종료하여 재로그인 시 새 권한이 적용되게 한다.
@@ -44,6 +54,26 @@ public class AdminUserService {
         user.changeRole(role);
         invalidateLatestSession(user);
         return AdminUserResult.of(user, false); // 방금 파기했으므로 비활성
+    }
+
+    /**
+     * 계정 상태 변경(정지/활성화).
+     * <p>
+     * 정지시키면 <b>세션도 함께 파기</b>한다. 상태만 바꾸면 이미 로그인해 있던 사용자가 세션이 만료될 때까지
+     * 계속 이용할 수 있어 "차단"이 성립하지 않기 때문이다. 활성화 시 실패 카운트 초기화는 도메인
+     * ({@link User#changeStatus})이 담당한다.
+     */
+    @Transactional
+    public AdminUserResult changeStatus(Long userId, UserStatus status) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        user.changeStatus(status);
+
+        if (status == UserStatus.SUSPENDED) {
+            invalidateLatestSession(user);
+            return AdminUserResult.of(user, false); // 방금 파기했으므로 비활성
+        }
+        return AdminUserResult.of(user, sessionManager.exists(user.getLatestSessionId()));
     }
 
     /** 특정 사용자를 강제 로그아웃(세션 파기). 1인 1세션이므로 세션 id 없이 user_id 만으로 처리. */

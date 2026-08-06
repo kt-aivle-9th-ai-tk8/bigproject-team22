@@ -6,7 +6,7 @@ import AlarmPopup from "./AlarmPopup/AlarmPopup";
 
 import "./Header.css";
 
-function Header({ onLogout, onTitleClick, alarm = [] }) {
+function Header({ onLogout, onTitleClick, onMyPage, alarm = [] }) {
   const navigate = useNavigate();
   const [now, setNow] = useState(new Date());
   const [isAlarmOpen, setIsAlarmOpen] = useState(false);
@@ -45,9 +45,12 @@ function Header({ onLogout, onTitleClick, alarm = [] }) {
     setIsAlarmOpen(false);
   };
 
-  // 3. 👤 아이콘 클릭 시 내 정보 페이지로 이동하는 함수
   const handleUserClick = () => {
-    navigate("/admin/users");
+    if (onMyPage) {
+      onMyPage();
+    } else {
+      navigate("/user");
+    }
   };
 
   return (
@@ -78,15 +81,27 @@ function Header({ onLogout, onTitleClick, alarm = [] }) {
           </div>
         </div>
 
-        {/* 4. 기존 로그아웃 텍스트 대신 👤 아이콘 버튼 적용 */}
-        <button
-          className="user-profile-button"
-          type="button"
-          title="사용자 페이지"
-          onClick={handleUserClick}
-        >
-          👤
-        </button>
+        {/* 3. 우측 '마이페이지' 텍스트 버튼 및 로그아웃 영역 */}
+        <div className="header-right" style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+          <span
+            className="mypage-link-text"
+            style={{ cursor: "pointer", fontWeight: "600", fontSize: "14px", color: "#333" }}
+            onClick={handleUserClick}
+          >
+            마이페이지
+          </span>
+
+          {onLogout && (
+            <button
+              type="button"
+              className="btn-logout-text"
+              style={{ cursor: "pointer", background: "none", border: "none", color: "#666" }}
+              onClick={onLogout}
+            >
+              로그아웃
+            </button>
+          )}
+        </div>
       </header>
 
       <AlarmPopup

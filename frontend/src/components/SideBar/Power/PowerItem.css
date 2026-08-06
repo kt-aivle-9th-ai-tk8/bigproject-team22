@@ -7,10 +7,13 @@
   align-items: center;
   color: #000;
   font-weight: 500;
+}
+
+.power-item-clickable {
   cursor: pointer;
 }
 
-.power-item:hover {
+.power-item-clickable:hover {
   opacity: 0.85;
 }
 

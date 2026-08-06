@@ -2,9 +2,11 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.LoginCommand;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.LoginResult;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.port.SessionManager;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserRepository;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserStatus;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -36,11 +38,11 @@ class AuthServiceTest {
     AuthService authService;
 
     private User user() {
-        return User.create("E1001", "hashed", "홍길동", Role.MANAGER);
+        return User.create("E1001", "hashed", "홍길동", "010-1234-5678", Role.MANAGER);
     }
 
     @Test
-    @DisplayName("로그인 성공 시 실패 카운트를 초기화하고 결과를 반환한다")
+    @DisplayName("로그인 성공 시 실패 카운트를 초기화한다")
     void login_success() {
         User user = user();
         user.increaseLoginFailCount();
@@ -53,6 +55,42 @@ class AuthServiceTest {
         assertThat(result.employeeId()).isEqualTo("E1001");
         assertThat(result.role()).isEqualTo(Role.MANAGER);
         assertThat(user.getLoginFailCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("실패 임계에 도달하면 계정이 정지되어 이후 로그인이 차단된다")
+    void login_lockedByFailureThreshold() {
+        User user = user();
+        when(userRepository.findByEmployeeId("E1001")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
+
+        for (int i = 0; i < User.MAX_LOGIN_FAIL_COUNT; i++) {
+            assertThatThrownBy(() -> authService.login(new LoginCommand("E1001", "wrong")))
+                    .isInstanceOf(BusinessException.class);
+        }
+
+        assertThat(user.getStatus()).isEqualTo(UserStatus.SUSPENDED);
+        // 실패 횟수는 감사 목적으로 잠긴 뒤에도 남는다
+        assertThat(user.getLoginFailCount()).isEqualTo(User.MAX_LOGIN_FAIL_COUNT);
+        assertThatThrownBy(() -> authService.login(new LoginCommand("E1001", "pw")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.ACCOUNT_LOCKED);
+    }
+
+    @Test
+    @DisplayName("관리자가 정지시킨 계정도 같은 코드(A003)로 차단된다 — 자동/수동 잠금을 구분하지 않는다")
+    void login_suspendedByAdmin() {
+        User user = user();
+        user.changeStatus(UserStatus.SUSPENDED);
+        when(userRepository.findByEmployeeId("E1001")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.login(new LoginCommand("E1001", "pw")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.ACCOUNT_LOCKED);
+        assertThat(user.getLoginFailCount()).isZero();
+        verify(passwordEncoder, never()).matches(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -78,22 +116,6 @@ class AuthServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
-    }
-
-    @Test
-    @DisplayName("잠긴 계정은 비밀번호 검증 전에 ACCOUNT_LOCKED 를 던진다")
-    void login_lockedAccount() {
-        User user = user();
-        for (int i = 0; i < User.MAX_LOGIN_FAIL_COUNT; i++) {
-            user.increaseLoginFailCount();
-        }
-        when(userRepository.findByEmployeeId("E1001")).thenReturn(Optional.of(user));
-
-        assertThatThrownBy(() -> authService.login(new LoginCommand("E1001", "pw")))
-                .isInstanceOf(BusinessException.class)
-                .extracting(e -> ((BusinessException) e).getErrorCode())
-                .isEqualTo(ErrorCode.ACCOUNT_LOCKED);
-        verify(passwordEncoder, never()).matches(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test

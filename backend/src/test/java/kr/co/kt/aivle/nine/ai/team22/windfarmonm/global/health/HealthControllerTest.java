@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(HealthController.class)
 @Import({WebConfig.class, LoginCheckInterceptor.class, AdminRoleInterceptor.class, LoginMemberArgumentResolver.class})
+@ActiveProfiles("test") // main application.yaml 의 spring.profiles.active 플레이스홀더 해석을 위해 필요
 class HealthControllerTest {
 
     @Autowired

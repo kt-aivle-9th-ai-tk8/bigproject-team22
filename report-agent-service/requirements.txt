@@ -43,3 +43,8 @@ uvicorn==0.51.0
 websockets==15.0.1
 xxhash==3.8.1
 zstandard==0.25.0
+
+# ── report-agent (LangGraph) 추가 의존성 — 정확한 핀 버전은 팀과 확정 예정 ──
+pandas
+python-dotenv
+langchain-openai

@@ -2,12 +2,14 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserStatus;
 
 public record AdminUserResult(
         Long id,
         String employeeId,
         String userName,
         Role role,
+        UserStatus status,
         boolean sessionActive
 ) {
     /**
@@ -21,6 +23,7 @@ public record AdminUserResult(
                 user.getEmployeeId(),
                 user.getUserName(),
                 user.getRole(),
+                user.getStatus(),
                 sessionActive
         );
     }

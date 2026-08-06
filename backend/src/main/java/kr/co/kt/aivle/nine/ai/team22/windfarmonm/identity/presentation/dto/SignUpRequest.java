@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.presentation.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.SignUpCommand;
 
 /**
@@ -14,9 +15,15 @@ public record SignUpRequest(
         String password,
 
         @NotBlank(message = "이름은 필수입니다.")
-        String userName
+        String userName,
+
+        // 길이 제한을 여기서 막는 이유: 초과 시 DB 제약 위반이 UserService 의
+        // DataIntegrityViolationException catch 에 걸려 '사번 중복(409)' 으로 잘못 보고된다.
+        @NotBlank(message = "연락처는 필수입니다.")
+        @Size(max = 20, message = "연락처는 20자를 넘을 수 없습니다.")
+        String phone
 ) {
     public SignUpCommand toCommand() {
-        return new SignUpCommand(employeeId, password, userName);
+        return new SignUpCommand(employeeId, password, userName, phone);
     }
 }

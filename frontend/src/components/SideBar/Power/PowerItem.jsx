@@ -2,7 +2,7 @@ import PowerGauge from "./PowerGauge";
 import "./PowerItem.css";
 
 function PowerItem({
-  title = "장흥 발전소",
+  title,
   currentOutput = 1005.4,
   currentPower = 412,
   monthPower = 8.7,
@@ -10,8 +10,13 @@ function PowerItem({
   onClick,
 }) {
   return (
-    <div className="power-item" onClick={onClick}>
-      <div className="power-item-title">{title}</div>
+    <div
+      className={`power-item ${onClick ? "power-item-clickable" : ""}`}
+      onClick={onClick}
+    >
+      {title && (
+        <div className="power-item-title">{title}</div>
+      )}
 
       <div className="power-item-label power-item-output-label">
         현재 출력
