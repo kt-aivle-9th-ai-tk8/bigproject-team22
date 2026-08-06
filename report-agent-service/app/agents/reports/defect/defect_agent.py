@@ -4,9 +4,11 @@
 
 역할(분석가 레이어): 수치·터빈별 상세·이미지 목록·판단유보는 builder가 코드로 주입.
 LLM은 '## 종합 분석'에서 facts를 근거로 신호를 종합·해석·우선순위 제시. 수치는 '인용'만.
+WITH_ANALYSIS off면 종합 분석 없이 완전 결정론(narrative=None → LLM 미호출). operation과 동일.
 """
 import re
 
+from app.core.config import WITH_ANALYSIS
 from app.agents.llm import llm
 from app.agents.reports.defect.builder import fact_lines, render_report
 
@@ -38,6 +40,9 @@ _ANALYST_RULES = """당신은 풍력 블레이드 결함 진단 보고서의 '�
 def defect_agent(state) -> dict:
     """facts(코드 집계치)를 근거로 LLM이 '종합 분석'을 쓰고, builder로 전체 조립."""
     to = state["tool_outputs"]
+    if not WITH_ANALYSIS:
+        return {"draft": render_report(to, None), "narrative": None}
+
     summary = to.get("summary", {}) or {}
     codes = summary.get("turbine_codes") or []
 

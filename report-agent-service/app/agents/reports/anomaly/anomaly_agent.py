@@ -4,7 +4,9 @@
 
 역할(분석가 레이어): 수치·표·차트·최근 이력·판단유보는 builder가 코드로 주입(사실의 단일 출처).
 LLM은 '## 종합분석'에서 facts의 수치만 '인용'해 서술한다(생성 금지). critic이 grounding으로 검증.
+WITH_ANALYSIS off면 종합분석 없이 완전 결정론(narrative=None → LLM 미호출). operation과 동일.
 """
+from app.core.config import WITH_ANALYSIS
 from app.agents.llm import llm
 from app.agents.reports.anomaly import builder
 
@@ -20,6 +22,9 @@ _SYSTEM = """당신은 풍력 발전 이상감지 '종합분석'을 쓰는 분�
 
 def anomaly_agent(state) -> dict:
     to = state["tool_outputs"]
+    if not WITH_ANALYSIS:
+        return {"draft": builder.render_report(to), "narrative": None}
+
     facts_text = "\n".join(builder.fact_lines(to))
     parts = [f"[사실]\n{facts_text}\n\n위 사실만으로 종합분석을 작성하라."]
 

@@ -464,11 +464,12 @@ def allowed_numbers(to) -> set:
     return {abs(n) for n in extract_numbers(text)}
 
 
-def render_report(to, analysis: str) -> str:
+def render_report(to, analysis: str = None) -> str:
     """전체 보고서 조립.
 
     코드 주입: 핵심 지표·터빈별 상세·검출 이미지·판단유보.  LLM: 종합 분석 섹션만.
     결함 0건 터빈은 상세 섹션을 만들지 않고 핵심 지표 표에만 표기한다.
+    analysis 가 비면(WITH_ANALYSIS off) 빈 헤더를 남기지 않고 섹션 자체를 뺀다.
     """
     e = to["event"]
     parts = [
@@ -478,10 +479,9 @@ def render_report(to, analysis: str) -> str:
         "",
         *metric_table(to),
         *overview_charts(to),
-        "",
-        "## 종합 분석",
-        (analysis or "").strip(),
     ]
+    if analysis and analysis.strip():
+        parts += ["", "## 종합 분석", analysis.strip()]
 
     for t in to.get("turbines", []) or []:
         if t["n_defects"] == 0:
