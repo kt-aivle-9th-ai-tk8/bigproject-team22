@@ -178,7 +178,7 @@ function LoginScreen() {
             <p>홈페이지 전산 이용 문의 1234-1234 (평일 09시 - 18시)</p>
           </div>
           <div className="footer-links">
-            <span>이용약관</span>
+            <span className="policy-highlight">이용약관</span>
             <span className="policy-highlight">개인정보처리방침</span>
             <span>사이트맵</span>
           </div>
