@@ -17,6 +17,10 @@ import CloudyLayer from "./layers/CloudyLayer";
 import CameraZoomController from "./CameraZoomController";
 import BladeInfoPopup from "./BladeInfoPopup";
 import Turbine3DSidebar from "./Turbine3DSidebar";
+// Vite를 사용 중이라면 import.meta.env로 접근합니다.
+
+import.meta.env
+const s3BucketName = import.meta.env.S3_BUCKET_NAME;
 
 /*
  * 풍력 터빈 운전 기준
@@ -98,6 +102,8 @@ function Turbine3DSimulation({
   turbineName = "터빈 A",
   onRunSimulation,
 }) {
+  
+  console.log("현재 S3 버킷 이름:", s3BucketName);
   /*
    * 풍속만 상태로 관리합니다.
    * bladeSpeed는 풍속을 기준으로 자동 계산합니다.
@@ -232,12 +238,12 @@ function Turbine3DSimulation({
             fogStrength={0.55}
           />
 
-          <ValleyModel
+          {/* <ValleyModel
             modelPath="/models/valley.glb"
             position={[-7, -9.5, 1]}
             scale={0.08}
             rotation={[0, (150 * Math.PI) / 180, 0]}
-          />
+          /> */}
 
           <ambientLight
             intensity={isRainy ? 0.12 : isCloudy ? 0.22 : 0.45}
