@@ -112,9 +112,11 @@ public class AnomalyEvent {
     }
 
     /**
-     * 진행 중이던 이벤트의 종료 시각과 지표를 갱신한다.
+     * 진행 중인 이벤트의 스냅샷을 <b>전량 갱신</b>한다.
      * <p>
-     * 매시각 배치가 같은 이벤트를 다시 산출하므로, 멱등키로 찾아 이 메서드로 덮는다.
+     * 매시각 배치가 같은 이벤트를 다시 산출하면 멱등키로 찾아 이 메서드로 덮는다. 전달한 값으로 모든 지표를
+     * 덮으므로 <b>호출자는 항상 완전한 스냅샷을 넘겨야 한다</b> — 일부만 주면 나머지가 null 로 지워진다.
+     * 종료 시각만 찍으려면 이 메서드가 아니라 {@link #close} 를 쓸 것(지표를 실수로 지우지 않도록 분리했다).
      */
     public void refresh(LocalDateTime endTime, AnomalyScope scope,
                         Double expectedPower, Double actualPower, Double zScore,
@@ -127,6 +129,16 @@ public class AnomalyEvent {
         this.deviationPct = deviationPct;
         this.energyRatio30d = energyRatio30d;
         this.estimatedLossKwh = estimatedLossKwh;
+    }
+
+    /**
+     * 진행 중이던 이벤트를 종료 처리한다. 종료 시각만 찍고 지표는 마지막 갱신값 그대로 둔다.
+     * <p>
+     * 배치가 "이전 회차엔 있었는데 이번엔 사라진" 이벤트를 끝낼 때 쓴다 — 마지막 상태는 이미 직전 {@link #refresh}
+     * 로 저장돼 있으므로, 종료가 그 값을 지우면 안 된다.
+     */
+    public void close(LocalDateTime endTime) {
+        this.endTime = endTime;
     }
 
     /** 아직 끝나지 않은 이벤트인지. */

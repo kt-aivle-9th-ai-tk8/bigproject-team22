@@ -102,7 +102,7 @@ class AnomalyEventSchemaIntegrationTest extends IntegrationTestSupport {
     void findOngoing() {
         anomalyEventRepository.save(stop(turbineA, START));                       // 진행 중
         AnomalyEvent closed = stop(turbineB, START);
-        closed.refresh(START.plusHours(2), null, null, null, null, null, null, null);
+        closed.close(START.plusHours(2));                                         // 종료 처리(지표는 건드리지 않는다)
         anomalyEventRepository.save(closed);
 
         assertThat(anomalyEventRepository.findOngoing())

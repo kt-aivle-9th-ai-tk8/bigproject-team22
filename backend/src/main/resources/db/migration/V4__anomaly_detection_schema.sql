@@ -42,8 +42,11 @@ CREATE TABLE anomaly_events
     -- 멱등키. 매시각 배치가 진행 중인 이벤트를 같은 키로 다시 산출하므로(종료 시각과 지표만 갱신된다)
     -- 이 제약이 없으면 회차마다 행이 쌓인다. 분산 락은 최적화일 뿐이고 중복 방지의 실제 근거는 이 제약이다.
     CONSTRAINT uq_anomaly_events_identity UNIQUE (turbine_id, tier, event_type, start_time),
-    -- 미해결 이벤트 조회(end_time IS NULL) 와 최신순 열람에 쓴다.
-    INDEX idx_anomaly_events_turbine_start (turbine_id, start_time)
+    -- 호기별 최신순 열람에 쓴다.
+    INDEX idx_anomaly_events_turbine_start (turbine_id, start_time),
+    -- 미해결 이벤트 조회(findOngoing, WHERE end_time IS NULL). 매시각 배치가 사용하고 행이 계속 누적되므로,
+    -- 위 인덱스(turbine_id 선두)로는 커버되지 않는 이 조회에 end_time 선두 인덱스를 따로 둔다.
+    INDEX idx_anomaly_events_ongoing (end_time)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;

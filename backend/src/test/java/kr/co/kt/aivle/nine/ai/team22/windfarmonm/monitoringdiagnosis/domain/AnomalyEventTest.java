@@ -70,6 +70,22 @@ class AnomalyEventTest {
     }
 
     @Test
+    @DisplayName("종료 처리는 종료 시각만 찍고 갱신된 지표는 유지한다")
+    void close_setsEndTimeWithoutErasingMetrics() {
+        AnomalyEvent event = ongoingStop();
+        event.refresh(null, AnomalyScope.TURBINE, 100.0, 0.0, -3.2, -100.0, null, 600.0); // 진행 중 스냅샷
+
+        event.close(START.plusHours(6));
+
+        assertThat(event.isOngoing()).isFalse();
+        assertThat(event.getEndTime()).isEqualTo(START.plusHours(6));
+        // 종료가 마지막 상태를 지우면 안 된다
+        assertThat(event.getExpectedPower()).isEqualTo(100.0);
+        assertThat(event.getEstimatedLossKwh()).isEqualTo(600.0);
+        assertThat(event.getScope()).isEqualTo(AnomalyScope.TURBINE);
+    }
+
+    @Test
     @DisplayName("관측이 없는 유형은 수치 지표가 비어 있어도 성립한다")
     void dataMissing_allowsEmptyMetrics() {
         AnomalyEvent event = AnomalyEvent.detected(1L, AnomalyTier.A, AnomalyEventType.DATA_MISSING,
