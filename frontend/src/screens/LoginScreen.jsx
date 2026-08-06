@@ -6,7 +6,7 @@ import "./LoginScreen.css";
 function LoginScreen() {
   const navigate = useNavigate();
 
-  const [employeeId, setEmployeeId] = useState("");
+  const [employee_id, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
 
   // 보안 및 오류 관련 상태 관리
@@ -58,14 +58,14 @@ function LoginScreen() {
     }
 
     // 아이디나 비밀번호 중 하나만 비어있는 경우
-    if (!employeeId.trim() || !password.trim()) {
+    if (!employee_id.trim() || !password.trim()) {
       setModalType("fail");
       setModalMessage("사번과 비밀번호를 모두 입력해주세요.");
       return;
     }
 
     // ⚡ [테스트 계정 우회 처리] (123 / 123!)
-    if (employeeId === "123" && password === "123!") {
+    if (employee_id === "123" && password === "123!") {
       setErrorCount(0);
       setModalType("success");
       setModalMessage("로그인에 성공했습니다!");
@@ -76,7 +76,7 @@ function LoginScreen() {
 
     try {
       const responseBody = await loginApi({
-        employeeId,
+        employee_id,
         password,
       });
 
@@ -130,7 +130,7 @@ function LoginScreen() {
             <input
               type="text"
               placeholder="사번"
-              value={employeeId}
+              value={employee_id}
               onChange={(e) => setEmployeeId(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLocked || loading}
