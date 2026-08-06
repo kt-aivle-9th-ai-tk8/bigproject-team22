@@ -25,3 +25,10 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD} # 미설정 시 기동 실패(운영 시크릿 강제)
+
+# 운영에서는 락 접두어에 기본값을 주지 않는다. 로컬 기본값(windfarmonm-local)이 그대로 쓰이면
+# 다른 환경과 락 키가 겹쳐 서로의 배치를 막는데, 그 사실이 조용히 지나간다.
+# DB/Redis 시크릿과 같은 원칙 — 미설정이면 기동을 실패시켜 배포 시점에 드러나게 한다.
+scheduling:
+  lock:
+    key-prefix: ${SCHEDULING_LOCK_KEY_PREFIX}

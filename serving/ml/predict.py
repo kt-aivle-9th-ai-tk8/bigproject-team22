@@ -20,7 +20,7 @@ import numpy as np
 try:
     from .density import density_at_height
 except ImportError:
-    from serving.ml.density import density_at_height
+    from density import density_at_height
 
 HERE = Path(__file__).resolve().parent
 RHO_STD = 1.225   # IEC 61400-12-1 표준 대기 밀도 (kg/m³)
@@ -30,11 +30,17 @@ DZ_M = {"jangheung": 352.0, "hwasun": 627.0}
 
 
 class FarmModels:
-    """한 단지의 LightGBM 모델 묶음. 기동 시 1회 로드해 재사용한다."""
+    """한 단지의 LightGBM 모델 묶음. 기동 시 1회 로드해 재사용한다.
 
-    def __init__(self, farm: str, version: str = "v1"):
+    model_root: 모델 루트 디렉터리(그 아래 {farm}/manifest_{version}.json 구조).
+                미지정 시 이 파일 옆의 models/ 를 사용한다.
+                SageMaker 등 코드·모델 분리 배포 시 model_dir를 넘기면 된다.
+    """
+
+    def __init__(self, farm: str, version: str = "v1", model_root=None):
         self.farm = farm
-        mdir = HERE / "models" / farm
+        root = Path(model_root) if model_root is not None else HERE / "models"
+        mdir = root / farm
         manifest = json.loads((mdir / f"manifest_{version}.json").read_text(encoding="utf-8"))
         self.pooled = None
         self.per_unit = {}   # turbine_code -> Booster
