@@ -3,6 +3,7 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.config;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.provider.redis.spring.RedisLockProvider;
 import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -22,11 +23,18 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableSchedulerLock(defaultLockAtMostFor = "PT30M")
 public class SchedulingConfig {
 
-    /** 락 키 접두어. 다른 환경(스테이징 등)이 같은 Redis 를 공유해도 서로의 락을 침범하지 않게 한다. */
-    private static final String LOCK_KEY_PREFIX = "windfarmonm";
+    /**
+     * 락 키 접두어. 여러 환경(스테이징·운영)이 같은 Redis 를 공유할 때 서로의 락을 침범하지 않도록
+     * <b>환경별로 다른 값</b>을 주입해야 한다. 고정 상수로 두면 한 환경의 배치가 다른 환경을 막는다.
+     */
+    private final String lockKeyPrefix;
+
+    public SchedulingConfig(@Value("${scheduling.lock.key-prefix}") String lockKeyPrefix) {
+        this.lockKeyPrefix = lockKeyPrefix;
+    }
 
     @Bean
     public LockProvider lockProvider(RedisConnectionFactory connectionFactory) {
-        return new RedisLockProvider(connectionFactory, LOCK_KEY_PREFIX);
+        return new RedisLockProvider(connectionFactory, lockKeyPrefix);
     }
 }

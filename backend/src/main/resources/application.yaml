@@ -36,6 +36,12 @@ aws:
   sagemaker:
     anomaly-endpoint: ${AWS_SAGEMAKER_ANOMALY_ENDPOINT:} # 이상감지 Serverless Inference 엔드포인트명
 
+# 스케줄러 분산 락. 여러 환경이 같은 Redis 를 공유할 수 있으므로 키 접두어를 환경별로 다르게 주입한다
+# (고정값이면 스테이징 배치가 운영 배치를 막는다). 기본값은 로컬 개발용이다.
+scheduling:
+  lock:
+    key-prefix: ${SCHEDULING_LOCK_KEY_PREFIX:windfarmonm-local}
+
 # 이상감지 배치. 기본 비활성이며 운영에서만 켠다.
 # (테스트/로컬에서 켜지면 매시각 SageMaker 를 호출하게 되므로 opt-in 으로 둔다)
 anomaly:
