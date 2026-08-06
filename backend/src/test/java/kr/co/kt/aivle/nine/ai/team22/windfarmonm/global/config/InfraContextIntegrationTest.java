@@ -64,9 +64,13 @@ class InfraContextIntegrationTest extends IntegrationTestSupport {
         Optional<SimpleLock> first = lockProvider.lock(config);
         assertThat(first).as("첫 획득은 성공해야 한다").isPresent();
 
-        // 락이 잡혀 있는 동안 같은 이름으로는 획득할 수 없어야 한다 = 다른 인스턴스의 중복 실행이 막힌다
-        assertThat(lockProvider.lock(config)).as("잡힌 락은 재획득되지 않아야 한다").isEmpty();
-
-        first.get().unlock();
+        try {
+            // 락이 잡혀 있는 동안 같은 이름으로는 획득할 수 없어야 한다 = 다른 인스턴스의 중복 실행이 막힌다
+            assertThat(lockProvider.lock(config)).as("잡힌 락은 재획득되지 않아야 한다").isEmpty();
+        } finally {
+            // 단언이 실패해도 반드시 푼다. 안 그러면 만료(30초)까지 Redis 에 락이 남아
+            // 뒤따르는 테스트가 원인 없이 함께 깨진다.
+            first.get().unlock();
+        }
     }
 }
