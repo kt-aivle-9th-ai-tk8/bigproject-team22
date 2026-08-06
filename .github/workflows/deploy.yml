@@ -21,6 +21,8 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       report_agent: ${{ steps.filter.outputs.report_agent }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      serving_ml: ${{ steps.filter.outputs.serving_ml }}
+      serving_dl: ${{ steps.filter.outputs.serving_dl }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,6 +36,8 @@ jobs:
             backend: 'backend/**'
             report_agent: 'report-agent-service/**'
             frontend: 'frontend/**'
+            serving_ml: 'serving/ml/**'
+            serving_dl: 'serving/dl/**'
 
   # **************************************************** #
   # 1. Spring boot 배포 Job
@@ -44,7 +48,7 @@ jobs:
     concurrency:
       group: deploy-backend-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
@@ -111,7 +115,7 @@ jobs:
     concurrency:
       group: deploy-report-agent-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
@@ -160,7 +164,7 @@ jobs:
           cluster: windfarm-onm-cluster
           wait-for-service-stability: true
 
-  # 4. React 배포 Job
+  # React 배포 Job
   deploy-frontend: 
     needs: detect-changes
     ## 조건: frontend 폴더에 변경점이 있는 경우에만 실행
@@ -168,7 +172,7 @@ jobs:
     concurrency:
       group: deploy-frontend-${{ github.ref }}
       cancel-in-progress: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
@@ -190,6 +194,8 @@ jobs:
         run: |
           npm ci
           npm run build
+        env:
+          VITE_VWORLD_API_KEY: ${{ secrets.VITE_VWORLD_API_KEY }}
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -197,12 +203,77 @@ jobs:
           role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role
           aws-region: ap-northeast-2
 
-      # 빌드 결과물(dist 또는 build)을 S3로 업로드
+      ### 빌드 결과물(dist 또는 build)을 S3로 업로드
       - name: Deploy to S3
         run: |
           aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} --delete
 
-      # CloudFront 캐시 무효화 (사용자가 즉시 최신 웹페이지를 보도록 설정)
+      ### CloudFront 캐시 무효화 (사용자가 즉시 최신 웹페이지를 보도록 설정)
       - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+
+  # **************************************************** #
+  # SageMaker 서빙 배포 Job
+  deploy-model-serving-ml:
+    if: ${{ needs.detect-changes.outputs.serving_ml == 'true' }}
+    concurrency:
+      group: deploy-model-serving-ml-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: ./serving/ml
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role
+          aws-region: ap-northeast-2
+
+      ## 코드 패키징
+      - name: Package sourcedir
+        run: |
+          tar -czvf sourcedir.tar.gz inference.py predict.py density.py requirements.txt
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp sourcedir.tar.gz s3://${{ secrets.S3_BUCKET_NAME }}/code/lightgbm/sourcedir.tar.gz
+
+    # SageMaker 모델 배포 (dl/)
+  deploy-model-serving-dl:
+    if: ${{ needs.detect-changes.outputs.serving_dl == 'true' }}
+    concurrency:
+      group: deploy-model-serving-dl-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: ./serving/dl
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role
+          aws-region: ap-northeast-2
+
+      ## 코드 패키징
+      - name: Package sourcedir
+        run: |
+          tar -czvf sourcedir.tar.gz inference.py requirements.txt
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp sourcedir.tar.gz s3://${{ secrets.S3_BUCKET_NAME }}/code/blade-defect-pipeline/sourcedir.tar.gz

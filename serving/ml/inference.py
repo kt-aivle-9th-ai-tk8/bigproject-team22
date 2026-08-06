@@ -1,11 +1,11 @@
-"""LightGBM 기대발전량 예측 — SageMaker Script mode 어댑터.
+"""
+LightGBM 기대발전량 예측 — SageMaker Script mode 어댑터
 
-팀원이 준 predict.py / density.py는 한 글자도 수정하지 않는다.
-predict.py의 HERE(모듈 전역변수)를 SageMaker가 실제로 모델을 풀어주는
-model_dir로 런타임에 재지정해서, 코드(code/)와 모델(models/)을 S3에서
-분리 배포해도 predict.py의 상대경로 가정이 그대로 맞아떨어지게 한다.
+* 주의
+    - predict.py의 FarmModels(farm, model_root=...) 파라미터를 통해 SageMaker가 실제로 모델을 풀어주는 model_dir을 넘겨줘서, 코드(code/)와 모델(models/)을 S3에서 분리 배포해도 정상 동작
+    - model_root 미지정 시 predict.py는 자기 파일 옆의 models/를 기본값으로 쓰므로, 팀원의 기존 단독 실행 방식(`python predict.py`, README의 FarmModels("hwasun") 예시)과도 하위 호환된다.)
 
-model_dir 안 기대 구조:
+* model_dir 안 기대 구조:
     model_dir/
     └── models/
         ├── hwasun/
@@ -20,14 +20,12 @@ model_dir 안 기대 구조:
 import json
 from pathlib import Path
 
-import predict  # 팀원 원본, 수정 없음
+import predict  # 팀원 원본, 수정 없음 — model_root 파라미터로 코드/모델 분리 배포를 정식 지원
 
 
 def model_fn(model_dir):
     """기동 시 1회 — 발견되는 모든 farm의 모델을 미리 로드해 재사용한다."""
-    predict.HERE = Path(model_dir)
-
-    models_root = predict.HERE / "models"
+    models_root = Path(model_dir) / "models"
     if not models_root.exists():
         raise FileNotFoundError(
             f"모델 디렉토리가 없습니다: {models_root}. "
@@ -38,7 +36,7 @@ def model_fn(model_dir):
     if not farms:
         raise FileNotFoundError(f"{models_root} 안에 farm 폴더가 하나도 없습니다.")
 
-    return {farm: predict.FarmModels(farm) for farm in farms}
+    return {farm: predict.FarmModels(farm, model_root=models_root) for farm in farms}
 
 
 def input_fn(request_body, content_type):
