@@ -23,12 +23,11 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U002", "사용자를 찾을 수 없습니다."),
 
     // Monitoring - WindFarm / Turbine / Blade
+    // 담당이 아닌 자원은 "권한 없음"이 아니라 "없음"으로 응답한다(AssetAccessGuard 참고).
+    // 그래서 자원별 ACCESS_DENIED 코드(구 M002/M004/M007)는 두지 않는다 — 쓰이면 존재가 드러난다.
     WIND_FARM_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "풍력단지를 찾을 수 없습니다."),
-    WIND_FARM_ACCESS_DENIED(HttpStatus.FORBIDDEN, "M002", "해당 풍력단지에 대한 접근 권한이 없습니다."),
     TURBINE_NOT_FOUND(HttpStatus.NOT_FOUND, "M003", "터빈을 찾을 수 없습니다."),
-    TURBINE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "M004", "해당 터빈에 대한 접근 권한이 없습니다."),
     BLADE_NOT_FOUND(HttpStatus.NOT_FOUND, "M005", "블레이드를 찾을 수 없습니다."),
-    BLADE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "M007", "해당 블레이드에 대한 접근 권한이 없습니다."),
     INVALID_TIME_RANGE(HttpStatus.BAD_REQUEST, "M006", "조회 기간이 올바르지 않습니다."),
 
     // Report
