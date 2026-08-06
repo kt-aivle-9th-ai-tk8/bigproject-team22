@@ -14,10 +14,10 @@ permissions:
 
 jobs:
   validate-ml:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: ./serving/ml/lightgbm-degradation
+        working-directory: ./serving/ml/
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
           python -m py_compile inference.py predict.py density.py
 
   validate-dl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: ./serving/dl/blade-defect-pipeline

@@ -216,6 +216,7 @@ jobs:
   # **************************************************** #
   # SageMaker 서빙 배포 Job
   deploy-model-serving-ml:
+    needs: detect-changes
     if: ${{ needs.detect-changes.outputs.serving_ml == 'true' }}
     concurrency:
       group: deploy-model-serving-ml-${{ github.ref }}
@@ -248,6 +249,7 @@ jobs:
 
     # SageMaker 모델 배포 (dl/)
   deploy-model-serving-dl:
+    needs: detect-changes
     if: ${{ needs.detect-changes.outputs.serving_dl == 'true' }}
     concurrency:
       group: deploy-model-serving-dl-${{ github.ref }}

@@ -17,10 +17,11 @@ LightGBM 기대발전량 예측 — SageMaker Script mode 어댑터
             ├── pooled_v1.txt
             └── U1_v1.txt ~ U6_v1.txt
 """
+
 import json
 from pathlib import Path
 
-import predict  # 팀원 원본, 수정 없음 — model_root 파라미터로 코드/모델 분리 배포를 정식 지원
+import predict 
 
 
 def model_fn(model_dir):
