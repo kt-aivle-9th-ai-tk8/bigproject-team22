@@ -17,6 +17,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * ShedLock 이 Redis 에 락을 잡아 한 회차를 한 인스턴스만 수행하게 만든다.
  * <p>
  * 락 저장소로 Redis 를 쓰는 이유는 이미 세션 저장소로 확보되어 있어 추가 인프라가 필요 없기 때문이다.
+ * <p>
+ * <b>주의: Redis 락은 완전한 상호배제를 보장하지 않는다.</b> primary 장애 전환 중에는 두 인스턴스가 락을
+ * 동시에 얻을 수 있다(ShedLock 공식 문서의 경고). 따라서 이 락은 "대체로 한 번만 돌게 하는" 최적화로 취급하고,
+ * <b>중복 실행되어도 결과가 같도록 쓰기 경로에 멱등 키를 두는 것이 실제 방어선</b>이다.
+ * 이 전제를 잊고 락만 믿은 채 멱등성을 생략하면 중복 이벤트·알림이 생긴다.
  */
 @Configuration
 @EnableScheduling
