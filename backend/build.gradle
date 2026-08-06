@@ -29,6 +29,25 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-flyway' // Boot 4 는 flyway-core 대신 스타터 필요(자동설정 모듈+JDBC 포함)
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
+
+	// 스케줄러 중복 실행 방지. ECS 다중 인스턴스에서 @Scheduled 가 인스턴스 수만큼 돌지 않도록 Redis 락으로 직렬화한다.
+	implementation 'net.javacrumbs.shedlock:shedlock-spring:6.9.0'
+	implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:6.9.0'
+
+	// AWS SDK: S3 presigned URL 발급 + SageMaker Serverless 동기 호출.
+	// netty/apache 비동기 클라이언트를 제외하고 url-connection-client 로 고정한다
+	// (Boot 4 의존성 충돌 회피 + 이미지 비대화 방지. 동기 호출만 하므로 비동기 트랜스포트가 불필요).
+	implementation platform('software.amazon.awssdk:bom:2.31.78')
+	implementation('software.amazon.awssdk:s3') {
+		exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
+		exclude group: 'software.amazon.awssdk', module: 'apache-client'
+	}
+	implementation('software.amazon.awssdk:sagemakerruntime') {
+		exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
+		exclude group: 'software.amazon.awssdk', module: 'apache-client'
+	}
+	implementation 'software.amazon.awssdk:url-connection-client'
+
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.h2database:h2'
