@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { loginApi } from "../api/authApi";
 import "./LoginScreen.css";
 
 function LoginScreen() {
@@ -11,15 +12,29 @@ function LoginScreen() {
   // 보안 및 오류 관련 상태 관리
   const [errorCount, setErrorCount] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // 커스텀 알림/모달 상태 관리
   const [modalType, setModalType] = useState(null); // 'success' 또는 'fail'
   const [modalMessage, setModalMessage] = useState("");
 
-  // 모달(팝업) 열림 상태에서 엔터키 입력 감지 이벤트
+  // 1. 모달 닫기 / 엔터키 확정을 처리하는 공통 함수
+  const handleCloseModal = () => {
+    const currentType = modalType;
+    setModalType(null);
+    setModalMessage("");
+
+    // 성공 모달인 경우 '확인' 클릭 혹은 '엔터키' 누름 시 바로 메인 화면으로 이동
+    if (currentType === "success") {
+      navigate("/main");
+    }
+  };
+
+  // 2. 글로벌 엔터키 감지 이벤트 (모달이 떠 있을 때 엔터를 누르면 handleCloseModal 실행)
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if (e.key === "Enter" && modalType) {
+        e.preventDefault();
         handleCloseModal();
       }
     };
@@ -30,7 +45,8 @@ function LoginScreen() {
     };
   }, [modalType]);
 
-  const handleLogin = (e) => {
+  // 3. 로그인 제출 이벤트
+  const handleLogin = async (e) => {
     if (e) e.preventDefault();
 
     if (isLocked) {
@@ -41,14 +57,6 @@ function LoginScreen() {
       return;
     }
 
-    // ⚡ [개발 편의 기능] 빈 값 상태로 로그인 시도 시 즉시 성공 처리!
-    if (!employeeId.trim() && !password.trim()) {
-      setErrorCount(0);
-      setModalType("success");
-      setModalMessage("로그인에 성공했습니다! (개발 테스트 모드)");
-      return;
-    }
-
     // 아이디나 비밀번호 중 하나만 비어있는 경우
     if (!employeeId.trim() || !password.trim()) {
       setModalType("fail");
@@ -56,14 +64,34 @@ function LoginScreen() {
       return;
     }
 
-    // 테스트용 임시 로그인 정보 검증 (123 / 123!)
-    const isLoginSuccess = employeeId === "123" && password === "123!";
-
-    if (isLoginSuccess) {
+    // ⚡ [테스트 계정 우회 처리] (123 / 123!)
+    if (employeeId === "123" && password === "123!") {
       setErrorCount(0);
       setModalType("success");
       setModalMessage("로그인에 성공했습니다!");
-    } else {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // 실제 백엔드 API 호출
+      const data = await loginApi({
+        username: employeeId,
+        password: password,
+      });
+
+      if (data.accessToken) {
+        localStorage.setItem("accessToken", data.accessToken);
+      }
+      if (data.user) {
+        localStorage.setItem("userInfo", JSON.stringify(data.user));
+      }
+
+      setErrorCount(0);
+      setModalType("success");
+      setModalMessage(data.message || "로그인에 성공했습니다!");
+    } catch (err) {
       const nextErrorCount = errorCount + 1;
       setErrorCount(nextErrorCount);
 
@@ -75,26 +103,18 @@ function LoginScreen() {
         );
       } else {
         setModalMessage(
-          `로그인에 실패했습니다.\n다시 시도해 주세요. (오류 횟수: ${nextErrorCount}/5)`
+          `${err.message || "로그인에 실패했습니다."}\n다시 시도해 주세요. (오류 횟수: ${nextErrorCount}/5)`
         );
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleKeyDown = (e) => {
+    // 모달이 닫혀 있을 때 폼 입력창에서 엔터를 누르면 로그인 진행
     if (e.key === "Enter" && !modalType) {
       handleLogin(e);
-    }
-  };
-
-  const handleCloseModal = () => {
-    const currentType = modalType;
-    setModalType(null);
-    setModalMessage("");
-
-    // 성공 모달을 닫았을 때 메인 페이지로 이동 (/main)
-    if (currentType === "success") {
-      navigate("/main");
     }
   };
 
@@ -114,7 +134,7 @@ function LoginScreen() {
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isLocked}
+              disabled={isLocked || loading}
             />
           </div>
           <div className="input-group">
@@ -124,12 +144,16 @@ function LoginScreen() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isLocked}
+              disabled={isLocked || loading}
             />
           </div>
 
-          <button type="submit" className="login-button" disabled={isLocked}>
-            로그인
+          <button
+            type="submit"
+            className="login-button"
+            disabled={isLocked || loading}
+          >
+            {loading ? "로그인 중..." : "로그인"}
           </button>
         </form>
 
