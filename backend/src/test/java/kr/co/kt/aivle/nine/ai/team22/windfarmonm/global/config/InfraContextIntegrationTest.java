@@ -15,6 +15,7 @@ import org.springframework.context.ApplicationContext;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -55,8 +56,10 @@ class InfraContextIntegrationTest extends IntegrationTestSupport {
     @DisplayName("같은 이름의 락은 한 번만 잡힌다(중복 스케줄 실행 방지의 실동작 확인)")
     void lock_isExclusiveForSameName() {
         LockProvider lockProvider = context.getBean(LockProvider.class);
+        // 락 이름을 실행마다 새로 만든다. Redis 컨테이너는 실행 간 재사용되므로 고정 이름을 쓰면
+        // 이전 실행이 남긴 락이 만료(30초)되기 전에 첫 획득부터 실패한다.
         LockConfiguration config = new LockConfiguration(
-                Instant.now(), "infra-context-test-lock", Duration.ofSeconds(30), Duration.ZERO);
+                Instant.now(), "infra-context-test-" + UUID.randomUUID(), Duration.ofSeconds(30), Duration.ZERO);
 
         Optional<SimpleLock> first = lockProvider.lock(config);
         assertThat(first).as("첫 획득은 성공해야 한다").isPresent();
