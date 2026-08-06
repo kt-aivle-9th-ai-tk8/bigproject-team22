@@ -3,11 +3,17 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.config;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.aws.S3ObjectStorage;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.aws.SageMakerInvoker;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.support.IntegrationTestSupport;
+import net.javacrumbs.shedlock.core.LockConfiguration;
 import net.javacrumbs.shedlock.core.LockProvider;
+import net.javacrumbs.shedlock.core.SimpleLock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,5 +43,21 @@ class InfraContextIntegrationTest extends IntegrationTestSupport {
     @DisplayName("ShedLock LockProvider 가 Redis 로 구성된다")
     void lockProviderIsConfigured() {
         assertThat(context.getBean(LockProvider.class)).isNotNull();
+    }
+
+    @Test
+    @DisplayName("같은 이름의 락은 한 번만 잡힌다(중복 스케줄 실행 방지의 실동작 확인)")
+    void lock_isExclusiveForSameName() {
+        LockProvider lockProvider = context.getBean(LockProvider.class);
+        LockConfiguration config = new LockConfiguration(
+                Instant.now(), "infra-context-test-lock", Duration.ofSeconds(30), Duration.ZERO);
+
+        Optional<SimpleLock> first = lockProvider.lock(config);
+        assertThat(first).as("첫 획득은 성공해야 한다").isPresent();
+
+        // 락이 잡혀 있는 동안 같은 이름으로는 획득할 수 없어야 한다 = 다른 인스턴스의 중복 실행이 막힌다
+        assertThat(lockProvider.lock(config)).as("잡힌 락은 재획득되지 않아야 한다").isEmpty();
+
+        first.get().unlock();
     }
 }

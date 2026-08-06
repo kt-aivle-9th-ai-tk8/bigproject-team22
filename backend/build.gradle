@@ -31,8 +31,9 @@ dependencies {
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
 
 	// 스케줄러 중복 실행 방지. ECS 다중 인스턴스에서 @Scheduled 가 인스턴스 수만큼 돌지 않도록 Redis 락으로 직렬화한다.
-	implementation 'net.javacrumbs.shedlock:shedlock-spring:6.9.0'
-	implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:6.9.0'
+	// 7.x 가 Spring Boot 4 / Spring 7 대상이다(6.x 는 Boot 3.3~3.5). 두 아티팩트 버전은 반드시 일치시킬 것.
+	implementation 'net.javacrumbs.shedlock:shedlock-spring:7.7.0'
+	implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:7.7.0'
 
 	// AWS SDK: S3 presigned URL 발급 + SageMaker Serverless 동기 호출.
 	// netty/apache 비동기 클라이언트를 제외하고 url-connection-client 로 고정한다
