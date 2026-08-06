@@ -29,6 +29,13 @@
                 },
                 "secretOptions": []
             },
+            "secrets":[
+                {
+                    "name": "OPENAI_API_KEY",
+                    "valueFrom":
+                    "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarm/prod/openai-api-key-wgpa2H::"
+                }
+            ],
             "systemControls": []
         }
     ],
