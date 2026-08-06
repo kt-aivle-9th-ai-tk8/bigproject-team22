@@ -15,61 +15,55 @@ ERD상 각 테이블은 코드값을 직접 갖지 않고 FK만 갖는다 → _l
   defect.blade_id       → blade.blade_tag / blade.turbine_id → turbine.turbine_code
 점검 대상 터빈은 inspection.turbine_id 로 확정되므로 결함 0건이어도 알 수 있다.
 
-배포(RDS) 전환: common.config.DATA_SOURCE == "rds" 이면 _load()를 SQLAlchemy 쿼리로
-교체(위 조인을 SQL JOIN으로 옮기면 되고, 반환 컬럼·시그니처는 동일 유지).
-fetch()·graph·agent·critic 은 불변.
+배포(RDS) 전환: 어디서 읽어오는지는 app.core.datasource 가 테이블 단위로 정한다.
+DATA_SOURCE=="rds" 면 turbine·blade·wind_farm 은 RDS 에서, report·inspection·defect 는
+(아직 RDS 스키마에 없으므로) CSV 에서 온다. 어느 쪽이든 컬럼은 동일하므로 아래 집계는 불변.
 
 (공유 계약) 반환 dict의 "event" 키는 공유 service.py 가 found 판정에 쓰는 자리다.
 defect 에서는 그 자리에 report 1건(+소속 점검 요약)이 들어간다.
 """
-import os
-
 import pandas as pd
 
-from app.core.config import DATA_DIR
+from app.core.datasource import cached, load_table, turbine_index
 
 # 검출 신뢰도 하한. None이면 필터 없음(현재 데이터 최저 0.684).
 # 임계 정책이 정해지면 이 값만 바꾸면 모든 집계에 일괄 반영된다.
 MIN_CONFIDENCE = None
 
-_cache = {}
+
+def _join_inspection():
+    """inspection + 터빈/발전소 이름."""
+    return load_table("inspection").merge(turbine_index(), on="turbine_id", how="left")
 
 
-def _read(name: str, **kw):
-    return pd.read_csv(os.path.join(DATA_DIR, name), encoding="utf-8-sig", **kw)
+def _join_defect():
+    """defect + 블레이드 태그 + 터빈 코드."""
+    blade = load_table("blade")[["blade_id", "blade_tag", "turbine_id"]]
+    # how="left" — FK가 깨져도 행을 잃지 않는다. 코드가 비면 집계에서 걸러진다(fetch 참고).
+    return (
+        load_table("defect")
+        .merge(blade, on="blade_id", how="left")
+        .merge(turbine_index()[["turbine_id", "turbine_code"]], on="turbine_id", how="left")
+    )
 
 
 def _load():
-    """CSV 지연 로드(1회 캐시) + ERD 조인. anomaly만 실행할 때 defect CSV를 읽지 않도록 lazy.
+    """지연 로드 + ERD 조인. anomaly만 실행할 때 defect 테이블을 읽지 않도록 lazy.
 
     조인 결과로 inspection 에는 turbine_code·wind_farm_id·wind_farm_name 이,
     defect 에는 turbine_id·turbine_code·blade_tag 가 붙는다. 아래 집계 함수들은
     이 컬럼들이 처음부터 있었던 것처럼 그대로 쓴다(조인 위치는 여기 한 곳뿐).
 
+    캐시는 datasource 가 갖는다 — 여기서 따로 들고 있으면 원본이 만료돼 새로 읽혀도
+    조인 결과는 낡은 채로 남는다(RDS 에서는 그게 곧 옛 데이터로 만든 보고서다).
+
     반환: (report, inspection, defect)
     """
-    if not _cache:
-        _cache["report"] = _read("report.csv")
-        blade = _read("blade.csv")[["blade_id", "blade_tag", "turbine_id"]]
-        # 터빈 → 코드 + 소속 발전소. inspection·defect 양쪽이 같은 참조표를 쓴다.
-        turbine = _read("turbine.csv")[["turbine_id", "turbine_code", "wind_farm_id"]].merge(
-            _read("wind_farm.csv")[["wind_farm_id", "wind_farm_name"]],
-            on="wind_farm_id",
-            how="left",
-        )
-
-        _cache["inspection"] = _read(
-            "inspection.csv",
-            parse_dates=["inspection_start", "inspection_end", "created_at"],
-        ).merge(turbine, on="turbine_id", how="left")
-
-        # how="left" — FK가 깨져도 행을 잃지 않는다. 코드가 비면 집계에서 걸러진다(fetch 참고).
-        _cache["defect"] = (
-            _read("defect.csv", parse_dates=["created_at"])
-            .merge(blade, on="blade_id", how="left")
-            .merge(turbine[["turbine_id", "turbine_code"]], on="turbine_id", how="left")
-        )
-    return _cache["report"], _cache["inspection"], _cache["defect"]
+    return (
+        load_table("report"),
+        cached("defect:inspection_joined", _join_inspection),
+        cached("defect:defect_joined", _join_defect),
+    )
 
 
 def _num(v):

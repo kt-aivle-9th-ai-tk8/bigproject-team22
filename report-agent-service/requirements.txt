@@ -48,3 +48,8 @@ zstandard==0.25.0
 pandas
 python-dotenv
 langchain-openai
+
+# DATA_SOURCE=rds 일 때만 실제로 쓰인다(app/core/datasource.py 가 지연 import).
+# backend 와 같은 MySQL RDS 를 본다 → 드라이버는 PyMySQL.
+SQLAlchemy
+PyMySQL
