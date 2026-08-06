@@ -1,11 +1,11 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // 1. useNavigate import 추가
+import { useNavigate } from 'react-router-dom';
 import './UserScreen.css';
 
 const UserScreen = ({ onClose }) => {
-  const navigate = useNavigate(); // 2. navigate 객체 생성
+  const navigate = useNavigate();
 
-  // 사용자 데이터
+  // 사용자 데이터 (추후 API 연동 대상)
   const userData = {
     role: '관리자',
     name: '홍길동',
@@ -16,9 +16,24 @@ const UserScreen = ({ onClose }) => {
     department: 'IT 운영팀',
   };
 
-  // 3. 관리자 페이지 이동 핸들러
+  // 관리자 페이지 이동 핸들러
   const handleNavigateToAdmin = () => {
     navigate('/admin/users');
+  };
+
+  // ⚡ [추가] 본인 로그아웃 처리 핸들러
+  const handleLogout = () => {
+    if (window.confirm("로그아웃 하시겠습니까?")) {
+      // 1. 브라우저에 저장된 로그인 토큰 및 정보 삭제
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userInfo");
+
+      // 2. 모달이 닫히는 콜백이 있으면 실행
+      if (onClose) onClose();
+
+      // 3. 로그인 화면으로 이동
+      navigate("/login");
+    }
   };
 
   return (
@@ -91,7 +106,10 @@ const UserScreen = ({ onClose }) => {
               관리자 페이지 진입
             </button>
           )}
-          <button className="btn-logout-text">로그아웃</button>
+          {/* ⚡ [수정] onClick={handleLogout} 연결 */}
+          <button className="btn-logout-text" onClick={handleLogout}>
+            로그아웃
+          </button>
         </div>
 
       </div>

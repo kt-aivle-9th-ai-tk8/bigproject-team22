@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import "./SignupScreen.css";
-// assets 폴더 내의 windmill.png 이미지를 올바르게 불러옵니다.
 import windmillImg from "../assets/windmill.png";
 
 function SignupScreen() {
@@ -177,7 +176,7 @@ function SignupScreen() {
         <div className="signup-modal-overlay">
           <div className="signup-modal-window">
             <div className="signup-modal-title">Success!</div>
-            <p>회원가입이 완료되었습니다.</p>
+            <p>회원가입이 완료되었습니다. 관리자의 승인을 기다려주세요.</p>
             <button onClick={handleModalClose}>로그인으로 이동</button>
           </div>
         </div>
