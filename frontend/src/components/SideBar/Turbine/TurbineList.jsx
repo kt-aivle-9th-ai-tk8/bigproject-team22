@@ -9,8 +9,7 @@ function TurbineList({ items, onSelectTurbine }) {
           key={item.id}
           name={item.name}
           status={item.status}
-          alertCount={item.alertCount}
-          hasEmergency={item.hasEmergency}
+          abnormalDetected={item.abnormalDetected}
           onClick={onSelectTurbine ? () => onSelectTurbine(item) : undefined}
         />
       ))}

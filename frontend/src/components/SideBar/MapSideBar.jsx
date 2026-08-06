@@ -1,7 +1,11 @@
+import { useState } from "react";
+
 import WeatherGroup from "./Weather/WeatherGroup";
 import PowerGroup from "./Power/PowerGroup";
 import FaultList from "./Fault/FaultList";
 import SideTitle from "./SideTitle";
+import WeatherHelpButton from "./Weather/WeatherHelpButton";
+import WeatherHelpPopup from "./Weather/WeatherHelpPopup";
 
 import "./MapSideBar.css";
 
@@ -9,6 +13,7 @@ function MapSideBar({
   plants = [],
   onSelectPlant,
 }) {
+  const [isWeatherHelpOpen, setIsWeatherHelpOpen] = useState(false);
   /*
    * 발전소 데이터를 날씨 컴포넌트 형태로 변환
    *
@@ -80,7 +85,15 @@ function MapSideBar({
   return (
     <div className="sidebar-content map-sidebar-content">
       <section className="sidebar-panel map-weather-panel">
-        <SideTitle>
+        <SideTitle
+          leftContent={
+            <WeatherHelpButton
+              isOpen={isWeatherHelpOpen}
+              onToggle={() => setIsWeatherHelpOpen((prev) => !prev)}
+              onClose={() => setIsWeatherHelpOpen(false)}
+            />
+          }
+        >
           주요 발전소 날씨
         </SideTitle>
 

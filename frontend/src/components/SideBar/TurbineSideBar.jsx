@@ -41,7 +41,7 @@ function TurbineSideBar({
     },
     {
       id: 3,
-      label: "금주 출력",
+      label: "금월 출력",
       value: 2.8,
       unit: "GWh",
       minValue: 0,

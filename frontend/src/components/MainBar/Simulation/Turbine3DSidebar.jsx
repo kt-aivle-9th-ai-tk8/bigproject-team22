@@ -1,11 +1,28 @@
+const STATUS_TEXT = {
+  "manual-stop": "수동 정지",
+  "below-cut-in": "시동 풍속 미달",
+  normal: "정상 운전",
+  rated: "정격 운전",
+  "cut-out": "강풍 안전 정지",
+};
+
 function Turbine3DSidebar({
   weather,
   onChangeWeather,
+  windSpeed,
+  onChangeWindSpeed,
   bladeSpeed,
-  onChangeBladeSpeed,
+  status,
   isRunning,
   onToggleRunning,
+  onRunSimulation,
 }) {
+  const statusText = STATUS_TEXT[status] ?? "상태 확인 중";
+
+  const handleWindSpeedChange = (event) => {
+    onChangeWindSpeed(Number(event.target.value));
+  };
+
   return (
     <div className="turbine-3d-panel">
       <h3>3D 시뮬레이션 제어</h3>
@@ -41,16 +58,37 @@ function Turbine3DSidebar({
       </div>
 
       <div className="turbine-3d-field">
-        <label>회전 속도</label>
+        <label htmlFor="wind-speed-number">
+          풍속 직접 입력
+        </label>
+
         <input
-          type="range"
+          id="wind-speed-number"
+          type="number"
           min="0"
-          max="0.5"
-          step="0.005"
-          value={bladeSpeed}
-          onChange={(event) => onChangeBladeSpeed(Number(event.target.value))}
+          max="30"
+          step="0.5"
+          value={windSpeed}
+          onChange={handleWindSpeedChange}
         />
-        <span>{bladeSpeed.toFixed(3)}</span>
+      </div>
+
+      <div className="turbine-3d-status">
+        <div>
+          <span>운전 상태</span>
+          <strong>{statusText}</strong>
+        </div>
+
+        <div>
+          <span>터빈 회전 속도</span>
+          <strong>{bladeSpeed.toFixed(3)}</strong>
+        </div>
+      </div>
+
+      <div className="turbine-3d-wind-guide">
+        <p>시동 풍속: 3 m/s</p>
+        <p>정격 풍속: 12 m/s</p>
+        <p>차단 풍속: 25 m/s</p>
       </div>
 
       <button

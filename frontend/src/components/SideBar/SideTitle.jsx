@@ -1,9 +1,18 @@
 import "./SideTitle.css";
 
-function SideTitle({ children }) {
+function SideTitle({
+  children,
+  leftContent,
+}) {
   return (
     <div className="side-title">
-      {children}
+      <div className="side-title-left">
+        {leftContent}
+      </div>
+
+      <div className="side-title-text">
+        {children}
+      </div>
     </div>
   );
 }

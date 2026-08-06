@@ -6,149 +6,10 @@ import MainBar from "../components/MainBar";
 import UnderBar from "../components/UnderBar";
 import SideBar from "../components/SideBar";
 
-import { WEATHER_TYPE } from "../components/SideBar/Weather/WeatherItem";
-import { FAULT_STATUS } from "../components/SideBar/Fault/FaultItem";
-import { TURBINE_STATUS } from "../components/SideBar/Turbine/TurbineItem";
+import { useWindFarms } from "../hooks/useWindFarms";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
-
-/*
- * 발전소 기본 정보, 지도 좌표, 날씨, 발전량,
- * 결함 데이터를 하나의 배열에서 관리
- */
-
-const dummyPlants = [
-  {
-    id: 1,
-    name: "장흥 발전소",
-    coordinate: [126.907, 34.681],
-
-    weather: {
-      weatherType: WEATHER_TYPE.RAIN,
-      temperature: 32.0,
-      windSpeed: 5.0,
-    },
-
-    power: {
-      currentOutput: 18.4,
-      currentPower: 412,
-      monthPower: 8.7,
-      yearPower: 96.4,
-    },
-
-    faults: [
-      {
-        id: 1,
-        date: "07.08",
-        time: "12:00",
-        status: FAULT_STATUS.ALERT,
-      },
-    ],
-
-    turbines: [
-      {
-        id: 1,
-        name: "터빈 A",
-        status: TURBINE_STATUS.ALERT,
-        alertCount: 6,
-        hasEmergency: true,
-        coordinate: [126.9064, 34.6815],
-      },
-      {
-        id: 2,
-        name: "터빈 B",
-        status: TURBINE_STATUS.WARNING,
-        alertCount: 3,
-        hasEmergency: false,
-        coordinate: [126.9077, 34.6816],
-      },
-      {
-        id: 3,
-        name: "터빈 C",
-        status: TURBINE_STATUS.ALERT,
-        alertCount: 2,
-        hasEmergency: true,
-        coordinate: [126.9066, 34.6804],
-      },
-      {
-        id: 4,
-        name: "터빈 D",
-        status: TURBINE_STATUS.NORMAL,
-        alertCount: 0,
-        hasEmergency: false,
-        coordinate: [126.9078, 34.6805],
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "경주 발전소",
-    coordinate: [129.2247, 35.8562],
-
-    weather: {
-      weatherType: WEATHER_TYPE.CLOUDY,
-      temperature: 28.0,
-      windSpeed: 10.0,
-    },
-
-    power: {
-      currentOutput: 19.0,
-      currentPower: 412,
-      monthPower: 8.7,
-      yearPower: 96.4,
-    },
-
-    faults: [],
-  },
-  {
-    id: 3,
-    name: "대구 발전소",
-    coordinate: [128.6014, 35.8714],
-
-    weather: {
-      weatherType: WEATHER_TYPE.PARTLY_CLOUDY,
-      temperature: 30.0,
-      windSpeed: 5.0,
-    },
-
-    power: {
-      currentOutput: 40.0,
-      currentPower: 412,
-      monthPower: 8.7,
-      yearPower: 96.4,
-    },
-
-    faults: [
-      {
-        id: 2,
-        date: "07.08",
-        time: "11:00",
-        status: FAULT_STATUS.WARNING,
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: "장흥 발전소2",
-    coordinate: [126.912, 34.684],
-
-    weather: {
-      weatherType: WEATHER_TYPE.CLOUDY,
-      temperature: 31.0,
-      windSpeed: 4.2,
-    },
-
-    power: {
-      currentOutput: 15.8,
-      currentPower: 380,
-      monthPower: 7.9,
-      yearPower: 88.5,
-    },
-
-    faults: [],
-  },
-];
 
 const alarmReports = [
   {
@@ -204,12 +65,15 @@ const alarmReports = [
 function MainScreen() {
   const navigate = useNavigate();
 
-  /*
-   * 현재는 API 대신 더미 데이터 사용
-   */
-  const [plants] = useState(dummyPlants);
-  const [isPlantsLoading] = useState(false);
-  const [plantsError] = useState(null);
+  const {
+    plants,
+    isPlantsLoading,
+    plantsError,
+  } = useWindFarms({
+    location: 1,
+    power: 1,
+    weather: 1,
+  });
 
   const [screenMode, setScreenMode] = useState(() => {
     return localStorage.getItem("screenMode") || "map";
@@ -226,6 +90,24 @@ function MainScreen() {
 
     return savedTurbine ? JSON.parse(savedTurbine) : null;
   });
+
+  useEffect(() => {
+    if (!selectedPlant) {
+      return;
+    }
+
+    const updatedPlant = plants.find(
+      (plant) => plant.id === selectedPlant.id
+    );
+
+    if (updatedPlant) {
+      setSelectedPlant(updatedPlant);
+    } else if (!isPlantsLoading) {
+      setSelectedPlant(null);
+      setSelectedTurbine(null);
+      setScreenMode("map");
+    }
+  }, [plants, isPlantsLoading]);
 
   useEffect(() => {
     const currentState = {
@@ -345,14 +227,12 @@ function MainScreen() {
     console.log("MainScreen에서 받은 수리 보고서 JSON:", repairReportData);
   };
 
-  // 1. 내 정보 페이지 이동 함수
   const handleNavigateUser = () => {
     navigate("/user");
   };
 
   return (
     <div className="main-screen">
-      {/* 2. Header 컴포넌트에 onMyPage 전달 */}
       <Header
         onLogout={handleLogout}
         onTitleClick={handleBackToMap}
