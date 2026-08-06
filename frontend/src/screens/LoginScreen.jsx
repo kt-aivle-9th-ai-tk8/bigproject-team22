@@ -75,27 +75,26 @@ function LoginScreen() {
     setLoading(true);
 
     try {
-      // 실제 백엔드 API 호출
-      const data = await loginApi({
-        employee_id: employeeId,
-        password: password,
+      const responseBody = await loginApi({
+        employeeId,
+        password,
       });
 
-      if (data.accessToken) {
-        localStorage.setItem("accessToken", data.accessToken);
-      }
-      if (data.user) {
-        localStorage.setItem("userInfo", JSON.stringify(data.user));
+      console.log("[로그인 응답]", responseBody);
+
+      if (responseBody.data) {
+        localStorage.setItem("userInfo", JSON.stringify(responseBody.data));
       }
 
       setErrorCount(0);
       setModalType("success");
-      setModalMessage(data.message || "로그인에 성공했습니다!");
+      setModalMessage(responseBody.message || "로그인에 성공했습니다!");
     } catch (err) {
       const nextErrorCount = errorCount + 1;
       setErrorCount(nextErrorCount);
 
       setModalType("fail");
+
       if (nextErrorCount >= 5) {
         setIsLocked(true);
         setModalMessage(
