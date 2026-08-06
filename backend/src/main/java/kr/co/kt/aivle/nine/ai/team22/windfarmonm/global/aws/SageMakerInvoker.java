@@ -83,11 +83,13 @@ public class SageMakerInvoker {
                 if (local == null) {
                     // 소켓 제한시간을 명시한다. SDK 기본값은 SageMaker 의 모델 응답 상한(60초)보다 짧아,
                     // 콜드스타트나 긴 추론이 성공할 수 있는데도 클라이언트가 먼저 끊어버린다.
+                    //
+                    // httpClient(이미 만든 인스턴스) 가 아니라 httpClientBuilder 를 넘긴다. 전자는 SDK 가
+                    // 소유권을 갖지 않아 서비스 클라이언트를 close 해도 HTTP 클라이언트가 닫히지 않는다(연결 누수).
                     local = SageMakerRuntimeClient.builder()
                             .region(Region.of(properties.region()))
-                            .httpClient(UrlConnectionHttpClient.builder()
-                                    .socketTimeout(properties.sagemaker().invokeTimeout())
-                                    .build())
+                            .httpClientBuilder(UrlConnectionHttpClient.builder()
+                                    .socketTimeout(properties.sagemaker().invokeTimeout()))
                             .build();
                     client = local;
                 }

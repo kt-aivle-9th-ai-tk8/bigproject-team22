@@ -133,9 +133,11 @@ public class S3ObjectStorage {
             synchronized (this) {
                 local = client;
                 if (local == null) {
+                    // httpClientBuilder 로 넘겨 SDK 가 HTTP 클라이언트 생명주기까지 관리하게 한다
+                    // (httpClient 로 완성된 인스턴스를 주면 close 시 함께 닫히지 않아 연결이 남는다).
                     local = S3Client.builder()
                             .region(Region.of(properties.region()))
-                            .httpClient(UrlConnectionHttpClient.create())
+                            .httpClientBuilder(UrlConnectionHttpClient.builder())
                             .build();
                     client = local;
                 }
