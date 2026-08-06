@@ -1,0 +1,223 @@
+.report-edit-container {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  padding: 32px 48px;
+  box-sizing: border-box;
+}
+
+.edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-content-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 36px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f5f9;
+  margin-bottom: 32px;
+}
+
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.card-title-row h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.edit-grid-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.styled-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.readonly-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.ai-box {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+/* ================================================= */
+/* 하단: ReportListScreen 동일 카드 스타일 및 배지 */
+/* ================================================= */
+.bottom-list-section {
+  margin-top: 32px;
+}
+
+.bottom-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.bottom-list-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.view-all-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.report-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.report-card.active-card {
+  border: 2px solid #3b82f6;
+  background-color: #f0f9ff;
+}
+
+.report-content {
+  flex: 1;
+}
+
+.card-main-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.plant-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.turbine-tag {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.type-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* 배지 색상 스타일 */
+.type-badge.운영보고서 {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+
+.type-badge.결함보고서 {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.type-badge.이상보고서 {
+  background-color: #fff7ed;
+  color: #ea580c;
+}
+
+.report-date {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+.card-arrow {
+  font-size: 18px;
+  color: #cbd5e1;
+  margin-left: 16px;
+}
