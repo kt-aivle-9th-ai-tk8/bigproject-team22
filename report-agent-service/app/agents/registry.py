@@ -15,47 +15,78 @@ critic_result 최소 계약: {verdict[, issues]} — 기본 정책이 verdict("�
 (예: reports/anomaly/critic_rules 의 _hard_soft/retry_policy = hard/soft 소진 정책).
 
 이 모듈은 app.agents.reports.* 구현만 import하고 graph/critic/supervisor는 import하지 않으므로 순환이 없다.
-"""
-from app.agents.reports.anomaly import anomaly_agent as _anomaly_agent
-from app.agents.reports.anomaly import tools as _anomaly_tools
-from app.agents.reports.anomaly import critic_rules as _anomaly_critic
-from app.agents.reports.defect import defect_agent as _defect_agent
-from app.agents.reports.defect import tools as _defect_tools
-from app.agents.reports.defect import critic_rules as _defect_critic
-from app.agents.reports.operation import operation_agent as _operation_agent
-from app.agents.reports.operation import tools as _operation_tools
-from app.agents.reports.operation import critic_rules as _operation_critic
-from app.agents.reports.farm_operation import farm_operation_agent as _farm_agent
-from app.agents.reports.farm_operation import tools as _farm_tools
-from app.agents.reports.farm_operation import critic_rules as _farm_critic
 
-REGISTRY = {
-    "anomaly": {
-        "fetch": _anomaly_tools.fetch,
-        "agent": _anomaly_agent.anomaly_agent,
+방어적 등록: 각 report_type의 import를 '엔트리 빌더' 함수 안으로 지연시키고 try/except로 감싼다.
+한 타입의 모듈이 로드에 실패해도(예: 스키마 불일치로 tools.py의 top-level read_csv가 예외)
+그 타입만 스킵되고 나머지는 정상 등록된다 — 한 폴더의 파손이 전체 서비스를 죽이지 않게(진짜 '폴더별 병렬 개발').
+실패 타입은 경고 로그를 남기며, 담당자가 고치면 자동으로 다시 등록된다.
+"""
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _anomaly_entry():
+    from app.agents.reports.anomaly import anomaly_agent, tools, critic_rules
+    return {
+        "fetch": tools.fetch,
+        "agent": anomaly_agent.anomaly_agent,
         "max_retries": 2,
-        "critic": _anomaly_critic.critic,              # hard=숫자 게이트 / soft=인과 레이어드
-        "retry_policy": _anomaly_critic.retry_policy,  # anomaly 전용 hard/soft 소진·강등 정책
-    },
-    "defect": {
-        "fetch": _defect_tools.fetch,
-        "agent": _defect_agent.defect_agent,
+        "critic": critic_rules.critic,              # hard=숫자 게이트 / soft=인과 레이어드
+        "retry_policy": critic_rules.retry_policy,  # anomaly 전용 hard/soft 소진·강등 정책
+    }
+
+
+def _defect_entry():
+    from app.agents.reports.defect import defect_agent, tools, critic_rules
+    return {
+        "fetch": tools.fetch,
+        "agent": defect_agent.defect_agent,
         "max_retries": 2,
-        "critic": _defect_critic.critic,   # code_checks(결정론)+llm_check(LLM). retry_policy 없음 → 기본 정책
-    },
-    "operation": {   # 터빈 단위 운영 (event_id = 터빈번호)
-        "fetch": _operation_tools.fetch,
-        "agent": _operation_agent.operation_agent,
+        "critic": critic_rules.critic,   # code_checks(결정론)+llm_check(LLM). retry_policy 없음 → 기본 정책
+    }
+
+
+def _operation_entry():   # 터빈 단위 운영 (event_id = 터빈번호)
+    from app.agents.reports.operation import operation_agent, tools, critic_rules
+    return {
+        "fetch": tools.fetch,
+        "agent": operation_agent.operation_agent,
         "max_retries": 2,
-        "critic": _operation_critic.critic,              # 총평 숫자 게이트(hard) + 인과/정비 가드(soft)
-        "retry_policy": _operation_critic.retry_policy,  # hard/soft 소진·강등 정책
-    },
-    "farm_operation": {   # 단지(발전소 전체) 운영 — 전 터빈 집계 + 터빈별 순위
-        "fetch": _farm_tools.fetch,
-        "agent": _farm_agent.farm_operation_agent,
+        "critic": critic_rules.critic,              # 총평 숫자 게이트(hard) + 인과/정비 가드(soft)
+        "retry_policy": critic_rules.retry_policy,  # hard/soft 소진·강등 정책
+    }
+
+
+def _farm_operation_entry():   # 단지(발전소 전체) 운영 — 전 터빈 집계 + 터빈별 순위
+    from app.agents.reports.farm_operation import farm_operation_agent, tools
+    from app.agents.reports.farm_operation import critic_rules as farm_critic
+    from app.agents.reports.operation import critic_rules as op_critic
+    return {
+        "fetch": tools.fetch,
+        "agent": farm_operation_agent.farm_operation_agent,
         "max_retries": 2,
-        "critic": _farm_critic.critic,                   # 단지 builder grounding
-        "retry_policy": _operation_critic.retry_policy,  # 제네릭(report_type 기반) 재사용
-    },
+        "critic": farm_critic.critic,             # 단지 builder grounding
+        "retry_policy": op_critic.retry_policy,   # 제네릭(report_type 기반) 재사용
+    }
+
+
+_ENTRY_BUILDERS = {
+    "anomaly": _anomaly_entry,
+    "defect": _defect_entry,
+    "operation": _operation_entry,
+    "farm_operation": _farm_operation_entry,
 }
+
+REGISTRY = {}
+for _name, _build in _ENTRY_BUILDERS.items():
+    try:
+        REGISTRY[_name] = _build()
+    except Exception as e:   # import/로드 실패(스키마 불일치 등) 타입은 스킵 — 나머지는 정상 등록
+        logger.warning("report type '%s' 사용 불가 (import 실패): %s: %s",
+                       _name, type(e).__name__, e)
+
+if not REGISTRY:
+    raise RuntimeError("등록된 report_type이 없습니다 — 모든 타입 import 실패")
+
 REPORT_TYPES = tuple(REGISTRY.keys())
