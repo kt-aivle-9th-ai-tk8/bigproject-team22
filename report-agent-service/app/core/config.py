@@ -55,5 +55,8 @@ IMAGE_BASE_URL = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
 CHRONIC_NATURAL_VAR_PP = float(os.getenv("CHRONIC_NATURAL_VAR_PP", "4.8"))
 CHRONIC_CONFIRM_THRESHOLD_PP = float(os.getenv("CHRONIC_CONFIRM_THRESHOLD_PP", "11.3"))
 CHRONIC_DAYS = int(os.getenv("CHRONIC_DAYS", "30"))
+# 만성 뒤처짐이 이 %p 이상이면 '가동 중 저하'라기보다 사실상 장기 미가동에 가까움 →
+# 리포트에 '장기 정지 동반 가능' 관측 주석을 단다(계층 A/B 경계 안내). 이상적으론 탐지기가 태깅.
+CHRONIC_NEAR_TOTAL_PP = float(os.getenv("CHRONIC_NEAR_TOTAL_PP", "90.0"))
 # 최근 동일 유형 이력 조회 창(개월).
 RECENT_HISTORY_MONTHS = int(os.getenv("RECENT_HISTORY_MONTHS", "6"))

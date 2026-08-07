@@ -1,23 +1,63 @@
 """데이터 조회 — LLM 절대 사용 안 함. 반환 수치는 원본 그대로(가공 금지).
 
-CSV(로컬) 로드. 배포(RDS) 전환 시 조회 함수를 SQLAlchemy로 교체(시그니처·반환 dict 유지).
+소스 선택(CSV/RDS)은 app.core.datasource 가 테이블 단위로 한다 — 이 파일은 load_table()/
+turbine_index() 만 부르고 어디서 읽는지는 신경 쓰지 않는다. RDS 에 anomaly_event·scada_record·
+aws_record·asos_record 가 채워지면 datasource._RDS_TABLES 에 등재만 하면 이 파일 무수정으로 RDS 전환.
 tool_outputs = builder(표·차트) + facts(종합분석 인용 수치) 양쪽의 단일 출처.
-"""
-import os
 
+스키마 정합(확정 스키마 기준):
+  - scada_record / anomaly_event 는 turbine_code 가 아니라 turbine_id(FK) 를 가진다.
+    → turbine_index()(turbine_id→turbine_code) 를 조인해 붙인다.
+  - 측정 시각 컬럼은 recorded_at.
+  - 기상: aws_record(기온·습도·강수·기압·풍향) + asos_record(적설 3종) — station_id 로 조인.
+"""
 import pandas as pd
 
-from app.core.config import DATA_DIR, RECENT_HISTORY_MONTHS
-
-_events = pd.read_csv(os.path.join(DATA_DIR, "anomaly_event.csv"), encoding="utf-8-sig",
-                      parse_dates=["start_time", "end_time"])
-_scada = pd.read_csv(os.path.join(DATA_DIR, "scada_record.csv"), encoding="utf-8-sig",
-                     parse_dates=["timestamp"])
-_weather = pd.read_csv(os.path.join(DATA_DIR, "aws_record.csv"), parse_dates=["timestamp"])
+from app.core.config import RECENT_HISTORY_MONTHS
+from app.core.datasource import load_table, turbine_index, cached
 
 WINDOW_HOURS = {"prolonged_stop": 24, "data_missing": 6, "chronic_screening": 720, "chronic_confirmed": 720}
 _CHRONIC = ("chronic_screening", "chronic_confirmed")
-_FARM_TURBINES = sorted(_scada["turbine_code"].unique().tolist())
+_SNOW_MISSING = -9   # 기상청 ASOS 결측/미관측 센티넬
+
+
+# ── 데이터 접근 (datasource 가 1회 캐시. 조인 파생 프레임도 cached() 로 함께 만료) ──────────
+def _tcode_map() -> pd.DataFrame:
+    """turbine_id → turbine_code 만 뽑은 참조표(조인용)."""
+    return turbine_index()[["turbine_id", "turbine_code"]]
+
+
+def _events() -> pd.DataFrame:
+    """anomaly_event + turbine_code (이벤트 테이블엔 code 컬럼이 없어 조인으로 부여)."""
+    return cached("anomaly:events",
+                  lambda: load_table("anomaly_event").merge(_tcode_map(), on="turbine_id", how="left"))
+
+
+def _scada() -> pd.DataFrame:
+    """scada_record + turbine_code (scada 엔 code 컬럼이 없어 조인으로 부여)."""
+    return cached("anomaly:scada",
+                  lambda: load_table("scada_record").merge(_tcode_map(), on="turbine_id", how="left"))
+
+
+def _aws() -> pd.DataFrame:
+    return load_table("aws_record")
+
+
+def _asos() -> pd.DataFrame:
+    return load_table("asos_record")
+
+
+def _farm_turbines() -> list:
+    return sorted(_scada()["turbine_code"].dropna().unique().tolist())
+
+
+def _farm_row(wind_farm_id):
+    """wind_farm 1행(단지명·aws/asos station id) — 없으면 None."""
+    if wind_farm_id is None:
+        return None
+    wf = load_table("wind_farm")
+    row = wf[wf["wind_farm_id"] == wind_farm_id]
+    return row.iloc[0] if not row.empty else None
 
 
 def _num(v):
@@ -28,6 +68,14 @@ def _num(v):
     return v.item() if hasattr(v, "item") else v
 
 
+def _snow(v):
+    """적설 값 정규화 — 결측 센티넬(-9)은 None, 그 외는 그대로."""
+    n = _num(v)
+    if n is None or (isinstance(n, (int, float)) and n <= _SNOW_MISSING):
+        return None
+    return n
+
+
 def _observation_window(start, event_type):
     """만성은 [start-30일, start], 급성은 [start, start+H]."""
     delta = pd.Timedelta(hours=WINDOW_HOURS.get(event_type, 24))
@@ -35,13 +83,26 @@ def _observation_window(start, event_type):
 
 
 def get_anomaly_event(event_id: int) -> dict:
-    row = _events[_events["event_id"] == event_id]
+    ev = _events()
+    row = ev[ev["event_id"] == event_id]
     if row.empty:
         return {"found": False}
     r = row.iloc[0]
+    tid = int(r["turbine_id"])
+    ti = turbine_index()
+    trow = ti[ti["turbine_id"] == tid]
+    fid = None
+    if not trow.empty and pd.notna(trow["wind_farm_id"].iloc[0]):
+        fid = int(trow["wind_farm_id"].iloc[0])
+    farm = _farm_row(fid)   # 단지명·station id (wind_farm 테이블)
     end = _num(r["end_time"])
     return {
-        "found": True, "event_id": int(r["event_id"]), "turbine_code": r["turbine_code"],
+        "found": True, "event_id": int(r["event_id"]),
+        "turbine_id": tid, "turbine_code": _num(r["turbine_code"]),
+        "wind_farm_id": fid,
+        "wind_farm_name": (farm["wind_farm_name"] if farm is not None else None),
+        "aws_station_id": (_num(farm["aws_station_id"]) if farm is not None else None),
+        "asos_station_id": (_num(farm["asos_station_id"]) if farm is not None else None),
         "tier": r["tier"], "event_type": r["event_type"], "scope": _num(r["scope"]),
         "start_time": _num(r["start_time"]), "end_time": end, "ongoing": end is None,
         "expected_power": _num(r["expected_power"]), "actual_power": _num(r["actual_power"]),
@@ -54,8 +115,9 @@ def get_scada_during_event(turbine_code, start_time, event_type) -> dict:
     """관측창 scada 집계(표·종합분석 공용). 평균·최대 풍속, 기대/실측 누적."""
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["turbine_code"] == turbine_code) & (_scada["timestamp"] >= win_start)
-                & (_scada["timestamp"] < win_end)]
+    sc = _scada()
+    df = sc[(sc["turbine_code"] == turbine_code) & (sc["recorded_at"] >= win_start)
+            & (sc["recorded_at"] < win_end)]
     if df.empty:
         return {"found": False, "n_rows": 0}
     return {
@@ -71,8 +133,9 @@ def get_other_turbines(turbine_code, start_time, event_type) -> dict:
     """관측창 동안 '타 호기' 수 + 발전량 평균 범위(lo~hi) — 종합분석용."""
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["turbine_code"] != turbine_code) & (_scada["timestamp"] >= win_start)
-                & (_scada["timestamp"] < win_end)]
+    sc = _scada()
+    df = sc[(sc["turbine_code"] != turbine_code) & (sc["recorded_at"] >= win_start)
+            & (sc["recorded_at"] < win_end)]
     if df.empty:
         return {"n": 0, "lo": None, "hi": None}
     means = df.groupby("turbine_code")["power_output"].mean()
@@ -85,9 +148,10 @@ def get_scada_series(turbine_code, start_time, event_type) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["turbine_code"] == turbine_code) & (_scada["timestamp"] >= win_start)
-                & (_scada["timestamp"] < win_end)]
-    return [{"t": r["timestamp"].strftime("%H:%M"), "expected": _num(r["expected_power_pooled"]),
+    sc = _scada()
+    df = sc[(sc["turbine_code"] == turbine_code) & (sc["recorded_at"] >= win_start)
+            & (sc["recorded_at"] < win_end)]
+    return [{"t": r["recorded_at"].strftime("%H:%M"), "expected": _num(r["expected_power_pooled"]),
              "actual": _num(r["power_output"])} for _, r in df.iterrows()]
 
 
@@ -97,8 +161,9 @@ def get_powercurve_bins(turbine_code, start_time, event_type, bin_w=2) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["turbine_code"] == turbine_code) & (_scada["timestamp"] >= win_start)
-                & (_scada["timestamp"] < win_end) & (_scada["wind_speed"] > 0)].copy()
+    sc = _scada()
+    df = sc[(sc["turbine_code"] == turbine_code) & (sc["recorded_at"] >= win_start)
+            & (sc["recorded_at"] < win_end) & (sc["wind_speed"] > 0)].copy()
     if df.empty:
         return []
     df["wbin"] = (df["wind_speed"] // bin_w * bin_w).astype(int)
@@ -112,9 +177,10 @@ def get_farm_presence(start_time, event_type) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["timestamp"] >= win_start) & (_scada["timestamp"] < win_end)]
+    sc = _scada()
+    df = sc[(sc["recorded_at"] >= win_start) & (sc["recorded_at"] < win_end)]
     counts = df.groupby("turbine_code").size().to_dict()
-    return [{"turbine": t, "rows": int(counts.get(t, 0))} for t in _FARM_TURBINES]
+    return [{"turbine": t, "rows": int(counts.get(t, 0))} for t in _farm_turbines()]
 
 
 def get_recent_events(turbine_code, event_type, before_time, months=RECENT_HISTORY_MONTHS) -> list:
@@ -124,21 +190,38 @@ def get_recent_events(turbine_code, event_type, before_time, months=RECENT_HISTO
     """
     before = pd.to_datetime(before_time)
     lo = before - pd.DateOffset(months=months)
-    df = _events[(_events["turbine_code"] == turbine_code) & (_events["event_type"] == event_type)
-                 & (_events["start_time"] >= lo) & (_events["start_time"] < before)]
+    ev = _events()
+    df = ev[(ev["turbine_code"] == turbine_code) & (ev["event_type"] == event_type)
+            & (ev["start_time"] >= lo) & (ev["start_time"] < before)]
     df = df.sort_values("start_time", ascending=False)
     return [{"start_time": _num(r["start_time"]), "tier": r["tier"],
              "estimated_loss_kwh": _num(r["estimated_loss_kwh"])} for _, r in df.iterrows()]
 
 
-def get_weather(turbine_code, start_time) -> dict:
+def get_weather(aws_station_id, asos_station_id, start_time) -> dict:
+    """시작 시점 기상 — aws_record(기온·습도·강수·기압·풍향) + asos_record(적설 3종).
+
+    두 관측망은 station_id 로 분리 조회하며, aws 가 없으면 미관측으로 처리한다.
+    적설 3종(3시간 신적설·일 신적설·적설)은 asos 가 있을 때만 채운다(결측 -9 → None).
+    """
     ts = pd.to_datetime(start_time).floor("h")
-    row = _weather[_weather["timestamp"] == ts]
+    aws = _aws()
+    row = aws[(aws["aws_station_id"] == aws_station_id) & (aws["recorded_at"] == ts)]
     if row.empty:
         return {"found": False}
     r = row.iloc[0]
-    return {"found": True, "temperature": _num(r["temperature"]), "precipitation": _num(r["precipitation"]),
-            "pressure": _num(r["pressure"]), "humidity": _num(r["humidity"]), "wind_direction": _num(r["wind_direction"])}
+    out = {"found": True, "temperature": _num(r["temperature"]), "precipitation": _num(r["precipitation"]),
+           "pressure": _num(r["pressure"]), "humidity": _num(r["humidity"]),
+           "wind_direction": _num(r["wind_direction"]),
+           "snow_hr3": None, "snow_day": None, "snow_tot": None}
+    asos = _asos()
+    srow = asos[(asos["asos_station_id"] == asos_station_id) & (asos["recorded_at"] == ts)]
+    if not srow.empty:
+        s = srow.iloc[0]
+        out["snow_hr3"] = _snow(s["sd_hr3"])   # 3시간 신적설 cm
+        out["snow_day"] = _snow(s["sd_day"])   # 일 신적설 cm
+        out["snow_tot"] = _snow(s["sd_tot"])   # 적설 cm
+    return out
 
 
 def fetch(event_id: int) -> dict:
@@ -152,10 +235,12 @@ def fetch(event_id: int) -> dict:
         "event": event,
         "scada": get_scada_during_event(code, start, et),
         "others": get_other_turbines(code, start, et),
-        "weather": get_weather(code, start),
+        "weather": get_weather(event["aws_station_id"], event["asos_station_id"], start),
         "recent_events": recent_events,
         "recent_count": {"count": len(recent_events)},   # 표용(이제 최근 6개월 창)
         "series": get_scada_series(code, start, et),
         "powercurve": get_powercurve_bins(code, start, et),
-        "presence": get_farm_presence(start, et),
+        # presence(전 호기 관측 상태)는 scope=farm 의 '동시 부재' 증거로만 필요 —
+        # scope=turbine 은 탐지기 판정을 그대로 서술하므로 farm-wide scada 를 읽지 않는다.
+        "presence": get_farm_presence(start, et) if event.get("scope") == "farm" else [],
     }
