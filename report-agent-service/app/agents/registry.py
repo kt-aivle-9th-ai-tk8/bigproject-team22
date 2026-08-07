@@ -29,6 +29,17 @@ from app.agents.reports.farm_operation import farm_operation_agent as _farm_agen
 from app.agents.reports.farm_operation import tools as _farm_tools
 from app.agents.reports.farm_operation import critic_rules as _farm_critic
 
+# fetch(event_id) 의 event_id 가 report_type 마다 무엇을 가리키는지.
+# 공유 골격이 4개 타입에 같은 시그니처를 쓰므로 이름은 event_id 하나지만 의미는 타입마다 다르다.
+# 이 표가 유일한 설명처다 — CLI(run.py) 도움말과 API 스키마 설명이 여기를 인용한다.
+# 틀린 id 를 넣어도 크래시가 아니라 found=False 로 조용히 끝나므로, 명시가 곧 방어책이다.
+EVENT_ID_MEANING = {
+    "anomaly": "anomaly_events.event_id (이상 감지 이벤트)",
+    "defect": "report.report_id (결함 진단 보고서, 예: 5001~5060) — inspection_id 가 아니다",
+    "operation": "터빈 번호 (2 → U2)",
+    "farm_operation": "단지 id (현재 단일 단지라 값은 무시된다)",
+}
+
 REGISTRY = {
     "anomaly": {
         "fetch": _anomaly_tools.fetch,

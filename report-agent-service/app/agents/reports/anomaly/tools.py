@@ -1,23 +1,33 @@
 """데이터 조회 — LLM 절대 사용 안 함. 반환 수치는 원본 그대로(가공 금지).
 
-CSV(로컬) 로드. 배포(RDS) 전환 시 조회 함수를 SQLAlchemy로 교체(시그니처·반환 dict 유지).
+소스 선택(CSV/RDS)은 app.core.datasource 가 테이블 단위로 하므로 이 파일은 그대로 둔다.
 tool_outputs = builder(표·차트) + facts(종합분석 인용 수치) 양쪽의 단일 출처.
 """
-import os
-
 import pandas as pd
 
-from app.core.config import DATA_DIR, RECENT_HISTORY_MONTHS
-
-_events = pd.read_csv(os.path.join(DATA_DIR, "anomaly_event.csv"), encoding="utf-8-sig",
-                      parse_dates=["start_time", "end_time"])
-_scada = pd.read_csv(os.path.join(DATA_DIR, "scada_record.csv"), encoding="utf-8-sig",
-                     parse_dates=["timestamp"])
-_weather = pd.read_csv(os.path.join(DATA_DIR, "aws_record.csv"), parse_dates=["timestamp"])
+from app.core.config import RECENT_HISTORY_MONTHS
+from app.core.datasource import load_table
 
 WINDOW_HOURS = {"prolonged_stop": 24, "data_missing": 6, "chronic_screening": 720, "chronic_confirmed": 720}
 _CHRONIC = ("chronic_screening", "chronic_confirmed")
-_FARM_TURBINES = sorted(_scada["turbine_code"].unique().tolist())
+
+
+# 호출 시점 로드(datasource 가 1회 캐시). registry 가 4개 tools 를 전부 import 하므로
+# 전역 로드로 두면 다른 보고서 1건에도 이상탐지용 테이블까지 다 읽게 된다.
+def _events():
+    return load_table("anomaly_event")
+
+
+def _scada():
+    return load_table("scada_record")
+
+
+def _weather():
+    return load_table("aws_record")
+
+
+def _farm_turbines() -> list:
+    return sorted(_scada()["turbine_code"].unique().tolist())
 
 
 def _num(v):
@@ -35,7 +45,8 @@ def _observation_window(start, event_type):
 
 
 def get_anomaly_event(event_id: int) -> dict:
-    row = _events[_events["event_id"] == event_id]
+    ev = _events()
+    row = ev[ev["event_id"] == event_id]
     if row.empty:
         return {"found": False}
     r = row.iloc[0]
@@ -54,8 +65,9 @@ def get_scada_during_event(turbine_code, start_time, event_type) -> dict:
     """관측창 scada 집계(표·종합분석 공용). 평균·최대 풍속, 기대/실측 누적."""
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["turbine_code"] == turbine_code) & (_scada["timestamp"] >= win_start)
-                & (_scada["timestamp"] < win_end)]
+    sc = _scada()
+    df = sc[(sc["turbine_code"] == turbine_code) & (sc["timestamp"] >= win_start)
+            & (sc["timestamp"] < win_end)]
     if df.empty:
         return {"found": False, "n_rows": 0}
     return {
@@ -71,8 +83,9 @@ def get_other_turbines(turbine_code, start_time, event_type) -> dict:
     """관측창 동안 '타 호기' 수 + 발전량 평균 범위(lo~hi) — 종합분석용."""
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["turbine_code"] != turbine_code) & (_scada["timestamp"] >= win_start)
-                & (_scada["timestamp"] < win_end)]
+    sc = _scada()
+    df = sc[(sc["turbine_code"] != turbine_code) & (sc["timestamp"] >= win_start)
+            & (sc["timestamp"] < win_end)]
     if df.empty:
         return {"n": 0, "lo": None, "hi": None}
     means = df.groupby("turbine_code")["power_output"].mean()
@@ -85,8 +98,9 @@ def get_scada_series(turbine_code, start_time, event_type) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["turbine_code"] == turbine_code) & (_scada["timestamp"] >= win_start)
-                & (_scada["timestamp"] < win_end)]
+    sc = _scada()
+    df = sc[(sc["turbine_code"] == turbine_code) & (sc["timestamp"] >= win_start)
+            & (sc["timestamp"] < win_end)]
     return [{"t": r["timestamp"].strftime("%H:%M"), "expected": _num(r["expected_power_pooled"]),
              "actual": _num(r["power_output"])} for _, r in df.iterrows()]
 
@@ -97,8 +111,9 @@ def get_powercurve_bins(turbine_code, start_time, event_type, bin_w=2) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["turbine_code"] == turbine_code) & (_scada["timestamp"] >= win_start)
-                & (_scada["timestamp"] < win_end) & (_scada["wind_speed"] > 0)].copy()
+    sc = _scada()
+    df = sc[(sc["turbine_code"] == turbine_code) & (sc["timestamp"] >= win_start)
+            & (sc["timestamp"] < win_end) & (sc["wind_speed"] > 0)].copy()
     if df.empty:
         return []
     df["wbin"] = (df["wind_speed"] // bin_w * bin_w).astype(int)
@@ -112,9 +127,10 @@ def get_farm_presence(start_time, event_type) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    df = _scada[(_scada["timestamp"] >= win_start) & (_scada["timestamp"] < win_end)]
+    sc = _scada()
+    df = sc[(sc["timestamp"] >= win_start) & (sc["timestamp"] < win_end)]
     counts = df.groupby("turbine_code").size().to_dict()
-    return [{"turbine": t, "rows": int(counts.get(t, 0))} for t in _FARM_TURBINES]
+    return [{"turbine": t, "rows": int(counts.get(t, 0))} for t in _farm_turbines()]
 
 
 def get_recent_events(turbine_code, event_type, before_time, months=RECENT_HISTORY_MONTHS) -> list:
@@ -124,8 +140,9 @@ def get_recent_events(turbine_code, event_type, before_time, months=RECENT_HISTO
     """
     before = pd.to_datetime(before_time)
     lo = before - pd.DateOffset(months=months)
-    df = _events[(_events["turbine_code"] == turbine_code) & (_events["event_type"] == event_type)
-                 & (_events["start_time"] >= lo) & (_events["start_time"] < before)]
+    ev = _events()
+    df = ev[(ev["turbine_code"] == turbine_code) & (ev["event_type"] == event_type)
+            & (ev["start_time"] >= lo) & (ev["start_time"] < before)]
     df = df.sort_values("start_time", ascending=False)
     return [{"start_time": _num(r["start_time"]), "tier": r["tier"],
              "estimated_loss_kwh": _num(r["estimated_loss_kwh"])} for _, r in df.iterrows()]
@@ -133,7 +150,8 @@ def get_recent_events(turbine_code, event_type, before_time, months=RECENT_HISTO
 
 def get_weather(turbine_code, start_time) -> dict:
     ts = pd.to_datetime(start_time).floor("h")
-    row = _weather[_weather["timestamp"] == ts]
+    w = _weather()
+    row = w[w["timestamp"] == ts]
     if row.empty:
         return {"found": False}
     r = row.iloc[0]

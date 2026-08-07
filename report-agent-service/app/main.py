@@ -47,7 +47,7 @@ def health_check():
 
 # 📌 API 라우터 등록
 # endpoints: /api/v1/reports/...
-# app.include_router(report_router, prefix="/api/v1/reports", tags=["Reports"])
+app.include_router(report_router, prefix="/api/v1/reports", tags=["Reports"])
 
 if __name__ == "__main__":
     import uvicorn
