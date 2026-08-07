@@ -87,6 +87,31 @@ class AnomalyEventTest {
     }
 
     @Test
+    @DisplayName("멱등키 필드가 null 이면 생성 시점에 거부한다(DB 제약까지 미루지 않는다)")
+    void detected_rejectsNullIdentityFields() {
+        assertThatThrownBy(() -> AnomalyEvent.detected(
+                null, AnomalyTier.A, AnomalyEventType.PROLONGED_STOP, START, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> AnomalyEvent.detected(
+                1L, null, AnomalyEventType.PROLONGED_STOP, START, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> AnomalyEvent.detected(
+                1L, AnomalyTier.A, null, START, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> AnomalyEvent.detected(
+                1L, AnomalyTier.A, AnomalyEventType.PROLONGED_STOP, null, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("생성 시에도 시작보다 이른 종료 시각은 거부한다")
+    void detected_rejectsEndBeforeStart() {
+        assertThatThrownBy(() -> AnomalyEvent.detected(
+                1L, AnomalyTier.A, AnomalyEventType.PROLONGED_STOP, START, START.minusHours(1), null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("종료 시각을 null 로 close 하면 거부한다(종료가 진행중으로 뒤집히는 것 방지)")
     void close_rejectsNull() {
         AnomalyEvent event = ongoingStop();

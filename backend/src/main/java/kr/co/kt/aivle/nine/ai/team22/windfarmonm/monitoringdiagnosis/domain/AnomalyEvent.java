@@ -94,11 +94,17 @@ public class AnomalyEvent {
 
     private AnomalyEvent(Long turbineId, AnomalyTier tier, AnomalyEventType eventType,
                          LocalDateTime startTime, LocalDateTime endTime, AnomalyScope scope) {
+        // 멱등키를 이루는 네 필드가 null 이면 DB UNIQUE 제약이 무의미해지고, save 시점의 제약 위반으로만
+        // 뒤늦게 드러난다. 생성 시점에 거부해 "언제 잘못됐는지"를 명확히 한다.
+        if (turbineId == null || tier == null || eventType == null || startTime == null) {
+            throw new IllegalArgumentException(
+                    "멱등키 필드(turbineId/tier/eventType/startTime)는 null 일 수 없다");
+        }
         this.turbineId = turbineId;
         this.tier = tier;
         this.eventType = eventType;
         this.startTime = startTime;
-        this.endTime = endTime;
+        this.endTime = endTime == null ? null : requireAfterStart(endTime); // 종료 시각이 있으면 시작 이후여야 한다
         this.scope = scope;
     }
 
