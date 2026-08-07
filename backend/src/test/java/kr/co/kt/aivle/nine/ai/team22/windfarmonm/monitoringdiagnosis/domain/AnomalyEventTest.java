@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AnomalyEventTest {
 
@@ -83,6 +84,37 @@ class AnomalyEventTest {
         assertThat(event.getExpectedPower()).isEqualTo(100.0);
         assertThat(event.getEstimatedLossKwh()).isEqualTo(600.0);
         assertThat(event.getScope()).isEqualTo(AnomalyScope.TURBINE);
+    }
+
+    @Test
+    @DisplayName("종료 시각을 null 로 close 하면 거부한다(종료가 진행중으로 뒤집히는 것 방지)")
+    void close_rejectsNull() {
+        AnomalyEvent event = ongoingStop();
+
+        assertThatThrownBy(() -> event.close(null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(event.isOngoing()).isTrue(); // 상태가 바뀌지 않았다
+    }
+
+    @Test
+    @DisplayName("시작보다 이른 종료 시각은 거부한다(음수 지속시간이 게이트를 무력화하는 것 방지)")
+    void close_rejectsEndBeforeStart() {
+        AnomalyEvent event = ongoingStop();
+
+        assertThatThrownBy(() -> event.close(START.minusHours(1)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("refresh 도 시작보다 이른 종료 시각은 거부한다(단 null 은 진행중 유지로 허용)")
+    void refresh_rejectsEndBeforeStartButAllowsNull() {
+        AnomalyEvent event = ongoingStop();
+
+        assertThatThrownBy(() -> event.refresh(START.minusHours(1), null, null, null, null, null, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        event.refresh(null, AnomalyScope.TURBINE, 1.0, 0.0, null, -100.0, null, 10.0); // null = 진행중 유지
+        assertThat(event.isOngoing()).isTrue();
     }
 
     @Test

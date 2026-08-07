@@ -121,7 +121,7 @@ public class AnomalyEvent {
     public void refresh(LocalDateTime endTime, AnomalyScope scope,
                         Double expectedPower, Double actualPower, Double zScore,
                         Double deviationPct, Double energyRatio30d, Double estimatedLossKwh) {
-        this.endTime = endTime;
+        this.endTime = endTime == null ? null : requireAfterStart(endTime); // null = 진행 중 유지
         this.scope = scope;
         this.expectedPower = expectedPower;
         this.actualPower = actualPower;
@@ -136,9 +136,24 @@ public class AnomalyEvent {
      * <p>
      * 배치가 "이전 회차엔 있었는데 이번엔 사라진" 이벤트를 끝낼 때 쓴다 — 마지막 상태는 이미 직전 {@link #refresh}
      * 로 저장돼 있으므로, 종료가 그 값을 지우면 안 된다.
+     * <p>
+     * 종료 시각은 필수이며 시작 이후여야 한다. null 이면 {@link #isOngoing()} 이 다시 true 가 되어 "종료"의
+     * 의미가 뒤집히고, 시작보다 이르면 {@link #duration}이 음수가 되어 24시간 게이트를 조용히 무력화한다.
      */
     public void close(LocalDateTime endTime) {
-        this.endTime = endTime;
+        if (endTime == null) {
+            throw new IllegalArgumentException("종료 시각은 필수다");
+        }
+        this.endTime = requireAfterStart(endTime);
+    }
+
+    /** 종료 시각이 시작 이후인지 보장한다. 위반은 배치 상류(추론 결과)나 시계 스큐의 오류다. */
+    private LocalDateTime requireAfterStart(LocalDateTime endTime) {
+        if (endTime.isBefore(startTime)) {
+            throw new IllegalArgumentException(
+                    "종료 시각이 시작보다 이르다: start=" + startTime + ", end=" + endTime);
+        }
+        return endTime;
     }
 
     /** 아직 끝나지 않은 이벤트인지. */
@@ -151,6 +166,9 @@ public class AnomalyEvent {
      * <p>
      * 보고서 자동생성 게이트(예: 정지 24시간 이상)가 이 값을 근거로 삼는다. 기준 시각을 인자로 받는 이유는
      * 배치가 다루는 "회차 기준 시각"과 실제 호출 시각이 다를 수 있고, 그래야 테스트가 결정적이기 때문이다.
+     * <p>
+     * 음수가 되지 않도록 여기서 따로 검증하지 않는다. 종료 시각은 저장 시점에 시작 이후로 강제되고
+     * ({@link #close}/{@link #refresh}), 진행 중이면 기준 시각은 항상 현재(=시작 이후)이기 때문이다.
      */
     public Duration duration(LocalDateTime at) {
         return Duration.between(startTime, endTime != null ? endTime : at);
