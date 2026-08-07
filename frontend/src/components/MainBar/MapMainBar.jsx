@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import Map from "./Map/Map";
 import "./MapMainBar.css";
@@ -20,7 +20,7 @@ function MapMainBar({
     onSelectPlant?.(plant);
     setIsPlantListOpen(false);
   };
-  
+
   if (isLoading) {
     return (
       <div className="map-main-bar">
@@ -40,16 +40,14 @@ function MapMainBar({
   return (
     <div className="map-main-bar">
       <Map
-        objects={plants}
-        iconSrc={plantIcon}
-        iconScale={0.05}
-        clusterDistance={40}
-        clusterMinDistance={15}
-        onSelectObject={onSelectPlant}
+        plants={plants}
+        onSelectPlant={handleSelectPlant}
       />
 
       <button
-        className={`map-plant-menu-button ${isPlantListOpen ? "active" : ""}`}
+        className={`map-plant-menu-button ${
+          isPlantListOpen ? "active" : ""
+        }`}
         type="button"
         aria-label="발전소 리스트 열기"
         onClick={handleTogglePlantList}
@@ -63,6 +61,7 @@ function MapMainBar({
         <div className="map-plant-list-panel">
           <div className="map-plant-list-header">
             <strong>발전소 리스트</strong>
+
             <button
               type="button"
               onClick={() => setIsPlantListOpen(false)}
@@ -111,4 +110,47 @@ function MapMainBar({
   );
 }
 
-export default MapMainBar;
+const areEqual = (prevProps, nextProps) => {
+  // 로딩 상태가 바뀌면 다시 렌더링
+  if (prevProps.isLoading !== nextProps.isLoading) {
+    return false;
+  }
+
+  // 에러 상태가 바뀌면 다시 렌더링
+  if (prevProps.error !== nextProps.error) {
+    return false;
+  }
+
+  // callback이 바뀌면 다시 렌더링
+  if (prevProps.onSelectPlant !== nextProps.onSelectPlant) {
+    return false;
+  }
+
+  // 발전소 개수가 바뀌면 다시 렌더링
+  if (prevProps.plants.length !== nextProps.plants.length) {
+    return false;
+  }
+
+  // MapMainBar에서 필요한 데이터만 비교
+  return prevProps.plants.every((prevPlant, index) => {
+    const nextPlant = nextProps.plants[index];
+
+    if (!nextPlant) {
+      return false;
+    }
+
+    return (
+      prevPlant.id === nextPlant.id &&
+      prevPlant.name === nextPlant.name &&
+      prevPlant.title === nextPlant.title &&
+      prevPlant.plantName === nextPlant.plantName &&
+      prevPlant.address === nextPlant.address &&
+      prevPlant.location === nextPlant.location &&
+      prevPlant.capacity === nextPlant.capacity &&
+      prevPlant.coordinate?.[0] === nextPlant.coordinate?.[0] &&
+      prevPlant.coordinate?.[1] === nextPlant.coordinate?.[1]
+    );
+  });
+};
+
+export default memo(MapMainBar, areEqual);

@@ -85,7 +85,7 @@ function MainScreen() {
     plantsError,
   } = useWindFarms({
     mode: screenMode,
-    refreshInterval: 600000,
+    refreshInterval: 10000,
   });
 
   useEffect(() => {
