@@ -21,6 +21,13 @@
 --      farm_operation : wind_farm_id 만
 --      anomaly        : event_id 로 대상 이벤트 지정
 -- ─────────────────────────────────────────────────────────────────────────────
+-- report 의 복합 FK 가 참조할 대상. turbine_id 는 이미 PK 라 유일하지만, (turbine_id, wind_farm_id)
+-- 순서의 인덱스가 있어야 복합 FK 가 이를 참조할 수 있다(turbines 는 V2 라 여기서 ALTER).
+-- 실질적으로 turbine_id 가 채워지는 운영 보고서(TURBINE_OPERATION)에서만 소속 검사가 걸린다 —
+-- defect/farm_operation 보고서는 turbine_id 가 NULL 이라 MATCH SIMPLE 로 건너뛴다.
+ALTER TABLE turbines
+    ADD CONSTRAINT uq_turbines_id_wind_farm UNIQUE (turbine_id, wind_farm_id);
+
 CREATE TABLE report
 (
     report_id        BIGINT       NOT NULL AUTO_INCREMENT,
@@ -49,7 +56,12 @@ CREATE TABLE report
     PRIMARY KEY (report_id),
     KEY idx_report_farm_type_period (wind_farm_id, report_type, period_start),
     CONSTRAINT fk_report_wind_farm FOREIGN KEY (wind_farm_id) REFERENCES wind_farms (wind_farm_id),
-    CONSTRAINT fk_report_turbine FOREIGN KEY (turbine_id) REFERENCES turbines (turbine_id),
+    -- 터빈 존재 + 소속 단지 일치를 한 번에 강제하는 복합 FK(교차 컬럼 정합성).
+    -- (turbine_id, wind_farm_id) 가 turbines 에 실재해야 하므로 "터빈이 이 단지 소속인가"가 DB 로 보장된다.
+    -- turbine_id 가 NULL(defect/farm_operation 보고서)이면 표준 MATCH SIMPLE 규칙상 이 FK 는 건너뛰고,
+    -- 단지 존재는 위의 fk_report_wind_farm 이 검사한다. 단일 FK 로는 교차 컬럼 일치를 표현할 수 없다.
+    CONSTRAINT fk_report_turbine_in_farm FOREIGN KEY (turbine_id, wind_farm_id)
+        REFERENCES turbines (turbine_id, wind_farm_id),
     CONSTRAINT fk_report_approver FOREIGN KEY (approver_id) REFERENCES users (user_id),
     -- V4 가 만든 anomaly_events(복수형)를 참조한다.
     CONSTRAINT fk_report_anomaly_event FOREIGN KEY (anomaly_event_id) REFERENCES anomaly_events (event_id)
