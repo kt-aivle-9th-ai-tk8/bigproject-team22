@@ -16,7 +16,7 @@ function MainBar({
   onSelectTurbine,
 }) {
   return (
-    <aside>
+    <aside className="main-bar">
       {mode === "map" && (
         <MapMainBar
           plants={plants}

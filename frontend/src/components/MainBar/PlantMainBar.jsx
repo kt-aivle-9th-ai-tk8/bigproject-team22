@@ -32,6 +32,7 @@ function PlantMainBar({
       </div>
     );
   }
+  console.log("터빈 리스트 ", turbines);
 
   return (
     <div className="map-main-bar">
