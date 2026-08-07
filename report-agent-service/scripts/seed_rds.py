@@ -1,7 +1,7 @@
 """data/*.csv → RDS 시드 적재.
 
 적재 대상은 '결함 진단(defect) 보고서 체인' 전부다:
-    wind_farm → turbine_model → turbine → blade → users → report → inspection → defect
+    wind_farm → turbine_model → turbine → blade → user → report → inspection → defect
 이 순서는 FK 의존 순서라 바꾸면 안 된다.
 
 적재하지 않는 것과 그 이유 (CSV 데이터가 ERD 와 어긋난다):
@@ -15,9 +15,9 @@
                   --with-aws 로 넣을 수 있게만 해두고 기본은 제외한다.
 
 CSV 에 없어 합성하는 값 (지어낸 값은 여기 한 곳에만 있다):
-  users.employee_id   EMP0001 형식 — user_id 로 만든 결정론적 사번
-  users.password      로그인 불가능한 자리표시자. 시드 계정으로 로그인되면 안 된다.
-  users.created_at/updated_at, login_fail_count
+  user.employee_id    EMP0001 형식 — user_id 로 만든 결정론적 사번
+  user.password       로그인 불가능한 자리표시자. 시드 계정으로 로그인되면 안 된다.
+  user.created_at/updated_at, login_fail_count
   report.wind_farm_id 소속 inspection 의 터빈 → 단지 (보고서 60건 모두 단지가 1개로 확정됨)
   report.period_start MIN(inspection_start), period_end MAX(inspection_end)
   report 의 title/content/generated_at/turbine_id/approver_id/event_id 는 채우지 않는다(NULL).
@@ -40,7 +40,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(HERE, "data")
 
 # 적재 순서 = FK 의존 순서. 삭제는 이 역순.
-ORDER = ["wind_farms", "turbine_models", "turbines", "blades", "users",
+ORDER = ["wind_farm", "turbine_model", "turbine", "blade", "user",
          "report", "inspection", "defect"]
 
 # 로그인 불가 자리표시자. bcrypt 해시 형식이 아니므로 어떤 비밀번호로도 매칭되지 않는다.
@@ -120,11 +120,11 @@ def build_frames(with_aws: bool) -> dict:
     })
 
     frames = {
-        "wind_farms": wf,
-        "turbine_models": tm,
-        "turbines": tb,
-        "blades": bl,
-        "users": users,
+        "wind_farm": wf,
+        "turbine_model": tm,
+        "turbine": tb,
+        "blade": bl,
+        "user": users,
         "report": report,
         "inspection": insp,
         "defect": df,
@@ -140,15 +140,15 @@ def check_fk(frames: dict):
         return sorted(set(frames[child][ccol].dropna()) - set(frames[parent][pcol]))
 
     checks = [
-        ("turbines", "wind_farm_id", "wind_farms", "wind_farm_id"),
-        ("turbines", "turbine_model_id", "turbine_models", "turbine_model_id"),
-        ("blades", "turbine_id", "turbines", "turbine_id"),
-        ("report", "wind_farm_id", "wind_farms", "wind_farm_id"),
-        ("inspection", "turbine_id", "turbines", "turbine_id"),
-        ("inspection", "user_id", "users", "user_id"),
+        ("turbine", "wind_farm_id", "wind_farm", "wind_farm_id"),
+        ("turbine", "turbine_model_id", "turbine_model", "turbine_model_id"),
+        ("blade", "turbine_id", "turbine", "turbine_id"),
+        ("report", "wind_farm_id", "wind_farm", "wind_farm_id"),
+        ("inspection", "turbine_id", "turbine", "turbine_id"),
+        ("inspection", "user_id", "user", "user_id"),
         ("inspection", "report_id", "report", "report_id"),
         ("defect", "inspection_id", "inspection", "inspection_id"),
-        ("defect", "blade_id", "blades", "blade_id"),
+        ("defect", "blade_id", "blade", "blade_id"),
     ]
     bad = [(c, cc, p, m) for c, cc, p, pc in checks if (m := missing(c, cc, p, pc))]
     for c, cc, p, m in bad:
@@ -187,7 +187,7 @@ def main():
 
     print("\n### 3) 적재")
     with engine.begin() as conn:          # 전부 성공하거나 전부 롤백
-        counts = {t: conn.execute(text(f"SELECT COUNT(*) FROM {t}")).scalar() for t in order}
+        counts = {t: conn.execute(text(f"SELECT COUNT(*) FROM `{t}`")).scalar() for t in order}
         nonempty = {t: n for t, n in counts.items() if n}
         if nonempty and not a.replace:
             raise SystemExit(
@@ -196,7 +196,7 @@ def main():
             )
         if a.replace:
             for t in reversed(order):      # 자식부터 지워야 FK 에 안 걸린다
-                n = conn.execute(text(f"DELETE FROM {t}")).rowcount
+                n = conn.execute(text(f"DELETE FROM `{t}`")).rowcount
                 if n:
                     print(f"  - {t:16s} {n:>7,} 행 삭제")
 
@@ -207,7 +207,7 @@ def main():
     print("\n### 4) 확인")
     with engine.connect() as conn:
         for t in order:
-            n = conn.execute(text(f"SELECT COUNT(*) FROM {t}")).scalar()
+            n = conn.execute(text(f"SELECT COUNT(*) FROM `{t}`")).scalar()
             ok = "✓" if n == len(frames[t]) else "✗"
             print(f"  {ok} {t:16s} DB {n:>7,} 행 (CSV {len(frames[t]):,})")
 

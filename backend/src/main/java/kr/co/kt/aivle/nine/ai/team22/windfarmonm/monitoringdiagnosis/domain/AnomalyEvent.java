@@ -29,7 +29,7 @@ import java.time.LocalDateTime;
  * 달라지므로, 저장해 두면 갱신하지 않는 한 낡은 값이 남는다.
  */
 @Entity
-@Table(name = "anomaly_events")
+@Table(name = "anomaly_event")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AnomalyEvent {
