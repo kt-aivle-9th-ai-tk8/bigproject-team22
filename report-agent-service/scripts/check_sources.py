@@ -16,7 +16,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-os.environ.setdefault("REPORT_WITH_ANALYSIS", "false")
+# setdefault 가 아니라 강제 대입이어야 한다 — 셸/.env 에 true 가 있으면 setdefault 는 그대로 두고,
+# 그러면 에이전트가 분석 경로로 들어가 아래 _NoLLM 이 터진다(데이터 출처 대신 실패만 찍힘).
+# 이 스크립트는 조회 경로만 보는 게 목적이라 분석은 항상 꺼야 한다.
+os.environ["REPORT_WITH_ANALYSIS"] = "false"
 
 import app.agents.llm as L  # noqa: E402
 
