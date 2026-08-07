@@ -37,8 +37,8 @@ export const convertWindFarmToPlant = (windFarm) => {
       yearPower: 0,
     },
 
-    faults: getDummyFaultsByWindFarmId(windFarm.id),
-    turbines: getDummyTurbinesByWindFarmId(windFarm.id),
+    faults: [],
+    turbines: [],
   };
 };
 
