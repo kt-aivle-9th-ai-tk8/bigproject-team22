@@ -23,18 +23,22 @@ function MapMainBar({
 
   if (isLoading) {
     return (
-      발전소 데이터를 불러오는 중입니다.
+      <div className="map-main-bar">
+        발전소 데이터를 불러오는 중입니다.
+      </div>
     );
   }
 
   if (error) {
     return (
-      발전소 데이터를 불러오지 못했습니다.
+      <div className="map-main-bar">
+        발전소 데이터를 불러오지 못했습니다.
+      </div>
     );
   }
 
   return (
-    <div>
+    <div className="map-main-bar">
       <Map
         plants={plants}
         iconSrc={plantIcon}
@@ -42,7 +46,9 @@ function MapMainBar({
       />
 
       <button
-        className={`map-plant-menu-button ${isPlantListOpen ? "active" : ""}`}
+        className={`map-plant-menu-button ${
+          isPlantListOpen ? "active" : ""
+        }`}
         type="button"
         aria-label="발전소 리스트 열기"
         onClick={handleTogglePlantList}
@@ -56,6 +62,7 @@ function MapMainBar({
         <div className="map-plant-list-panel">
           <div className="map-plant-list-header">
             <strong>발전소 리스트</strong>
+
             <button
               type="button"
               onClick={() => setIsPlantListOpen(false)}
@@ -123,6 +130,10 @@ const areEqual = (prevProps, nextProps) => {
 
   return prevProps.plants.every((prevPlant, index) => {
     const nextPlant = nextProps.plants[index];
+
+    if (!nextPlant) {
+      return false;
+    }
 
     return (
       prevPlant.id === nextPlant.id &&
