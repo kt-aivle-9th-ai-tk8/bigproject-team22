@@ -155,7 +155,8 @@ def _read_csv(name: str) -> pd.DataFrame:
 def _query(name: str) -> pd.DataFrame:
     table, cols = _RDS_TABLES[name]
     # 식별자는 위 상수에서만 온다 — 외부 입력이 섞이지 않으므로 f-string 조립이 안전하다.
-    # 테이블명은 백틱으로 인용한다(`user` 같은 예약어 안전 + 이식성).
+    # 테이블명은 백틱으로 인용한다 — MySQL 에서 `user` 등 예약어와의 충돌을 피하기 위함이다
+    # (백틱은 MySQL 전용 인용 문법이라 타 DB 이식성을 주는 것은 아니다).
     df = pd.read_sql(f"SELECT {', '.join(cols)} FROM `{table}`", _get_engine())
     # DATE 를 date 객체로 돌려주는 드라이버가 있어 CSV 경로(datetime64)와 dtype 이 갈린다 — 통일.
     for c in _DATE_COLS.get(name, ()):
