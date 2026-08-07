@@ -11,9 +11,6 @@ import { useWindFarms } from "../hooks/useWindFarms";
 import "./MainScreen.css";
 import "../components/Bar.css";
 
-import.meta.env
-const s3BucketName = S3_BUCKET_NAME;
-
 const alarmReports = [
   {
     id: "alarm-001",
@@ -66,8 +63,6 @@ const alarmReports = [
 ];
 
 function MainScreen() {
-  console.log("현재 S3 버킷 이름:", s3BucketName);
-
   const navigate = useNavigate();
 
   const [screenMode, setScreenMode] = useState(() => {
