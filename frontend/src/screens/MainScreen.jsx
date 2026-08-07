@@ -1,277 +1,144 @@
-import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-import Header from "../components/Header";
-import MainBar from "../components/MainBar";
-import UnderBar from "../components/UnderBar";
-import SideBar from "../components/SideBar";
+import { fetchWindFarms } from "../api/windFarmApi";
+import { convertWindFarmToPlant } from "../utils/windFarmMapper";
 
-import { useWindFarms } from "../hooks/useWindFarms";
+const getWindFarmListFromResponse = (responseBody) => {
+  if (Array.isArray(responseBody)) {
+    return responseBody;
+  }
 
-import "./MainScreen.css";
-import "../components/Bar.css";
+  if (Array.isArray(responseBody?.data)) {
+    return responseBody.data;
+  }
 
-const alarmReports = [
-  {
-    id: "alarm-001",
-    title: "터빈 A 긴급 결함 보고서",
-    plantName: "장흥 발전소",
-    turbineName: "터빈 A",
-    time: "14:20",
-    markdown: `
-# 터빈 A 긴급 결함 보고서
+  return [];
+};
 
-## 개요
-- 발전소: 장흥 발전소
-- 터빈: 터빈 A
-- 발생 시간: 14:20
-- 상태: 긴급
-
-## 주요 내용
-터빈 A에서 비정상 진동과 출력 저하가 감지되었습니다.
-
-## 조치 필요 사항
-1. 터빈 A 즉시 점검
-2. 출력 로그 확인
-3. 베어링 온도 및 진동 센서 확인
-`,
-  },
-  {
-    id: "alarm-002",
-    title: "터빈 B 경고 보고서",
-    plantName: "장흥 발전소",
-    turbineName: "터빈 B",
-    time: "13:45",
-    markdown: `
-# 터빈 B 경고 보고서
-
-## 개요
-- 발전소: 장흥 발전소
-- 터빈: 터빈 B
-- 발생 시간: 13:45
-- 상태: 경고
-
-## 주요 내용
-터빈 B의 출력 변동 폭이 기준치를 초과했습니다.
-
-## 권장 조치
-- 출력 추이 모니터링
-- 풍속 데이터 비교
-- 센서 이상 여부 확인
-`,
-  },
-];
-
-function MainScreen() {
-  const navigate = useNavigate();
-
-  const [screenMode, setScreenMode] = useState(() => {
-    return localStorage.getItem("screenMode") || "map";
-  });
-
-  const [selectedPlant, setSelectedPlant] = useState(() => {
-    const savedPlant = localStorage.getItem("selectedPlant");
-    return savedPlant ? JSON.parse(savedPlant) : null;
-  });
-
-  const [selectedTurbine, setSelectedTurbine] = useState(() => {
-    const savedTurbine = localStorage.getItem("selectedTurbine");
-    return savedTurbine ? JSON.parse(savedTurbine) : null;
-  });
-
-  const {
-    plants,
-    isPlantsLoading,
-    plantsError,
-  } = useWindFarms({
-    mode: screenMode,
-    refreshInterval: 600000,
-    location: 1,
-    power: 1,
-    weather: 1,
-  });
+export const useWindFarms = ({
+  mode,
+  refreshInterval = 600000,
+} = {}) => {
+  const [plants, setPlants] = useState([]);
+  const [isPlantsLoading, setIsPlantsLoading] = useState(true);
+  const [plantsError, setPlantsError] = useState(null);
 
   useEffect(() => {
-    if (!selectedPlant) {
+    if (mode !== "map") {
       return;
     }
 
-    const updatedPlant = plants.find(
-      (plant) => plant.id === selectedPlant.id
-    );
+    let isMounted = true;
 
-    if (updatedPlant) {
-      setSelectedPlant(updatedPlant);
-    } else if (!isPlantsLoading) {
-      setSelectedPlant(null);
-      setSelectedTurbine(null);
-      setScreenMode("map");
-    }
-  }, [plants, isPlantsLoading]);
+    // 최초 진입: 위치 + 발전량 + 날씨 전체 조회
+    const loadInitialWindFarms = async () => {
+      try {
+        setIsPlantsLoading(true);
+        setPlantsError(null);
 
-  useEffect(() => {
-    const currentState = {
-      screenMode,
-      selectedPlant,
-      selectedTurbine,
-    };
+        const responseBody = await fetchWindFarms({
+          location: 1,
+          power: 1,
+          weather: 1,
+        });
 
-    window.history.replaceState(
-      currentState,
-      "",
-      window.location.href
-    );
-  }, []);
+        const windFarmList =
+          getWindFarmListFromResponse(responseBody);
 
-  useEffect(() => {
-    const handlePopState = (event) => {
-      const state = event.state;
+        const convertedPlants =
+          windFarmList.map(convertWindFarmToPlant);
 
-      if (!state) {
-        setScreenMode("map");
-        setSelectedPlant(null);
-        setSelectedTurbine(null);
-        return;
+        if (isMounted) {
+          setPlants(convertedPlants);
+        }
+      } catch (error) {
+        console.error(
+          "발전소 초기 조회 API 오류:",
+          error
+        );
+
+        if (isMounted) {
+          setPlantsError(error.message);
+        }
+      } finally {
+        if (isMounted) {
+          setIsPlantsLoading(false);
+        }
       }
-
-      setScreenMode(state.screenMode || "map");
-      setSelectedPlant(state.selectedPlant || null);
-      setSelectedTurbine(state.selectedTurbine || null);
     };
 
-    window.addEventListener("popstate", handlePopState);
+    // 갱신: 발전량 + 날씨만 조회
+    const refreshWindFarms = async () => {
+      try {
+        const responseBody = await fetchWindFarms({
+          power: 1,
+          weather: 1,
+        });
+
+        const windFarmList =
+          getWindFarmListFromResponse(responseBody);
+
+        const refreshedPlants =
+          windFarmList.map(convertWindFarmToPlant);
+
+        if (isMounted) {
+          setPlants((prevPlants) =>
+            prevPlants.map((prevPlant) => {
+              const refreshedPlant =
+                refreshedPlants.find(
+                  (plant) =>
+                    plant.id === prevPlant.id
+                );
+
+              if (!refreshedPlant) {
+                return prevPlant;
+              }
+
+              return {
+                ...prevPlant,
+                weather: refreshedPlant.weather,
+                power: refreshedPlant.power,
+              };
+            })
+          );
+        }
+      } catch (error) {
+        console.error(
+          "발전소 갱신 API 오류:",
+          error
+        );
+
+        if (isMounted) {
+          setPlantsError(error.message);
+        }
+      }
+    };
+
+    // map 진입 시 즉시 전체 조회
+    loadInitialWindFarms();
+
+    let intervalId = null;
+
+    // 이후 10분마다 power + weather 갱신
+    if (refreshInterval > 0) {
+      intervalId = setInterval(() => {
+        refreshWindFarms();
+      }, refreshInterval);
+    }
 
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      isMounted = false;
+
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
-  }, []);
+  }, [mode, refreshInterval]);
 
-  const turbines = selectedPlant?.turbines || [];
-
-  useEffect(() => {
-    localStorage.setItem("screenMode", screenMode);
-  }, [screenMode]);
-
-  useEffect(() => {
-    if (selectedPlant) {
-      localStorage.setItem(
-        "selectedPlant",
-        JSON.stringify(selectedPlant)
-      );
-    } else {
-      localStorage.removeItem("selectedPlant");
-    }
-  }, [selectedPlant]);
-
-  useEffect(() => {
-    if (selectedTurbine) {
-      localStorage.setItem(
-        "selectedTurbine",
-        JSON.stringify(selectedTurbine)
-      );
-    } else {
-      localStorage.removeItem("selectedTurbine");
-    }
-  }, [selectedTurbine]);
-
-  const moveMode = (nextMode, nextPlant, nextTurbine) => {
-    const nextState = {
-      screenMode: nextMode,
-      selectedPlant: nextPlant,
-      selectedTurbine: nextTurbine,
-    };
-
-    setScreenMode(nextMode);
-    setSelectedPlant(nextPlant);
-    setSelectedTurbine(nextTurbine);
-
-    window.history.pushState(
-      nextState,
-      "",
-      window.location.href
-    );
+  return {
+    plants,
+    isPlantsLoading,
+    plantsError,
+    setPlants,
   };
-
-  const handleLogout = () => {
-    localStorage.removeItem("screenMode");
-    localStorage.removeItem("selectedPlant");
-    localStorage.removeItem("selectedTurbine");
-
-    navigate("/login");
-  };
-
-  const handleSelectPlant = (plant) => {
-    moveMode("plant", plant, null);
-  };
-
-  const handleSelectTurbine = (turbine) => {
-    moveMode("turbine", selectedPlant, turbine);
-  };
-
-  const handleBackToMap = () => {
-    moveMode("map", null, null);
-  };
-
-  const handleCreateInspectionReport = (reportData) => {
-    console.log("MainScreen에서 받은 점검 보고서 데이터:", reportData);
-
-    const formData = new FormData();
-    formData.append("reportKind", reportData.reportKind);
-
-    if (reportData.file) {
-      formData.append("file", reportData.file);
-    }
-  };
-
-  const handleCreateRepairReport = (repairReportData) => {
-    console.log("MainScreen에서 받은 수리 보고서 JSON:", repairReportData);
-  };
-
-  const handleNavigateUser = () => {
-    navigate("/user");
-  };
-
-  return (
-    <div className="main-screen">
-      <Header
-        onLogout={handleLogout}
-        onTitleClick={handleBackToMap}
-        onMyPage={handleNavigateUser}
-        alarm={alarmReports}
-      />
-
-      <div className="dashboard-layout">
-        <MainBar
-          mode={screenMode}
-          plants={plants}
-          turbines={turbines}
-          selectedPlant={selectedPlant}
-          selectedTurbine={selectedTurbine}
-          isPlantsLoading={isPlantsLoading}
-          plantsError={plantsError}
-          onSelectPlant={handleSelectPlant}
-          onSelectTurbine={handleSelectTurbine}
-        />
-
-        <SideBar
-          mode={screenMode}
-          plants={plants}
-          selectedPlant={selectedPlant}
-          selectedTurbine={selectedTurbine}
-          onSelectPlant={handleSelectPlant}
-          onSelectTurbine={handleSelectTurbine}
-          onCreateInspectionReport={handleCreateInspectionReport}
-          onCreateRepairReport={handleCreateRepairReport}
-        />
-
-        <UnderBar
-          mode={screenMode}
-          selectedPlant={selectedPlant}
-          selectedTurbine={selectedTurbine}
-        />
-      </div>
-    </div>
-  );
-}
-
-export default MainScreen;
+};

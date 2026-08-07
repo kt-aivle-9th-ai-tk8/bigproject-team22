@@ -1,18 +1,21 @@
 export const fetchWindFarms = async ({
-  topN,
-  location = 1,
-  power = 1,
-  weather = 1,
+  location,
+  power,
+  weather,
 } = {}) => {
   const params = new URLSearchParams();
 
-  if (topN !== undefined && topN !== null) {
-    params.append("top-n", String(topN));
+  if (location !== undefined && location !== null) {
+    params.append("location", String(location));
   }
 
-  params.append("location", String(location));
-  params.append("power", String(power));
-  params.append("weather", String(weather));
+  if (power !== undefined && power !== null) {
+    params.append("power", String(power));
+  }
+
+  if (weather !== undefined && weather !== null) {
+    params.append("weather", String(weather));
+  }
 
   const queryString = params.toString();
 
@@ -44,20 +47,35 @@ export const fetchWindFarms = async ({
   let responseBody = null;
 
   try {
-    responseBody = responseText ? JSON.parse(responseText) : null;
-    console.log("[fetchWindFarms] JSON 파싱 결과:", responseBody);
+    responseBody = responseText
+      ? JSON.parse(responseText)
+      : null;
+
+    console.log(
+      "[fetchWindFarms] JSON 파싱 결과:",
+      responseBody
+    );
   } catch (error) {
-    console.error("[fetchWindFarms] JSON 파싱 실패:", error);
+    console.error(
+      "[fetchWindFarms] JSON 파싱 실패:",
+      error
+    );
+
     console.error(
       "[fetchWindFarms] 응답이 HTML인지 확인:",
       responseText.slice(0, 300)
     );
 
-    throw new Error("서버에서 JSON이 아닌 응답을 받았습니다.");
+    throw new Error(
+      "서버에서 JSON이 아닌 응답을 받았습니다."
+    );
   }
 
   if (!response.ok) {
-    console.error("[fetchWindFarms] API 실패 body:", responseBody);
+    console.error(
+      "[fetchWindFarms] API 실패 body:",
+      responseBody
+    );
 
     throw new Error(
       responseBody?.message ||
