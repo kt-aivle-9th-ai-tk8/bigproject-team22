@@ -59,6 +59,29 @@ _RDS_TABLES = {
         "defect_id", "inspection_id", "blade_id", "defect_type", "severity", "part_side",
         "bbox_x", "bbox_y", "bbox_w", "bbox_h", "confidence", "image_path", "created_at",
     )),
+
+    # ── 이상감지(anomaly) — V4(anomaly_events·scada 보강) / V5(aws·asos) 마이그레이션 ──
+    #   논리명(단수) → 물리명. anomaly_events 만 복수형(V4). 컬럼명은 확정 스키마(recorded_at/sd_)와 일치.
+    #   event_type·scope 는 RDS 가 대문자 관례(PROLONGED_STOP/FARM)로 저장 → LOWER 로 코드(소문자)에 맞춘다.
+    #   (tier 는 A/B 그대로. 날짜는 _DATE_COLS 가 파싱. LOWER 는 이미 소문자면 무해한 no-op.)
+    "anomaly_event": ("anomaly_events", (
+        "event_id", "turbine_id", "start_time", "end_time", "expected_power",
+        "actual_power", "z_score", "deviation_pct", "tier",
+        "LOWER(event_type) AS event_type", "LOWER(scope) AS scope",
+        "energy_ratio_30d", "estimated_loss_kwh", "created_at",
+    )),
+    "scada_record": ("scada_record", (
+        "turbine_id", "recorded_at", "wind_speed", "power_output", "air_density",
+        "norm_wind_speed", "is_stopped", "train_mask",
+        "expected_power_pooled", "expected_power_unit",
+    )),
+    "aws_record": ("aws_record", (
+        "aws_station_id", "recorded_at", "temperature", "pressure",
+        "humidity", "wind_direction", "precipitation",
+    )),
+    "asos_record": ("asos_record", (
+        "asos_station_id", "recorded_at", "sd_hr3", "sd_day", "sd_tot",
+    )),
 }
 
 # 테이블별 날짜 컬럼. 호출부가 아니라 여기서 정해야 CSV/RDS 어느 쪽으로 읽어도 dtype 이 같고,
