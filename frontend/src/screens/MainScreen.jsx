@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
 
 import Header from "../components/Header";
 import MainBar from "../components/MainBar";
@@ -85,7 +86,7 @@ function MainScreen() {
     plantsError,
   } = useWindFarms({
     mode: screenMode,
-    refreshInterval: 600000,
+    refreshInterval: 10000,
   });
 
   useEffect(() => {
@@ -104,7 +105,7 @@ function MainScreen() {
       setSelectedTurbine(null);
       setScreenMode("map");
     }
-  }, [plants, isPlantsLoading]);
+  }, [plants, isPlantsLoading, selectedPlant]);
 
   useEffect(() => {
     const currentState = {
@@ -171,23 +172,33 @@ function MainScreen() {
     }
   }, [selectedTurbine]);
 
-  const moveMode = (nextMode, nextPlant, nextTurbine) => {
-    const nextState = {
-      screenMode: nextMode,
-      selectedPlant: nextPlant,
-      selectedTurbine: nextTurbine,
-    };
+  const moveMode = useCallback(
+    (nextMode, nextPlant, nextTurbine) => {
+      const nextState = {
+        screenMode: nextMode,
+        selectedPlant: nextPlant,
+        selectedTurbine: nextTurbine,
+      };
 
-    setScreenMode(nextMode);
-    setSelectedPlant(nextPlant);
-    setSelectedTurbine(nextTurbine);
+      setScreenMode(nextMode);
+      setSelectedPlant(nextPlant);
+      setSelectedTurbine(nextTurbine);
 
-    window.history.pushState(
-      nextState,
-      "",
-      window.location.href
-    );
-  };
+      window.history.pushState(
+        nextState,
+        "",
+        window.location.href
+      );
+    },
+    []
+  );
+
+  const handleSelectPlant = useCallback(
+    (plant) => {
+      moveMode("plant", plant, null);
+    },
+    [moveMode]
+  );
 
   const handleLogout = () => {
     localStorage.removeItem("screenMode");
@@ -195,10 +206,6 @@ function MainScreen() {
     localStorage.removeItem("selectedTurbine");
 
     navigate("/login");
-  };
-
-  const handleSelectPlant = (plant) => {
-    moveMode("plant", plant, null);
   };
 
   const handleSelectTurbine = (turbine) => {
