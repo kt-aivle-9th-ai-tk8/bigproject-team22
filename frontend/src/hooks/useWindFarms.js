@@ -30,14 +30,13 @@ export const useWindFarms = ({
 
     let isMounted = true;
 
-    // 최초 진입: 전체 정보 조회
+    // 최초 진입: 위치 + 발전량 + 날씨 전체 조회
     const loadInitialWindFarms = async () => {
       try {
         setIsPlantsLoading(true);
         setPlantsError(null);
 
         const responseBody = await fetchWindFarms({
-          topN,
           location: 1,
           power: 1,
           weather: 1,
@@ -53,7 +52,10 @@ export const useWindFarms = ({
           setPlants(convertedPlants);
         }
       } catch (error) {
-        console.error("발전소 초기 조회 API 오류:", error);
+        console.error(
+          "발전소 초기 조회 API 오류:",
+          error
+        );
 
         if (isMounted) {
           setPlantsError(error.message);
@@ -82,9 +84,11 @@ export const useWindFarms = ({
         if (isMounted) {
           setPlants((prevPlants) =>
             prevPlants.map((prevPlant) => {
-              const refreshedPlant = refreshedPlants.find(
-                (plant) => plant.id === prevPlant.id
-              );
+              const refreshedPlant =
+                refreshedPlants.find(
+                  (plant) =>
+                    plant.id === prevPlant.id
+                );
 
               if (!refreshedPlant) {
                 return prevPlant;
@@ -99,7 +103,10 @@ export const useWindFarms = ({
           );
         }
       } catch (error) {
-        console.error("발전소 갱신 API 오류:", error);
+        console.error(
+          "발전소 갱신 API 오류:",
+          error
+        );
 
         if (isMounted) {
           setPlantsError(error.message);
@@ -107,11 +114,12 @@ export const useWindFarms = ({
       }
     };
 
-    // map 진입 시 전체 데이터 1회 조회
+    // map 진입 시 즉시 전체 조회
     loadInitialWindFarms();
 
     let intervalId = null;
 
+    // 이후 10분마다 power + weather 갱신
     if (refreshInterval > 0) {
       intervalId = setInterval(() => {
         refreshWindFarms();
@@ -125,7 +133,7 @@ export const useWindFarms = ({
         clearInterval(intervalId);
       }
     };
-  }, [mode, refreshInterval, topN]);
+  }, [mode, refreshInterval]);
 
   return {
     plants,
