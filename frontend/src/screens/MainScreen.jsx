@@ -273,6 +273,7 @@ function MainScreen() {
           plants={plants.slice(0, 3)}
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
+          windFarmDetail={windFarmDetail}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
           onCreateInspectionReport={handleCreateInspectionReport}
