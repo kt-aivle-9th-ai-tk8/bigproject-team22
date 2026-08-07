@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import { fetchWindFarms } from "../api/windFarmApi";
-import { dummyWindFarms } from "../mocks/dummyWindFarms";
 import { convertWindFarmToPlant } from "../utils/windFarmMapper";
 
 const getWindFarmListFromResponse = (responseBody) => {
@@ -9,7 +8,7 @@ const getWindFarmListFromResponse = (responseBody) => {
     return responseBody;
   }
 
-  if (Array.isArray(responseBody.data)) {
+  if (Array.isArray(responseBody?.data)) {
     return responseBody.data;
   }
 
@@ -43,17 +42,6 @@ export const useWindFarms = ({
 
         setPlantsError(null);
 
-        if (USE_DUMMY_WIND_FARMS) {
-          const convertedDummyPlants =
-            dummyWindFarms.map(convertWindFarmToPlant);
-
-          if (isMounted) {
-            setPlants(convertedDummyPlants);
-          }
-
-          return;
-        }
-
         const responseBody = await fetchWindFarms({
           topN,
           location,
@@ -83,10 +71,12 @@ export const useWindFarms = ({
       }
     };
 
+    // map 진입 시 즉시 1회 호출
     loadWindFarms(true);
 
     let intervalId = null;
 
+    // 설정된 시간마다 다시 호출
     if (refreshInterval > 0) {
       intervalId = setInterval(() => {
         loadWindFarms(false);
