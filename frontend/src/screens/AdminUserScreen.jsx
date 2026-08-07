@@ -1,195 +1,410 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "./UserScreen.css";
+import React, { useState, useMemo } from 'react';
+import './AdminUserScreen.css';
 
-function UserScreen() {
-  const navigate = useNavigate();
+// 샘플 발전소 목록
+const PLANT_OPTIONS = [
+  '장흥 발전소', '해남 발전소', '강진 발전소', '삼천포 발전소', 
+  '여수 발전소', '광양 발전소', '태안 발전소', '당진 발전소', 
+  '평택 발전소', '보령 발전소', '서천 발전소', '제주 발전소', 
+  '서귀포 발전소', '신안 발전소', '영광 발전소', '함평 발전소'
+];
 
-  // 관리자 여부 상태 (현재는 개발용으로 true 설정, 일반 사용자는 false)
-  const [isAdmin, setIsAdmin] = useState(true);
+// 1. 가입 대기 사용자 샘플 데이터 (카드 내부 발전소 지정 제거)
+const INITIAL_PENDING_USERS = [
+  { id: 'p1', name: '김민수', employeeId: '2505001', createdAt: '2024.05.20 14:30' },
+  { id: 'p2', name: '이영희', employeeId: '2505002', createdAt: '2024.05.20 10:15' },
+  { id: 'p3', name: '박지훈', employeeId: '2505003', createdAt: '2024.05.19 16:45' },
+  { id: 'p4', name: '최유리', employeeId: '2505004', createdAt: '2024.05.19 11:20' },
+  { id: 'p5', name: '정태호', employeeId: '2505005', createdAt: '2024.05.18 15:05' },
+];
 
-  // 편집 모드 상태
-  const [isEditing, setIsEditing] = useState(false);
+// 2. 전체 사용자 샘플 데이터 (차단 상태 = 로그인 5회 실패)
+const INITIAL_APPROVED_USERS = [
+  { id: 1, name: '최유리', employeeId: '2401001', isOnline: true, plants: ['장흥 발전소', '해남 발전소'], loginFailCount: 5, isBlocked: true },
+  { id: 2, name: '정태호', employeeId: '2401002', isOnline: true, plants: ['해남 발전소', '강진 발전소'], loginFailCount: 0, isBlocked: false },
+  { id: 3, name: '오세훈', employeeId: '2401003', isOnline: false, plants: ['삼천포 발전소'], loginFailCount: 2, isBlocked: false },
+  { id: 4, name: '강하나', employeeId: '2401004', isOnline: true, plants: ['여수 발전소', '광양 발전소'], loginFailCount: 5, isBlocked: true },
+  { id: 5, name: '조민석', employeeId: '2401005', isOnline: false, plants: ['태안 발전소'], loginFailCount: 0, isBlocked: false },
+  { id: 6, name: '김민수', employeeId: '2401006', isOnline: true, plants: ['당진 발전소', '평택 발전소'], loginFailCount: 0, isBlocked: false },
+  { id: 7, name: '이영희', employeeId: '2401007', isOnline: false, plants: ['보령 발전소', '서천 발전소'], loginFailCount: 0, isBlocked: false },
+  { id: 8, name: '박지훈', employeeId: '2401008', isOnline: true, plants: ['제주 발전소', '서귀포 발전소'], loginFailCount: 5, isBlocked: true },
+  { id: 9, name: '한지민', employeeId: '2401009', isOnline: false, plants: ['신안 발전소'], loginFailCount: 1, isBlocked: false },
+  { id: 10, name: '윤대영', employeeId: '2401010', isOnline: true, plants: ['영광 발전소', '함평 발전소'], loginFailCount: 0, isBlocked: false },
+];
 
-  // 사용자 정보 상태
-  const [userInfo, setUserInfo] = useState({
-    name: "홍길동",
-    employeeId: "12345678",
-    mobile: "010-1234-5678",
-    email: "admin@company.com",
-    department: "IT 운영팀",
-  });
+export default function AdminUserScreen() {
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'list'
+  const [pendingUsers, setPendingUsers] = useState(INITIAL_PENDING_USERS);
+  const [approvedUsers, setApprovedUsers] = useState(INITIAL_APPROVED_USERS);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // 입력값 변경 핸들러
-  const handleChange = (field, value) => {
-    setUserInfo((prev) => ({
-      ...prev,
-      [field]: value,
+  // 정렬 및 필터 상태
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' (가나다순) | 'desc' (역순)
+  const [selectedPlantFilter, setSelectedPlantFilter] = useState('ALL'); // 발전소 필터링
+
+  // 모달 팝업 상태
+  const [selectedUserForApproval, setSelectedUserForApproval] = useState(null);
+  const [selectedPlants, setSelectedPlants] = useState([]);
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+
+  // --- [정렬 및 필터링 계산] ---
+  const processedApprovedUsers = useMemo(() => {
+    let result = [...approvedUsers];
+
+    // 1. 검색어 필터링
+    if (searchTerm) {
+      result = result.filter(u => 
+        u.name.includes(searchTerm) || u.employeeId.includes(searchTerm)
+      );
+    }
+
+    // 2. 발전소 필터링
+    if (selectedPlantFilter !== 'ALL') {
+      result = result.filter(u => u.plants.includes(selectedPlantFilter));
+    }
+
+    // 3. 이름 정렬 (가나다순 / 역순)
+    result.sort((a, b) => {
+      if (sortOrder === 'asc') {
+        return a.name.localeCompare(b.name, 'ko');
+      } else {
+        return b.name.localeCompare(a.name, 'ko');
+      }
+    });
+
+    return result;
+  }, [approvedUsers, searchTerm, selectedPlantFilter, sortOrder]);
+
+  // --- [제어 및 모달 이벤트 핸들러] ---
+  const handleOpenApproveModal = (user) => {
+    setSelectedUserForApproval(user);
+    setSelectedPlants([]);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedUserForApproval(null);
+    setSelectedPlants([]);
+  };
+
+  const handleTogglePlantInModal = (plantName) => {
+    setSelectedPlants(prev => 
+      prev.includes(plantName) ? prev.filter(p => p !== plantName) : [...prev, plantName]
+    );
+  };
+
+  const handleConfirmApproval = () => {
+    if (selectedPlants.length === 0) {
+      alert('최소 하나 이상의 담당 발전소를 선택해 주세요.');
+      return;
+    }
+
+    alert(`${selectedUserForApproval.name} 님의 가입이 승인되었습니다.`);
+
+    setPendingUsers(prev => prev.filter(u => u.id !== selectedUserForApproval.id));
+    const newUser = {
+      id: Date.now(),
+      name: selectedUserForApproval.name,
+      employeeId: selectedUserForApproval.employeeId,
+      isOnline: false,
+      plants: selectedPlants,
+      loginFailCount: 0,
+      isBlocked: false,
+    };
+    setApprovedUsers(prev => [newUser, ...prev]);
+    handleCloseModal();
+  };
+
+  const handleReject = (id, name) => {
+    if (window.confirm(`${name} 님의 가입 신청을 거절하시겠습니까?`)) {
+      setPendingUsers(prev => prev.filter(u => u.id !== id));
+    }
+  };
+
+  // 강제 로그아웃
+  const handleForceLogout = (name) => {
+    alert(`${name} 님을 강제 로그아웃 시켰습니다.`);
+  };
+
+  // 로그인 5회 실패 차단 해제
+  const handleUnblockUser = (id, name) => {
+    if (window.confirm(`${name} 님의 로그인 차단을 해제하시겠습니까?`)) {
+      setApprovedUsers(prev => prev.map(u => 
+        u.id === id ? { ...u, isBlocked: false, loginFailCount: 0 } : u
+      ));
+    }
+  };
+
+  const handleTogglePlantInList = (userId, plantName) => {
+    setApprovedUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const exists = u.plants.includes(plantName);
+        const updated = exists 
+          ? u.plants.filter(p => p !== plantName)
+          : [...u.plants, plantName];
+        return { ...u, plants: updated };
+      }
+      return u;
     }));
   };
 
-  // 연필(수정) 버튼 클릭 토글
-  const handleToggleEdit = () => {
-    if (isEditing) {
-      alert("정보 수정이 완료되었습니다.");
-    }
-    setIsEditing(!isEditing);
-  };
-
-  // 닫기(X) 버튼 클릭 - 이전 화면으로 이동
-  const handleClose = () => {
-    navigate(-1);
-  };
-
-  // 로그아웃 버튼 클릭
-  const handleLogout = () => {
-    if (window.confirm("로그아웃 하시겠습니까?")) {
-      navigate("/login");
-    }
-  };
-
-  // 관리자 페이지 진입 버튼 클릭 (사용자 관리 콘솔로 이동)
-  const handleAdminConsoleNav = () => {
-    navigate("/admin/users");
-  };
+  const filteredPending = pendingUsers.filter(u => 
+    u.name.includes(searchTerm) || u.employeeId.includes(searchTerm)
+  );
 
   return (
-    <div className="user-screen-overlay">
-      <div className="user-screen-card">
-        {/* 상단 헤더: 타이틀 & 우측 아이콘(연필, 닫기) */}
-        <div className="card-header">
-          <h2>내 정보 관리</h2>
-          <div className="header-icons">
-            <button
-              className={`icon-btn edit-btn ${isEditing ? "active" : ""}`}
-              onClick={handleToggleEdit}
-              title={isEditing ? "저장" : "수정"}
-            >
-              ✏️
-            </button>
-            <button
-              className="icon-btn close-btn"
-              onClick={handleClose}
-              title="닫기"
-            >
-              ✕
-            </button>
-          </div>
+    <div className="aus-container">
+      {/* 헤더 */}
+      <header className="aus-header">
+        <h1 className="aus-title">사용자 관리</h1>
+        <div className="aus-profile-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
         </div>
+      </header>
 
-        {/* 프로필 이미지 & 이름 헤더 */}
-        <div className="profile-header">
-          <div className="avatar-circle">
-            <span className="avatar-icon">👤</span>
-          </div>
-          <div className="profile-name-group">
-            <span className="profile-title">
-              {isAdmin ? "관리자" : "사용자"} {userInfo.name}
-            </span>
-            {isAdmin && <span className="admin-badge">Admin</span>}
-          </div>
-        </div>
-
-        {/* 정보 항목 리스트 */}
-        <div className="info-list">
-          {/* 이름 */}
-          <div className="info-item">
-            <span className="info-label">이름</span>
-            {isEditing ? (
-              <input
-                type="text"
-                className="info-input"
-                value={userInfo.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-              />
-            ) : (
-              <span className="info-value">{userInfo.name}</span>
-            )}
-          </div>
-
-          {/* 사번 */}
-          <div className="info-item">
-            <span className="info-label">사번</span>
-            <span className="info-value read-only">{userInfo.employeeId}</span>
-          </div>
-
-          {/* 연락처 */}
-          <div className="info-item">
-            <span className="info-label">연락처 (Mobile)</span>
-            {isEditing ? (
-              <input
-                type="text"
-                className="info-input"
-                value={userInfo.mobile}
-                onChange={(e) => handleChange("mobile", e.target.value)}
-              />
-            ) : (
-              <span className="info-value">{userInfo.mobile}</span>
-            )}
-          </div>
-
-          {/* 이메일 */}
-          <div className="info-item">
-            <span className="info-label">이메일</span>
-            {isEditing ? (
-              <input
-                type="email"
-                className="info-input"
-                value={userInfo.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-              />
-            ) : (
-              <span className="info-value">{userInfo.email}</span>
-            )}
-          </div>
-
-          {/* 소속 부서 */}
-          <div className="info-item">
-            <span className="info-label">소속 부서</span>
-            {isEditing ? (
-              <input
-                type="text"
-                className="info-input"
-                value={userInfo.department}
-                onChange={(e) => handleChange("department", e.target.value)}
-              />
-            ) : (
-              <span className="info-value">{userInfo.department}</span>
-            )}
-          </div>
-
-          {/* 비밀번호 변경 */}
-          <div
-            className="info-item clickable"
-            onClick={() => alert("비밀번호 변경 창으로 이동합니다.")}
+      {/* 탭 & 검색바 */}
+      <div className="aus-top-bar">
+        <div className="aus-tabs">
+          <button 
+            className={`aus-tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pending')}
           >
-            <span className="info-label">비밀번호 변경</span>
-            <div className="pw-change-right">
-              <span className="info-value masked-pw">********</span>
-              <span className="arrow-icon">›</span>
+            가입 대기 ({pendingUsers.length})
+          </button>
+          <button 
+            className={`aus-tab-btn ${activeTab === 'list' ? 'active' : ''}`}
+            onClick={() => setActiveTab('list')}
+          >
+            사용자 목록 및 권한 관리 ({approvedUsers.length})
+          </button>
+        </div>
+
+        <div className="aus-search-box">
+          <input 
+            type="text" 
+            placeholder="이름 또는 사번 검색" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <svg className="aus-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+      </div>
+
+      {/* TAB 1: 가입 대기 화면 */}
+      {activeTab === 'pending' && (
+        <div className="aus-tab-content">
+          <div className="aus-section-intro">
+            <h2>가입 승인 대기 목록</h2>
+            <p>가입을 신청한 사용자의 승인을 진행하세요.</p>
+          </div>
+
+          <div className="aus-pending-list">
+            {filteredPending.length === 0 ? (
+              <div className="aus-empty-state">가입 승인 대기 중인 사용자가 없습니다.</div>
+            ) : (
+              filteredPending.map((user) => (
+                <div key={user.id} className="aus-pending-card">
+                  <div className="user-info-group">
+                    <div className="avatar-circle">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#718096" strokeWidth="1.5">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                    </div>
+                    <div className="user-details">
+                      <span className="user-name">{user.name}</span>
+                      <div className="user-meta">
+                        <span>사번 {user.employeeId}</span>
+                        <span className="meta-divider"></span>
+                        <span>가입 신청일 {user.createdAt}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pending-actions">
+                    <button className="btn-approve" onClick={() => handleOpenApproveModal(user)}>승인</button>
+                    <button className="btn-reject" onClick={() => handleReject(user.id, user.name)}>거절</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: 사용자 목록 및 권한 관리 화면 */}
+      {activeTab === 'list' && (
+        <div className="aus-tab-content">
+          <div className="aus-card">
+            {/* 박스 우측 상단 정렬 및 필터 컨트롤 바 */}
+            <div className="aus-card-header">
+              <h2 className="aus-sub-title">전체 사용자 관리</h2>
+              
+              <div className="aus-filter-group">
+                {/* 발전소 필터 드롭다운 */}
+                <select 
+                  className="aus-select-filter"
+                  value={selectedPlantFilter}
+                  onChange={(e) => setSelectedPlantFilter(e.target.value)}
+                >
+                  <option value="ALL">전체 발전소 필터</option>
+                  {PLANT_OPTIONS.map(plant => (
+                    <option key={plant} value={plant}>{plant}</option>
+                  ))}
+                </select>
+
+                {/* 이름 정렬 드롭다운 */}
+                <select 
+                  className="aus-select-filter"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                >
+                  <option value="asc">이름순 ▲</option>
+                  <option value="desc">이름순 ▼</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="aus-table-wrapper">
+              <table className="aus-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '12%' }}>이름</th>
+                    <th style={{ width: '14%' }}>사번</th>
+                    <th style={{ width: '14%' }}>접속 상태</th>
+                    <th style={{ width: '36%' }}>담당 발전소</th>
+                    <th style={{ width: '24%' }}>제어</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {processedApprovedUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="aus-empty-td">조건에 일치하는 사용자가 없습니다.</td>
+                    </tr>
+                  ) : (
+                    processedApprovedUsers.map((user) => {
+                      const firstTwo = user.plants.slice(0, 2);
+                      const extraCount = user.plants.length - 2;
+
+                      return (
+                        <tr key={user.id}>
+                          <td className="font-bold">{user.name}</td>
+                          <td className="text-secondary">{user.employeeId}</td>
+                          <td>
+                            <span className={`status-badge ${user.isOnline ? 'online' : 'offline'}`}>
+                              <span className="dot"></span>
+                              {user.isOnline ? '온라인' : '오프라인'}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="plant-select-container">
+                              <div className="plant-tags-box" onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}>
+                                {user.plants.length === 0 ? (
+                                  <span className="plant-placeholder">발전소 선택</span>
+                                ) : (
+                                  <>
+                                    {firstTwo.map((plant, idx) => (
+                                      <span key={idx} className="plant-tag">{plant}</span>
+                                    ))}
+                                    {extraCount > 0 && <span className="plant-badge">+{extraCount}</span>}
+                                  </>
+                                )}
+                                <span className="arrow-icon">∨</span>
+                              </div>
+
+                              {openDropdownId === user.id && (
+                                <div className="plant-dropdown-menu">
+                                  {PLANT_OPTIONS.map((plantOption) => (
+                                    <label key={plantOption} className="plant-checkbox-item">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={user.plants.includes(plantOption)} 
+                                        onChange={() => handleTogglePlantInList(user.id, plantOption)}
+                                      />
+                                      <span>{plantOption}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            {/* 제어 컬럼: 강제 로그아웃 & 차단 해제 */}
+                            <div className="action-cell">
+                              <button 
+                                className="btn-logout"
+                                onClick={() => handleForceLogout(user.name)}
+                              >
+                                로그아웃
+                              </button>
+
+                              {user.isBlocked ? (
+                                <button className="btn-unblock" onClick={() => handleUnblockUser(user.id, user.name)}>
+                                  차단 해제
+                                </button>
+                              ) : (
+                                <span className="text-normal">정상</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="aus-footer">
+            <div className="total-count">전체 {processedApprovedUsers.length}명</div>
+            <div className="pagination">
+              <button className="page-nav">&lt;</button>
+              <button className="page-num active">1</button>
+              <button className="page-num">2</button>
+              <button className="page-nav">&gt;</button>
             </div>
           </div>
         </div>
+      )}
 
-        {/* 하단 액션 버튼 영역 */}
-        <div className="action-footer">
-          {/* 관리자일 때만 진입 버튼 노출 */}
-          {isAdmin && (
-            <button
-              className="admin-entry-btn"
-              onClick={handleAdminConsoleNav}
-            >
-              관리자 페이지 진입
-            </button>
-          )}
+      {/* 담당 발전소 지정 모달 */}
+      {selectedUserForApproval && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 className="modal-title">담당 발전소 지정</h3>
+            <p className="modal-desc">
+              <strong>{selectedUserForApproval.name}</strong> ({selectedUserForApproval.employeeId}) 님이 담당할 발전소를 선택해 주세요.
+            </p>
 
-          <button className="logout-link-btn" onClick={handleLogout}>
-            로그아웃
-          </button>
+            <div className="modal-plant-grid">
+              {PLANT_OPTIONS.map((plant) => {
+                const checked = selectedPlants.includes(plant);
+                return (
+                  <label key={plant} className={`modal-plant-item ${checked ? 'selected' : ''}`}>
+                    <input 
+                      type="checkbox" 
+                      checked={checked} 
+                      onChange={() => handleTogglePlantInModal(plant)}
+                    />
+                    <span>{plant}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-modal-cancel" onClick={handleCloseModal}>취소</button>
+              <button className="btn-modal-confirm" onClick={handleConfirmApproval}>승인 완료</button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-
-export default UserScreen;

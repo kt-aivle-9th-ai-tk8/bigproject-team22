@@ -121,7 +121,7 @@ function AlarmReportList({ alarm, onSelectReport }) {
           </div>
 
           <div className="alarm-list-sub">
-            {report.plantName} · {report.turbineName} · {report.time}
+            {report.time}
           </div>
         </button>
       ))}

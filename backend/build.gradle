@@ -23,11 +23,32 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springframework.boot:spring-boot-starter-restclient' // Boot 4.0: RestClient 자동구성(주입용 Builder) + ClientHttpRequestFactory 설정(webmvc 스타터는 서버측 전용)
 	implementation 'org.springframework.session:spring-session-data-redis'
 	implementation 'org.springframework.security:spring-security-crypto'
 	implementation 'org.springframework.boot:spring-boot-starter-flyway' // Boot 4 는 flyway-core 대신 스타터 필요(자동설정 모듈+JDBC 포함)
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
+
+	// 스케줄러 중복 실행 방지. ECS 다중 인스턴스에서 @Scheduled 가 인스턴스 수만큼 돌지 않도록 Redis 락으로 직렬화한다.
+	// 7.x 가 Spring Boot 4 / Spring 7 대상이다(6.x 는 Boot 3.3~3.5). 두 아티팩트 버전은 반드시 일치시킬 것.
+	implementation 'net.javacrumbs.shedlock:shedlock-spring:7.7.0'
+	implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:7.7.0'
+
+	// AWS SDK: S3 presigned URL 발급 + SageMaker Serverless 동기 호출.
+	// netty/apache 비동기 클라이언트를 제외하고 url-connection-client 로 고정한다
+	// (Boot 4 의존성 충돌 회피 + 이미지 비대화 방지. 동기 호출만 하므로 비동기 트랜스포트가 불필요).
+	implementation platform('software.amazon.awssdk:bom:2.31.78')
+	implementation('software.amazon.awssdk:s3') {
+		exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
+		exclude group: 'software.amazon.awssdk', module: 'apache-client'
+	}
+	implementation('software.amazon.awssdk:sagemakerruntime') {
+		exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
+		exclude group: 'software.amazon.awssdk', module: 'apache-client'
+	}
+	implementation 'software.amazon.awssdk:url-connection-client'
+
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.h2database:h2'
@@ -40,6 +61,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers' // testcontainers core(2.x) 를 끌어옴
 	testImplementation 'org.testcontainers:testcontainers-mysql'
 	testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+	testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0' // 아키텍처 규약 테스트(빌드타임)
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
@@ -47,4 +69,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+
+	// ProdEnvironmentContractTest 가 이 파일을 읽는다. 소스셋 밖이라 선언하지 않으면 Gradle 이 변경을
+	// 감지하지 못해, 태스크 정의만 고친 경우 테스트가 UP-TO-DATE 로 건너뛰어져 stale 하게 통과한다.
+	inputs.file('task-definition.json')
 }

@@ -13,4 +13,12 @@ public record LoginMember(
         String userName,
         Role role
 ) implements Serializable {
+
+    /**
+     * 관리자 여부. 각 BC 의 표현계층이 {@code Role} 을 직접 임포트해 비교하지 않도록 여기서 판정한다
+     * (권한 판정 규칙이 바뀌어도 호출부가 영향받지 않는다).
+     */
+    public boolean isAdmin() {
+        return role == Role.ADMIN;
+    }
 }

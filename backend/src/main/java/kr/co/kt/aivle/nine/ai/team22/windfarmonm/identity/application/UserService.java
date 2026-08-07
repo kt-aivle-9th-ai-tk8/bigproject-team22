@@ -32,7 +32,7 @@ public class UserService {
         }
 
         String encodedPassword = passwordEncoder.encode(command.password());
-        User user = User.create(command.employeeId(), encodedPassword, command.userName(), Role.GUEST);
+        User user = User.create(command.employeeId(), encodedPassword, command.userName(), command.phone(), Role.GUEST);
 
         try {
             return UserResult.from(userRepository.save(user));

@@ -1,7 +1,7 @@
 """defect 결정론적 렌더러 (LLM 없음) + LLM 분석용 팩트 제공.
 
 역할 분담:
-- 코드(여기): 개요·터빈별 상세·검출 이미지 목록·판단유보를 '주입'한다. = 사실의 단일 출처.
+- 코드(여기): 핵심 지표·터빈별 상세·검출 이미지 목록·판단유보를 '주입'한다. = 사실의 단일 출처.
 - LLM(defect_agent): '## 종합 분석'에서 코드가 준 facts를 근거로 종합·해석·우선순위 제시.
   LLM은 facts의 수치를 '인용'할 수 있으나 '생성'할 수 없다. critic이 exact-match로 검증.
 
@@ -86,21 +86,21 @@ def _conf(c: dict) -> str:
     return f"{c['min']:.3f} ~ {c['max']:.3f} (평균 {c['mean']:.3f})"
 
 
-def _severe_ratio_line(counts: dict, total: int):
+def _severe_ratio(counts: dict, total: int):
     """심각도 3 이상 비율 — 분석이 자주 인용하는 지표라 코드가 미리 계산해 준다."""
     if not counts or not total:
         return None
     n = sum(v for k, v in counts.items() if int(k) >= 3)
-    return f"- 심각도 3 이상: {n:,}건 / 전체 {total:,}건 ({n / total * 100:.1f}%)"
+    return f"{n:,}건 / 전체 {total:,}건 ({n / total * 100:.1f}%)"
 
 
-def _top_type_line(top, n: int, total: int):
+def _top_type(top, n: int, total: int):
     """최다 결함 유형과 그 비율 — 분석이 자주 인용하는 지표라 코드가 미리 계산해 준다.
 
     비율을 안 주면 LLM이 '18건 / 27건 = 66.7%' 를 직접 계산하는데, 그 값은 facts에
     없으므로 critic이 환각으로 반려한다. 미리 줘서 계산할 이유 자체를 없앤다.
     """
-    label = f"- 최다 결함 유형: {DEFECT_TYPE_KO.get(top, top)} {n:,}건"
+    label = f"{DEFECT_TYPE_KO.get(top, top)} {n:,}건"
     if not total:
         return label
     return f"{label} / 전체 {total:,}건 ({n / total * 100:.1f}%)"
@@ -131,13 +131,14 @@ def _init_directive() -> str:
     return "%%{init: " + json.dumps(theme, separators=(", ", ": ")) + "}%%"
 
 
-def _xychart(title: str, pairs: list) -> list:
+# 제목은 chart_lines 가 마크다운 소제목으로 내보낸다 → 아래 렌더러들은 그림만 그린다
+# (mermaid 내부 title 을 같이 쓰면 제목이 두 번 보인다).
+def _xychart(pairs: list) -> list:
     ymax = max(1, math.ceil(max(v for _, v in pairs) * 1.2))
     return [
         "```mermaid",
         _init_directive(),
         "xychart-beta",
-        f'    title "{title}"',
         "    x-axis [" + ", ".join(f'"{k}"' for k, _ in pairs) + "]",
         f'    y-axis "결함 수" 0 --> {ymax}',
         "    bar [" + ", ".join(str(v) for _, v in pairs) + "]",
@@ -145,20 +146,19 @@ def _xychart(title: str, pairs: list) -> list:
     ]
 
 
-def _pie(title: str, pairs: list) -> list:
+def _pie(pairs: list) -> list:
     return [
         "```mermaid",
         "pie showData",
-        f"    title {title}",
         *[f'    "{k}" : {v}' for k, v in pairs],
         "```",
     ]
 
 
-def _bar_table(title: str, pairs: list) -> list:
+def _bar_table(pairs: list) -> list:
     total = sum(v for _, v in pairs)
     top = max(v for _, v in pairs)
-    lines = [f"**{title}**", "", "| | 결함 | 비율 | |", "|---|---:|---:|---|"]
+    lines = ["| | 결함 | 비율 | |", "|---|---:|---:|---|"]
     for k, v in pairs:
         bar = "█" * max(1, round(v / top * TABLE_BAR_WIDTH))
         lines.append(f"| {k} | {v:,}건 | {v / total * 100:.1f}% | `{bar}` |")
@@ -166,7 +166,11 @@ def _bar_table(title: str, pairs: list) -> list:
 
 
 def chart_lines(title: str, pairs: list) -> list:
-    """분포 차트 1개. 카테고리가 2종 미만이면 아무것도 그리지 않는다.
+    """제목 + 분포 차트 1개. 카테고리가 2종 미만이면 제목까지 통째로 안 그린다.
+
+    제목을 차트와 한 덩어리로 반환하는 게 핵심이다. 차트가 없으면 제목도 같이 사라지므로
+    '제목만 남는' 경우가 구조적으로 생길 수 없다(실데이터 59건 중 차트 0개가 18건,
+    둘 중 하나만 그려지는 건이 6건 — 어느 쪽이 빠질지는 점검마다 다르다).
 
     pairs 는 [(라벨, 건수)] 이며 넘어온 순서를 그대로 지킨다
     (심각도는 심각→경미, 유형은 많은 순).
@@ -175,11 +179,11 @@ def chart_lines(title: str, pairs: list) -> list:
     if len(pairs) < MIN_CHART_CATEGORIES:
         return []
     render = {"bar": _xychart, "pie": _pie}.get(CHART_STYLE, _bar_table)
-    return render(title, pairs)
+    return [f"### {title}", "", *render(pairs)]
 
 
 def overview_charts(to) -> list:
-    """개요 아래에 붙는 분포 차트 — 심각도, 결함 유형."""
+    """핵심 지표 표 아래에 붙는 분포 차트 — 심각도, 결함 유형."""
     s = to.get("summary", {}) or {}
     total = s.get("n_defects_total", 0)
     if not total:
@@ -202,92 +206,158 @@ def overview_charts(to) -> list:
 
 
 def report_title(e) -> str:
-    """'1발전소 2023-04-19 점검 보고서'.
+    """'강원 풍력 발전소 2023-04-19 점검 보고서'.
 
     점검일자는 inspection_start 의 날짜 부분. 점검이 자정을 넘겨 이틀에 걸치는 건이
-    있어 '시작일' 기준으로 고정한다(정확한 구간은 개요의 '점검 기간'에 그대로 남는다).
-    발전소는 현재 windfarm_id(숫자)뿐이라 'N발전소'로 쓴다. 발전소명 컬럼이 생기면
-    여기만 이름으로 바꾸면 된다.
+    있어 '시작일' 기준으로 고정한다(정확한 구간은 부제의 '점검 기간'에 그대로 남는다).
+    발전소명은 tools._load() 의 조인(inspection→turbine→wind_farm)이 붙여준다.
+    조인이 비면 id로, 그것도 없으면 '발전소 미상'으로 떨어진다 — 제목이 깨지지 않게.
     """
     date = (e.get("inspection_start") or "")[:10] or "일자 미상"
-    return f"{e.get('windfarm_id')}발전소 {date} 점검 보고서"
+    farm = e.get("wind_farm_name")
+    if not farm:
+        fid = e.get("wind_farm_id")
+        farm = f"{fid}발전소" if fid is not None else "발전소 미상"
+    return f"{farm} {date} 점검 보고서"
 
 
-def meta_lines(to) -> list:
-    """점검 식별·기간 라인.
+def subtitle_lines(to) -> list:
+    """제목 밑 부제 — 보고서 식별·기간. anomaly 의 `유형` · 상태 · 발생시각 줄과 같은 자리.
 
-    보고서 개요에만 쓰고 LLM facts에는 넣지 않는다 → 분석이 점검번호·날짜를 다시 쓰면
-    allowed_numbers에 없어 환각 후보로 걸린다(의도된 동작).
+    보고서 부제에만 쓰고 LLM facts에는 넣지 않는다 → 분석이 보고서번호·점검번호·날짜를
+    다시 쓰면 allowed_numbers에 없어 환각 후보로 걸린다(의도된 동작).
+
+    점검번호를 함께 남기는 이유: 보고서 1건이 점검 여러 건을 묶으므로(드론 1회 출동에
+    터빈 2대) 어느 점검이 들어갔는지 밝혀야 대시보드·원본과 대조할 수 있다.
     """
     e = to["event"]
     status = e.get("status")
+    # 발전소는 제목에 이미 있으므로, 여기서는 보고서 식별자와 묶인 점검을 밝힌다.
+    ids = e.get("inspection_ids") or []
+    insp = f"점검 {len(ids)}건" + (f" (#{', #'.join(str(i) for i in ids)})" if ids else "")
     return [
-        f"- 점검: #{e.get('inspection_id')} (보고서 {e.get('report_id')}) · "
-        f"단지 {e.get('windfarm_id')} · {STATUS_KO.get(status, status)}",
-        f"- 점검 기간: {e.get('inspection_start')} ~ {e.get('inspection_end')}",
+        f"`보고서 #{e.get('report_id')}` · {insp} · {STATUS_KO.get(status, status)}",
+        "",
+        f"점검 기간 {e.get('inspection_start')} ~ {e.get('inspection_end')}",
     ]
 
 
-def stat_lines(to) -> list:
-    """전체 집계 라인 — 보고서 개요와 LLM facts가 공유한다. 수치 전부 코드 주입."""
-    e = to["event"]
+def stat_pairs(to) -> list:
+    """전체 집계 (지표, 값) 쌍 — 핵심 지표 표와 LLM facts의 단일 출처. 수치 전부 코드 주입.
+
+    표(metric_table)와 불릿(stat_lines)은 이 목록을 각자 렌더링만 한다.
+    새 지표는 여기에 한 번만 추가하면 양쪽에 동시에 반영된다.
+    """
     s = to.get("summary", {}) or {}
+    pairs = []
 
-    lines = []
-    if e.get("status") != "INSPECTED":
-        lines.append("- 판독이 완료되지 않아 결과가 변경될 수 있음")
-
-    # inspection에 '점검 대상 터빈' 목록이 없어, 결함이 검출된 터빈만 알 수 있다.
+    # 점검 대상 터빈은 inspection.turbine_id 로 확정된다 — 결함 0건이어도 여기 표기된다.
     codes = s.get("turbine_codes") or []
-    lines.append(
-        f"- 결함 검출 터빈: {s.get('n_turbines', 0)}대"
-        + (f" ({', '.join(codes)})" if codes else "")
-    )
-    lines.append(
-        f"- 검출 결함: {s.get('n_defects_total', 0):,}건 / 이미지 {s.get('n_images_total', 0):,}장"
-    )
+    pairs.append((
+        "점검 대상 터빈",
+        f"{s.get('n_turbines', 0)}대" + (f" ({', '.join(codes)})" if codes else ""),
+    ))
+    pairs.append((
+        "검출 결함",
+        f"{s.get('n_defects_total', 0):,}건 / 이미지 {s.get('n_images_total', 0):,}장",
+    ))
 
     if s.get("n_defects_total"):
-        lines.append(f"- 심각도 분포: {_sev_counts(s.get('severity_counts', {}))}")
-        sr = _severe_ratio_line(s.get("severity_counts", {}), s.get("n_defects_total", 0))
+        pairs.append(("심각도 분포", _sev_counts(s.get("severity_counts", {}))))
+        sr = _severe_ratio(s.get("severity_counts", {}), s.get("n_defects_total", 0))
         if sr:
-            lines.append(sr)
-        lines.append(
-            _top_type_line(
+            pairs.append(("심각도 3 이상", sr))
+        pairs.append((
+            "최다 결함 유형",
+            _top_type(
                 s.get("top_defect_type"),
                 s.get("top_defect_type_n", 0),
                 s.get("n_defects_total", 0),
-            )
-        )
-        lines.append(
-            f"- 결함 최다 터빈: {s.get('worst_turbine')} {s.get('worst_turbine_n', 0):,}건"
-        )
-        lines.append(f"- 검출 신뢰도: {_conf(s.get('confidence', {}))}")
-    else:
-        lines.append("- 검출된 결함 없음")
+            ),
+        ))
+        pairs.append((
+            "결함 최다 터빈",
+            f"{s.get('worst_turbine')} {s.get('worst_turbine_n', 0):,}건",
+        ))
+        pairs.append(("검출 신뢰도", _conf(s.get("confidence", {}))))
 
     zero = s.get("zero_defect_turbines") or []
     if zero:
-        lines.append(f"- 결함 미검출 터빈: {', '.join(zero)} (상세 없음)")
+        pairs.append(("결함 미검출 터빈", f"{', '.join(zero)} (상세 없음)"))
+    return pairs
+
+
+def stat_notes(to) -> list:
+    """지표가 아닌 단서 문구 — 값이 없어 (지표, 값) 쌍으로 못 만드는 것들."""
+    notes = []
+    if to["event"].get("status") != "INSPECTED":
+        notes.append("판독이 완료되지 않아 결과가 변경될 수 있음")
+    if not (to.get("summary", {}) or {}).get("n_defects_total"):
+        notes.append("검출된 결함 없음")
+    return notes
+
+
+def stat_lines(to) -> list:
+    """전체 집계 불릿 — LLM facts 전용. 표와 같은 stat_pairs 를 불릿으로 편다."""
+    notes = stat_notes(to)
+    # '검출된 결함 없음'은 건수 라인 뒤에 와야 읽힌다(불릿 순서 유지).
+    head = [f"- {n}" for n in notes if n != "검출된 결함 없음"]
+    tail = [f"- {n}" for n in notes if n == "검출된 결함 없음"]
+    body = [f"- {k}: {v}" for k, v in stat_pairs(to)]
+    # 결함 0건이면 '검출된 결함 없음'이 집계 뒤·미검출 터빈 앞에 들어간다.
+    if tail:
+        cut = len(body) - 1 if body and body[-1].startswith("- 결함 미검출 터빈") else len(body)
+        body = body[:cut] + tail + body[cut:]
+    return head + body
+
+
+def metric_table(to) -> list:
+    """## 핵심 지표 표 — anomaly/builder.py 의 `| 지표 | 값 |` 형식과 통일.
+
+    표에 못 넣는 단서 문구(stat_notes)는 표 아래 인용문으로 남긴다 — 조용히 버리지 않는다.
+    """
+    lines = ["## 핵심 지표", "", "| 지표 | 값 |", "|:--|--:|"]
+    for k, v in stat_pairs(to):
+        # 검출 결함 건수가 이 보고서의 머리 수치 — anomaly 가 놓친 발전량을 굵게 쓰는 것과 같다.
+        bold = k == "검출 결함"
+        lines.append(f"| **{k}** | **{v}** |" if bold else f"| {k} | {v} |")
+    notes = stat_notes(to)
+    if notes:
+        # 표 바로 뒤에 '>' 를 붙이면 렌더러에 따라 표가 끊기지 않는다 — 빈 줄로 분리.
+        lines += ["", *[f"> {n}" for n in notes]]
     return lines
 
 
-def overview_lines(to) -> list:
-    """보고서 개요 = 점검 메타 + 전체 집계."""
-    return meta_lines(to) + stat_lines(to)
+def turbine_pairs(t) -> list:
+    """터빈 1대의 (지표, 값) 쌍 — 상세 표와 LLM facts의 단일 출처. stat_pairs 와 같은 구조.
+
+    이미지 목록은 제외(양이 많고 해석 대상이 아니라 facts에 넣지 않는다).
+    """
+    return [
+        ("결함", f"{t['n_defects']:,}건"),
+        ("이미지", f"{t['n_images']:,}장"),
+        ("최고 심각도", _sev(t["max_severity"])),
+        ("심각도별", _sev_counts(t.get("severity_counts", {}))),
+        ("유형별", _type_counts(t.get("type_counts", {}))),
+        ("블레이드별", _blade_counts(t.get("blade_counts", {}))),
+        ("위치별", _side_counts(t.get("side_counts", {}))),
+        ("검출 신뢰도", _conf(t.get("confidence", {}))),
+    ]
 
 
 def turbine_summary_lines(t) -> list:
-    """터빈 1대의 요약 라인(이미지 목록 제외)."""
-    return [
-        f"- 결함 {t['n_defects']:,}건 / 이미지 {t['n_images']:,}장 · "
-        f"최고 심각도 {_sev(t['max_severity'])}",
-        f"- 심각도별: {_sev_counts(t.get('severity_counts', {}))}",
-        f"- 유형별: {_type_counts(t.get('type_counts', {}))}",
-        f"- 블레이드별: {_blade_counts(t.get('blade_counts', {}))}",
-        f"- 위치별: {_side_counts(t.get('side_counts', {}))}",
-        f"- 검출 신뢰도: {_conf(t.get('confidence', {}))}",
-    ]
+    """터빈 1대의 요약 불릿 — LLM facts 전용. 표와 같은 turbine_pairs 를 불릿으로 편다."""
+    return [f"- {k}: {v}" for k, v in turbine_pairs(t)]
+
+
+def turbine_table(t) -> list:
+    """터빈 1대의 상세 표 — 핵심 지표 표와 같은 `| 지표 | 값 |` 형식."""
+    lines = ["| 지표 | 값 |", "|:--|--:|"]
+    for k, v in turbine_pairs(t):
+        # 결함 건수가 이 섹션의 머리 수치 — 핵심 지표 표의 '검출 결함'과 같은 역할.
+        bold = k == "결함"
+        lines.append(f"| **{k}** | **{v}** |" if bold else f"| {k} | {v} |")
+    return lines
 
 
 def image_url(image_path: str) -> str:
@@ -368,10 +438,10 @@ def turbine_image_lines(t) -> list:
 
 
 def fact_lines(to) -> list:
-    """LLM 분석용 팩트 블록 = 개요 집계 + 터빈별 요약.
+    """LLM 분석용 팩트 블록 = 전체 집계 + 터빈별 요약.
 
     LLM은 이 블록의 수치만 인용할 수 있다(생성 금지). allowed_numbers와 같은 출처.
-    - 점검번호·기간(meta_lines)은 제외 → 분석이 다시 쓰면 critic이 잡는다.
+    - 점검번호·기간(subtitle_lines)은 제외 → 분석이 다시 쓰면 critic이 잡는다.
     - 이미지 목록도 제외(양이 많고 해석 대상이 아님). 보고서 본문에는 코드가 렌더링.
     """
     lines = list(stat_lines(to))
@@ -387,30 +457,31 @@ def allowed_numbers(to) -> set:
     """분석이 인용해도 되는 수치(절대값) 집합. 코드가 생성한 팩트에서만 추출.
 
     부호는 자연어에서 자주 뒤집히므로 절대값으로 비교한다.
-    점검 기간(날짜·시각)은 개요에만 있고 facts에는 넣지 않는다
+    점검 기간(날짜·시각)은 부제에만 있고 facts에는 넣지 않는다
     → 분석이 날짜를 다시 쓰면 환각 후보로 걸린다(의도된 동작).
     """
     text = "\n".join(fact_lines(to))
     return {abs(n) for n in extract_numbers(text)}
 
 
-def render_report(to, analysis: str) -> str:
+def render_report(to, analysis: str = None) -> str:
     """전체 보고서 조립.
 
-    코드 주입: 개요·터빈별 상세·검출 이미지·판단유보.  LLM: 종합 분석 섹션만.
-    결함 0건 터빈은 상세 섹션을 만들지 않고 개요에만 표기한다.
+    코드 주입: 핵심 지표·터빈별 상세·검출 이미지·판단유보.  LLM: 종합 분석 섹션만.
+    결함 0건 터빈은 상세 섹션을 만들지 않고 핵심 지표 표에만 표기한다.
+    analysis 가 비면(WITH_ANALYSIS off) 빈 헤더를 남기지 않고 섹션 자체를 뺀다.
     """
     e = to["event"]
     parts = [
         f"# {report_title(e)}",
         "",
-        "## 개요",
-        *overview_lines(to),
-        *overview_charts(to),
+        *subtitle_lines(to),
         "",
-        "## 종합 분석",
-        (analysis or "").strip(),
+        *metric_table(to),
+        *overview_charts(to),
     ]
+    if analysis and analysis.strip():
+        parts += ["", "## 종합 분석", analysis.strip()]
 
     for t in to.get("turbines", []) or []:
         if t["n_defects"] == 0:
@@ -420,7 +491,8 @@ def render_report(to, analysis: str) -> str:
             "---",
             "",
             f"## {t['turbine_code']} — 결함 상세",
-            *turbine_summary_lines(t),
+            "",
+            *turbine_table(t),
             "",
             "### 검출 이미지",
             *turbine_image_lines(t),

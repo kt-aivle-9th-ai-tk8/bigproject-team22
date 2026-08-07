@@ -3,7 +3,9 @@
   --color-point-bright: #ECF2FE;
   --color-dark-gray: #4F4F4F;
   --color-divider: #AEAEB2;
-  --color-point: #85AFF9;
+  --color-light-divider: #E5E7EB;
+  --color-point: #b4cfff;
+  --color-point-divider: #678fd5;
 }
 * {
   margin: 0;

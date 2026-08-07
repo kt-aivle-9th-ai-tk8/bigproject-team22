@@ -44,7 +44,7 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
     }
 
     private void seed(String employeeId, Role role) {
-        userJpaRepository.save(User.create(employeeId, passwordEncoder.encode("pw12345!"), employeeId, role));
+        userJpaRepository.save(User.create(employeeId, passwordEncoder.encode("pw12345!"), employeeId, "010-1234-5678", role));
     }
 
     /** exchange 로 상태코드/헤더/본문을 예외 없이 그대로 받는다. */
@@ -62,9 +62,10 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
                 .body(response.bodyTo(String.class)));
     }
 
+    /** 요청 바디는 운영과 동일하게 snake_case 로 보낸다(FE 합의 계약). */
     private ResponseEntity<String> login(String employeeId) {
         return send(HttpMethod.POST, "/auth/login",
-                "{\"employeeId\":\"" + employeeId + "\",\"password\":\"pw12345!\"}", null);
+                "{\"employee_id\":\"" + employeeId + "\",\"password\":\"pw12345!\"}", null);
     }
 
     private String sessionCookie(ResponseEntity<String> response) {
@@ -83,7 +84,7 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
     @DisplayName("회원가입은 항상 GUEST 로 생성된다")
     void signUp_createsGuest() {
         ResponseEntity<String> response = send(HttpMethod.POST, "/users",
-                "{\"employeeId\":\"E1001\",\"password\":\"pw12345!\",\"userName\":\"홍길동\",\"role\":\"ADMIN\"}", null);
+                "{\"employee_id\":\"E1001\",\"password\":\"pw12345!\",\"user_name\":\"홍길동\",\"phone\":\"010-1234-5678\",\"role\":\"ADMIN\"}", null);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).contains("\"role\":\"GUEST\"");

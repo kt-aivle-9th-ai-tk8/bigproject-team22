@@ -15,46 +15,75 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import CircleStyle from "ol/style/Circle";
 
+const SINGLE_MARKER_RADIUS = 30;
+const SINGLE_MARKER_STROKE_WIDTH = 3;
+const SINGLE_MARKER_ICON_SIZE = 70;
+const SINGLE_MARKER_TEXT_OFFSET_Y = 18;
+
+const CLUSTER_RADIUS = 30;
+
+const getCssVariableColor = (variableName, fallbackColor) => {
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(variableName)
+    .trim();
+
+  return value || fallbackColor;
+};
+
 /*
  * 단일 객체 아이콘 스타일
+ *
+ * 이미지 합성 X
+ * 원 배경은 CircleStyle
+ * SVG 아이콘은 Icon
  */
 const createSingleObjectStyle = (
   objectFeature,
   iconSrc,
-  iconScale
+  singleMarkerFillColor,
+  singleMarkerStrokeColor
 ) => {
-  return new Style({
-    image: new Icon({
-      src: iconSrc,
+  return [
+    new Style({
+      image: new CircleStyle({
+        radius: SINGLE_MARKER_RADIUS,
 
-      /*
-       * 아이콘 아래쪽 중앙을 객체 좌표에 맞춤
-       */
-      anchor: [0.5, 1],
+        fill: new Fill({
+          color: singleMarkerFillColor,
+        }),
 
-      scale: iconScale,
-    }),
-
-    text: new Text({
-      text: objectFeature.get("objectName"),
-
-      /*
-       * 아이콘 위쪽에 객체 이름 표시
-       */
-      offsetY: -30,
-
-      font: "bold 12px sans-serif",
-
-      fill: new Fill({
-        color: "#ffffff",
-      }),
-
-      stroke: new Stroke({
-        color: "#222222",
-        width: 3,
+        stroke: new Stroke({
+          color: singleMarkerStrokeColor,
+          width: SINGLE_MARKER_STROKE_WIDTH,
+        }),
       }),
     }),
-  });
+
+    new Style({
+      image: new Icon({
+        src: iconSrc,
+        anchor: [0.5, 0.5],
+        width: SINGLE_MARKER_ICON_SIZE,
+        height: SINGLE_MARKER_ICON_SIZE,
+      }),
+
+      text: new Text({
+        text: objectFeature.get("objectName"),
+        offsetY: SINGLE_MARKER_TEXT_OFFSET_Y,
+
+        font: "bold 12px sans-serif",
+
+        fill: new Fill({
+          color: "#ffffff",
+        }),
+
+        stroke: new Stroke({
+          color: "#222222",
+          width: 3,
+        }),
+      }),
+    }),
+  ];
 };
 
 /*
@@ -63,24 +92,27 @@ const createSingleObjectStyle = (
 const createClusterStyle = (count) => {
   return new Style({
     image: new CircleStyle({
-      radius: 30,
+      radius: CLUSTER_RADIUS,
 
       fill: new Fill({
-        color: "#0B50D1",
+        color: getCssVariableColor("--color-point", "#b4cfff"),
       }),
 
       stroke: new Stroke({
-        color: "#ffffff",
+        color: getCssVariableColor(
+          "--color-point-bright",
+          "#ECF2FE"
+        ),
         width: 3,
       }),
     }),
 
     text: new Text({
       text: String(count),
-      font: "bold 20px sans-serif",
+      font: "bold 22px sans-serif",
 
       fill: new Fill({
-        color: "#ffffff",
+        color: "#000000",
       }),
     }),
   });
@@ -92,53 +124,75 @@ const createClusterStyle = (count) => {
 const createExpandedObjectStyle = (
   feature,
   iconSrc,
-  iconScale
+  singleMarkerFillColor,
+  singleMarkerStrokeColor
 ) => {
-  return new Style({
-    image: new Icon({
-      src: iconSrc,
-      anchor: [0.5, 1],
-      scale: iconScale,
-    }),
+  return [
+    new Style({
+      image: new CircleStyle({
+        radius: SINGLE_MARKER_RADIUS,
 
-    text: new Text({
-      text: feature.get("objectName"),
-      offsetY: -30,
-      font: "bold 12px sans-serif",
+        fill: new Fill({
+          color: singleMarkerFillColor,
+        }),
 
-      fill: new Fill({
-        color: "#ffffff",
-      }),
-
-      stroke: new Stroke({
-        color: "#222222",
-        width: 3,
+        stroke: new Stroke({
+          color: singleMarkerStrokeColor,
+          width: SINGLE_MARKER_STROKE_WIDTH,
+        }),
       }),
     }),
-  });
+
+    new Style({
+      image: new Icon({
+        src: iconSrc,
+        anchor: [0.5, 0.5],
+        width: SINGLE_MARKER_ICON_SIZE,
+        height: SINGLE_MARKER_ICON_SIZE,
+      }),
+
+      text: new Text({
+        text: feature.get("objectName"),
+        offsetY: SINGLE_MARKER_TEXT_OFFSET_Y,
+
+        font: "bold 12px sans-serif",
+
+        fill: new Fill({
+          color: "#ffffff",
+        }),
+
+        stroke: new Stroke({
+          color: "#222222",
+          width: 3,
+        }),
+      }),
+    }),
+  ];
 };
 
 export function createObjectLayer({
   objects = [],
   iconSrc,
-  iconScale = 0.07,
   clusterDistance = 40,
   clusterMinDistance = 15,
+
+  singleMarkerFillColor = getCssVariableColor(
+    "--color-point-bright",
+    "#ECF2FE"
+  ),
+
+  singleMarkerStrokeColor = getCssVariableColor(
+    "--color-point",
+    "#b4cfff"
+  ),
 }) {
   if (!iconSrc) {
-    throw new Error(
-      "createObjectLayer에 iconSrc가 필요합니다."
-    );
+    throw new Error("createObjectLayer에 iconSrc가 필요합니다.");
   }
 
-  /*
-   * 실제 객체 Feature 생성
-   */
   const objectFeatures = objects.map((object) => {
     return new Feature({
-      geometry: new Point(
-        fromLonLat(object.coordinate)
-      ),
+      geometry: new Point(fromLonLat(object.coordinate)),
 
       objectId: object.id,
       objectName: object.name,
@@ -146,34 +200,20 @@ export function createObjectLayer({
     });
   });
 
-  /*
-   * 실제 객체 Feature를 저장하는 원본 Source
-   */
   const objectSource = new VectorSource({
     features: objectFeatures,
   });
 
-  /*
-   * 가까운 객체 Feature들을 하나로 묶는 Cluster Source
-   *
-   * distance와 minDistance는 화면 픽셀 기준
-   */
   const clusterSource = new Cluster({
     distance: clusterDistance,
     minDistance: clusterMinDistance,
     source: objectSource,
   });
 
-  /*
-   * 단일 객체와 숫자 클러스터를 표시하는 레이어
-   */
   const objectLayer = new VectorLayer({
     source: clusterSource,
 
     style: (clusterFeature) => {
-      /*
-       * 펼쳐진 클러스터는 숨김
-       */
       if (clusterFeature.get("isExpanded")) {
         return null;
       }
@@ -187,41 +227,38 @@ export function createObjectLayer({
         return createSingleObjectStyle(
           clusteredFeatures[0],
           iconSrc,
-          iconScale
+          singleMarkerFillColor,
+          singleMarkerStrokeColor
         );
       }
 
       return createClusterStyle(count);
     },
 
-    declutter: true,
+    /*
+     * 아이콘 누락 방지
+     */
+    declutter: false,
     zIndex: 10,
   });
 
-  /*
-   * 펼쳐진 개별 객체 Feature를 저장하는 Source
-   */
-  const expandedObjectSource =
-    new VectorSource();
+  const expandedObjectSource = new VectorSource();
 
-  /*
-   * 펼쳐진 개별 객체 아이콘을 표시하는 레이어
-   */
-  const expandedObjectLayer =
-    new VectorLayer({
-      source: expandedObjectSource,
+  const expandedObjectLayer = new VectorLayer({
+    source: expandedObjectSource,
 
-      style: (feature) => {
-        return createExpandedObjectStyle(
-          feature,
-          iconSrc,
-          iconScale
-        );
-      },
+    style: (feature) => {
+      return createExpandedObjectStyle(
+        feature,
+        iconSrc,
+        singleMarkerFillColor,
+        singleMarkerStrokeColor
+      );
+    },
 
-      declutter: false,
-      zIndex: 20,
-    });
+    declutter: false,
+    zIndex: 20,
+  });
 
   return {
     objectLayer,

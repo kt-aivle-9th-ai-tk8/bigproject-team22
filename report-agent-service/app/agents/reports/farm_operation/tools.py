@@ -8,22 +8,24 @@ scada에 데이터가 있으면 found=True). 기간은 scada 전 구간.
   scada  : 단지 총 발전량(MWh)·달성률·가동률·손실 분해·평균 풍속·월별 총량 + 터빈별 실적
   anomaly: 단지 전체 이상 이벤트(상태별/유형별)
   defect : 단지 전체 결함(데이터 없으면 미가용)
+
+배포(RDS): 소스 선택은 app.core.datasource 가 테이블 단위로 한다 — 이 파일은 그대로 둔다.
 """
-import os
 import pandas as pd
 
-from app.core.config import DATA_DIR
-
-_events = pd.read_csv(
-    os.path.join(DATA_DIR, "anomaly_event.csv"),
-    encoding="utf-8-sig", parse_dates=["start_time", "end_time"],
-)
-_scada = pd.read_csv(
-    os.path.join(DATA_DIR, "scada_record.csv"),
-    encoding="utf-8-sig", parse_dates=["timestamp"],
-)
+from app.core.datasource import load_table, table_available
 
 DEFAULT_FARM = "화순풍력발전소"
+
+
+# 호출 시점 로드(datasource 가 1회 캐시). registry 가 4개 tools 를 전부 import 하므로
+# 전역 로드로 두면 다른 보고서 1건에도 단지 운영용 테이블까지 다 읽게 된다.
+def _events():
+    return load_table("anomaly_event")
+
+
+def _scada():
+    return load_table("scada_record")
 EVENT_CATEGORY = {
     "prolonged_stop": "stop", "data_missing": "data_missing",
     "chronic_screening": "degradation", "chronic_confirmed": "degradation",
@@ -40,23 +42,28 @@ def _num(v):
 
 def get_farm_scada() -> dict:
     """단지 전체 scada 집계 + 터빈별 실적 + 월별 총량."""
-    df = _scada
+    df = _scada()
     if df.empty:
         return {"found": False}
 
-    total_actual_kwh = df["power_output"].sum()
-    total_expected_kwh = df["expected_power_unit"].sum()
+    # 손실 계산은 expected/actual이 모두 있는 행만 사용 — expected에 NaN이 있으면
+    #   sum()은 NaN을 무시(0 취급)하지만 gap(뺄셈)은 NaN이 되어 총손실과 분해 합이 어긋난다.
+    valid = df[["expected_power_unit", "power_output"]].notna().all(axis=1)
+    dfv = df[valid]
+    total_actual_kwh = dfv["power_output"].sum()
+    total_expected_kwh = dfv["expected_power_unit"].sum()
     util = (total_actual_kwh / total_expected_kwh * 100) if total_expected_kwh else None
-    availability = (1 - df["is_stopped"].mean()) * 100
-    avg_wind = df["wind_speed"].mean()
+    availability = (1 - dfv["is_stopped"].mean()) * 100
+    avg_wind = dfv["wind_speed"].mean()
 
-    gap = df["expected_power_unit"] - df["power_output"]
-    stopped = df["is_stopped"] == 1
+    # 손실 분해: 두 항의 합 = 총손실(기대-실측)이 되도록 양쪽 모두 순합(clip 없음, 유효 행만).
+    gap = dfv["expected_power_unit"] - dfv["power_output"]
+    stopped = dfv["is_stopped"] == 1
     downtime_loss_kwh = gap[stopped].sum()
-    perf_loss_kwh = gap[~stopped].clip(lower=0).sum()
+    perf_loss_kwh = gap[~stopped].sum()
 
-    # 터빈별 실적 (달성률 오름차순 = 부진 터빈 먼저)
-    g = df.groupby("turbine_code").agg(
+    # 터빈별 실적 (달성률 오름차순 = 부진 터빈 먼저). 손실 기여 합 = 단지 총손실이 되도록 유효 행만.
+    g = dfv.groupby("turbine_code").agg(
         actual_sum=("power_output", "sum"),
         expected_sum=("expected_power_unit", "sum"),
         stopped=("is_stopped", "mean"),
@@ -75,7 +82,7 @@ def get_farm_scada() -> dict:
     per_turbine.sort(key=lambda x: (x["utilization_pct"] is None, x["utilization_pct"]))
 
     # 월별 단지 총 발전량 (MWh)
-    dfm = df.copy()
+    dfm = dfv.copy()   # 월별 추이도 같은 유효 행 모집단 사용
     dfm["month"] = dfm["timestamp"].dt.strftime("%Y-%m")
     grp = dfm.groupby("month").agg(expected=("expected_power_unit", "sum"),
                                    actual=("power_output", "sum"))
@@ -84,7 +91,7 @@ def get_farm_scada() -> dict:
 
     return {
         "found": True,
-        "n_turbines": int(df["turbine_code"].nunique()),
+        "n_turbines": int(dfv["turbine_code"].nunique()),
         "period_start": _num(df["timestamp"].min()),
         "period_end": _num(df["timestamp"].max()),
         "total_actual_mwh": _num(total_actual_kwh / 1000.0),
@@ -102,7 +109,8 @@ def get_farm_scada() -> dict:
 
 def get_farm_anomaly(start, end_excl) -> dict:
     """단지 전체 이상 이벤트 집계 + 터빈별 분포."""
-    df = _events[(_events["start_time"] >= start) & (_events["start_time"] < end_excl)].copy()
+    ev = _events()
+    df = ev[(ev["start_time"] >= start) & (ev["start_time"] < end_excl)].copy()
     cats = df["event_type"].map(EVENT_CATEGORY).fillna("other")
     cat_counts = cats.value_counts().to_dict()
 
@@ -128,25 +136,25 @@ def get_farm_anomaly(start, end_excl) -> dict:
             "stop": int(cat_counts.get("stop", 0)),
             "data_missing": int(cat_counts.get("data_missing", 0)),
             "degradation": int(cat_counts.get("degradation", 0)),
+            # 미지의 event_type도 노출 — total과 유형별 합 불일치 방지
+            "other": int(cat_counts.get("other", 0)),
         },
         "by_turbine": by_turbine,
     }
 
 
 def get_farm_defect(start, end_excl) -> dict:
-    """단지 전체 결함 건수. 데이터 없으면 미가용."""
-    dpath = os.path.join(DATA_DIR, "defect.csv")
-    ipath = os.path.join(DATA_DIR, "inspection.csv")
-    if not (os.path.exists(dpath) and os.path.exists(ipath)):
+    """단지 전체 결함 건수. 점검·결함 데이터가 아예 없으면 미가용.
+
+    '미가용'은 소스가 없을 때만이다 — 조회 중 나는 오류는 삼키지 않고 올린다.
+    (예전엔 except Exception 이 전부를 삼켜, 컬럼이 바뀌어 깨진 것도 0건으로 보고됐다.)
+    """
+    if not (table_available("defect") and table_available("inspection")):
         return {"available": False, "count": 0}
-    try:
-        defects = pd.read_csv(dpath, encoding="utf-8-sig")
-        insp = pd.read_csv(ipath, encoding="utf-8-sig", parse_dates=["inspection_start"])
-        insp = insp[(insp["inspection_start"] >= start) & (insp["inspection_start"] < end_excl)]
-        merged = defects[defects["inspection_id"].isin(insp["inspection_id"])]
-        return {"available": True, "count": int(len(merged))}
-    except Exception:
-        return {"available": False, "count": 0}
+    insp = load_table("inspection")
+    insp = insp[(insp["inspection_start"] >= start) & (insp["inspection_start"] < end_excl)]
+    n = int(load_table("defect")["inspection_id"].isin(insp["inspection_id"]).sum())
+    return {"available": True, "count": n}
 
 
 def fetch(event_id: int) -> dict:

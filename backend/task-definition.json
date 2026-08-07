@@ -1,4 +1,9 @@
 {
+    "family": "windfarm-onm-backend-task",
+
+    "taskRoleArn": "arn:aws:iam::336090301989:role/windfarm-onm-backend-task-role",
+    "executionRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
+    
     "containerDefinitions": [
         {
             "name": "windfarm-onm-backend-container",
@@ -14,7 +19,45 @@
                 }
             ],
             "essential": true,
-            "environment": [],
+            "environment": [
+                {
+                    "name": "SPRING_PROFILES_ACTIVE",
+                    "value": "prod"
+                },
+                {
+                    "name": "DB_URL",
+                    "value": "jdbc:mysql://db-windfarmonm.clicg40gq1nb.ap-northeast-2.rds.amazonaws.com:3306/db-windfarmonm"
+                },
+                {
+                    "name": "DB_USERNAME",
+                    "value":"team22"
+                },
+
+                {
+                    "name": "REDIS_HOST",
+                    "value":"windfarm-vk.hhxr8m.ng.0001.apn2.cache.amazonaws.com"
+                },
+                {
+                    "name": "REDIS_PORT",
+                    "value":"6379"
+                },
+                {
+                    "name": "SCHEDULING_LOCK_KEY_PREFIX",
+                    "value":"windfarmonm-prod"
+                }
+            ],
+
+            "secrets": [
+                {
+                    "name": "DB_PASSWORD",
+                    "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:rds!db-56327afb-90de-465f-89f7-57a66d75ce1b-VuWe1K:password::"
+                },
+                {
+                    "name": "REDIS_PASSWORD",
+                    "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarm/prod/redis-password-U3WQZ1:password::"
+                }
+            ],
+
             "environmentFiles": [],
             "mountPoints": [],
             "volumesFrom": [],
@@ -32,8 +75,7 @@
             "systemControls": []
         }
     ],
-    "family": "windfarm-onm-backend-task",
-    "executionRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
+
     "networkMode": "awsvpc",
     "volumes": [],
     "placementConstraints": [],

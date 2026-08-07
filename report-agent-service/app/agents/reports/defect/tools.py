@@ -1,42 +1,69 @@
 """defect 데이터 조회 — LLM 절대 사용 안 함.
 
 반환 수치는 전부 원본 집계 그대로(임의 가공 금지). 이 값들이 critic의 검증 기준이 된다.
-데이터: inspection.csv(점검 1건 = 드론 출동 1회) + defect.csv(CNN 검출 결함 1건 = 1행).
-한 inspection이 여러 터빈을 커버하며, 터빈 구분은 defect.turbine_code 로만 알 수 있다.
 
-배포(RDS) 전환: common.config.DATA_SOURCE == "rds" 이면 _load()를 SQLAlchemy 쿼리로
-교체(반환 컬럼·시그니처는 동일 유지). fetch()·graph·agent·critic 은 불변.
+보고서의 단위는 report 다(report.csv). 점검(inspection)은 터빈 1대당 1건이고,
+드론 1회 출동으로 2대를 점검하면 inspection 2건이 같은 report_id 를 공유한다
+(실데이터 60개 보고서 중 8개가 터빈 2대). 그래서 fetch 는 report_id 로 조회하고,
+그 아래 inspection 전부의 결함을 모아 터빈별로 집계한다.
+  ※ defect 의 event_id 는 report_id 다 — inspection_id 가 아니다.
+     (event_id 해석은 원래 report_type 마다 다르다: operation 은 터빈번호, farm_operation 은 무시.)
+
+ERD상 각 테이블은 코드값을 직접 갖지 않고 FK만 갖는다 → _load()에서 조인해 붙인다.
+  report.report_id     ← inspection.report_id                              (보고서 1건 = 점검 N건)
+  inspection.turbine_id → turbine.turbine_code / wind_farm.wind_farm_name  (점검 대상 터빈)
+  defect.blade_id       → blade.blade_tag / blade.turbine_id → turbine.turbine_code
+점검 대상 터빈은 inspection.turbine_id 로 확정되므로 결함 0건이어도 알 수 있다.
+
+배포(RDS) 전환: 어디서 읽어오는지는 app.core.datasource 가 테이블 단위로 정한다.
+DATA_SOURCE=="rds" 면 turbine·blade·wind_farm 은 RDS 에서, report·inspection·defect 는
+(아직 RDS 스키마에 없으므로) CSV 에서 온다. 어느 쪽이든 컬럼은 동일하므로 아래 집계는 불변.
 
 (공유 계약) 반환 dict의 "event" 키는 공유 service.py 가 found 판정에 쓰는 자리다.
-defect 에서는 그 자리에 inspection 1건이 들어간다.
+defect 에서는 그 자리에 report 1건(+소속 점검 요약)이 들어간다.
 """
-import os
-
 import pandas as pd
 
-from app.core.config import DATA_DIR
+from app.core.datasource import cached, load_table, turbine_index
 
 # 검출 신뢰도 하한. None이면 필터 없음(현재 데이터 최저 0.684).
 # 임계 정책이 정해지면 이 값만 바꾸면 모든 집계에 일괄 반영된다.
 MIN_CONFIDENCE = None
 
-_cache = {}
+
+def _join_inspection():
+    """inspection + 터빈/발전소 이름."""
+    return load_table("inspection").merge(turbine_index(), on="turbine_id", how="left")
+
+
+def _join_defect():
+    """defect + 블레이드 태그 + 터빈 코드."""
+    blade = load_table("blade")[["blade_id", "blade_tag", "turbine_id"]]
+    # how="left" — FK가 깨져도 행을 잃지 않는다. 코드가 비면 집계에서 걸러진다(fetch 참고).
+    return (
+        load_table("defect")
+        .merge(blade, on="blade_id", how="left")
+        .merge(turbine_index()[["turbine_id", "turbine_code"]], on="turbine_id", how="left")
+    )
 
 
 def _load():
-    """CSV 지연 로드(1회 캐시). anomaly만 실행할 때 defect CSV를 읽지 않도록 lazy."""
-    if not _cache:
-        _cache["inspection"] = pd.read_csv(
-            os.path.join(DATA_DIR, "inspection.csv"),
-            encoding="utf-8-sig",
-            parse_dates=["inspection_start", "inspection_end", "created_at"],
-        )
-        _cache["defect"] = pd.read_csv(
-            os.path.join(DATA_DIR, "defect.csv"),
-            encoding="utf-8-sig",
-            parse_dates=["created_at"],
-        )
-    return _cache["inspection"], _cache["defect"]
+    """지연 로드 + ERD 조인. anomaly만 실행할 때 defect 테이블을 읽지 않도록 lazy.
+
+    조인 결과로 inspection 에는 turbine_code·wind_farm_id·wind_farm_name 이,
+    defect 에는 turbine_id·turbine_code·blade_tag 가 붙는다. 아래 집계 함수들은
+    이 컬럼들이 처음부터 있었던 것처럼 그대로 쓴다(조인 위치는 여기 한 곳뿐).
+
+    캐시는 datasource 가 갖는다 — 여기서 따로 들고 있으면 원본이 만료돼 새로 읽혀도
+    조인 결과는 낡은 채로 남는다(RDS 에서는 그게 곧 옛 데이터로 만든 보고서다).
+
+    반환: (report, inspection, defect)
+    """
+    return (
+        load_table("report"),
+        cached("defect:inspection_joined", _join_inspection),
+        cached("defect:defect_joined", _join_defect),
+    )
 
 
 def _num(v):
@@ -55,29 +82,64 @@ def _counts(series) -> dict:
     return {str(k): int(v) for k, v in series.value_counts().items()}
 
 
-def get_inspection(inspection_id: int) -> dict:
-    """inspection 1건 → dict. 없으면 {'found': False}."""
-    insp, _ = _load()
-    row = insp[insp["inspection_id"] == inspection_id]
+# 점검 상태 진행 순서. 한 보고서에 점검이 여러 건이면 '가장 덜 진행된' 상태로 대표한다
+# — 하나라도 판독 전이면 보고서 전체를 미완으로 봐야 안전하다(builder가 단서 문구를 붙인다).
+_STATUS_ORDER = ("UPLOADING", "INSPECTING", "INSPECTED")
+
+
+def _rollup_status(values) -> str:
+    """점검 여러 건의 status → 보고서 대표 status."""
+    vals = [v for v in values if isinstance(v, str)]
+    if not vals:
+        return None
+    # 모르는 상태값은 숨기지 않고 그대로 노출한다(조용히 INSPECTED로 뭉개지 않기 위해).
+    unknown = sorted(v for v in vals if v not in _STATUS_ORDER)
+    return unknown[0] if unknown else min(vals, key=_STATUS_ORDER.index)
+
+
+def get_report(report_id: int) -> dict:
+    """report 1건 + 소속 inspection 요약 → dict. 없으면 {'found': False}.
+
+    turbine_code·wind_farm_* 는 _load()의 조인이 붙여준 값이다(원본 테이블에는 FK만 있음).
+    점검이 하나도 안 달린 보고서는 렌더링할 내용이 없으므로 found=False 로 돌려준다
+    (호출자는 404를 받는다 — 빈 보고서를 만들어 내보내는 것보다 낫다).
+
+    실데이터 기준 한 보고서 안에서는 발전소·상태·시작시각이 모두 동일하지만,
+    아래는 그 가정에 기대지 않고 집계한다(기간은 min~max, 상태는 _rollup_status).
+    """
+    rep, insp, _ = _load()
+    row = rep[rep["report_id"] == report_id]
     if row.empty:
         return {"found": False}
-    r = row.iloc[0]
+    sub = insp[insp["report_id"] == report_id].sort_values("inspection_id")
+    if sub.empty:
+        return {"found": False}
+
+    r, first = row.iloc[0], sub.iloc[0]
     return {
         "found": True,
-        "inspection_id": int(r["inspection_id"]),
-        "windfarm_id": _num(r["windfarm_id"]),
-        "report_id": _num(r["report_id"]),
-        "inspection_start": _num(r["inspection_start"]),
-        "inspection_end": _num(r["inspection_end"]),
-        "user_id": _num(r["user_id"]),
-        "status": r["status"],
+        "report_id": int(r["report_id"]),
+        "report_type": _num(r["report_type"]),
+        "report_status": _num(r["status"]),
+        # 발전소는 보고서 단위로 하나. 첫 점검 기준(위 docstring 참고).
+        "wind_farm_id": _num(first["wind_farm_id"]),
+        "wind_farm_name": _num(first["wind_farm_name"]),
+        "n_inspections": int(len(sub)),
+        "inspection_ids": [int(x) for x in sub["inspection_id"]],
+        "turbine_codes": [c for c in sub["turbine_code"] if isinstance(c, str)],
+        # 점검이 여러 건이면 전체를 감싸는 구간으로.
+        "inspection_start": _num(sub["inspection_start"].min()),
+        "inspection_end": _num(sub["inspection_end"].max()),
+        "user_id": _num(first["user_id"]),
+        "status": _rollup_status(sub["status"]),
     }
 
 
-def get_defects(inspection_id: int):
-    """해당 inspection 의 결함 행 전체(DataFrame). MIN_CONFIDENCE 적용."""
-    _, defect = _load()
-    df = defect[defect["inspection_id"] == inspection_id]
+def get_defects(report_id: int):
+    """해당 보고서(소속 inspection 전부)의 결함 행(DataFrame). MIN_CONFIDENCE 적용."""
+    _, insp, defect = _load()
+    ids = insp[insp["report_id"] == report_id]["inspection_id"]
+    df = defect[defect["inspection_id"].isin(ids)]
     if MIN_CONFIDENCE is not None:
         df = df[df["confidence"] >= MIN_CONFIDENCE]
     return df
@@ -179,8 +241,8 @@ def _summarize(turbines: list, df) -> dict:
     summary = {
         "n_turbines": len(turbines),
         "turbine_codes": [t["turbine_code"] for t in turbines],
-        # 결함 0건 터빈: 현재 스키마에서는 defect 행이 있어야 터빈의 존재를 알 수 있어
-        # 실제로는 항상 비어 있다. '점검 대상 터빈' 목록이 생기면 자동으로 채워진다.
+        # 결함 0건 터빈: inspection.turbine_id 로 점검 대상을 알 수 있으므로 실제로 채워진다
+        # (결함 0건인 점검이 데이터상 존재한다). 상세 섹션 없이 개요에만 표기된다.
         "zero_defect_turbines": [t["turbine_code"] for t in turbines if t["n_defects"] == 0],
         "n_defects_total": int(len(df)),
         "n_images_total": int(df["image_path"].nunique()) if len(df) else 0,
@@ -222,27 +284,27 @@ def _summarize(turbines: list, df) -> dict:
 
 
 def fetch(event_id: int) -> dict:
-    """inspection_id → tool_outputs.
+    """report_id → tool_outputs.
 
-    (공유 계약) event_id 자리에 inspection_id 가 들어온다. 반환 dict가 그대로
-    state['tool_outputs']가 되고 critic 의 검증 기준이 된다.
+    (공유 계약) event_id 자리에 report_id 가 들어온다 — inspection_id 가 아니다.
+    반환 dict가 그대로 state['tool_outputs']가 되고 critic 의 검증 기준이 된다.
 
-    반환: {"event": inspection, "turbines": [터빈별 집계], "summary": {개요 요약}}
-      - 터빈은 defect.turbine_code 로 식별하며 코드순 정렬.
-      - 결함이 한 건도 없는 점검이면 turbines 는 빈 리스트(개요만 렌더링).
+    반환: {"event": report, "turbines": [터빈별 집계], "summary": {개요 요약}}
+      - 보고서에 점검이 2건 묶이면 터빈도 2대가 되고, turbines 가 2개로 나온다.
+      - 점검 대상 터빈은 inspection.turbine_id 가 원본이며, 결함이 한 건도 없어도 남는다
+        (그 터빈은 n_defects=0 으로 집계되어 summary.zero_defect_turbines 에 들어간다).
+      - 조인이 비어(FK 파손) 대상 터빈을 못 찾으면 defect 쪽 코드로 대체한다.
     """
-    inspection = get_inspection(event_id)
-    if not inspection.get("found"):
-        return {"event": inspection}
+    report = get_report(event_id)
+    if not report.get("found"):
+        return {"event": report}
 
     df = get_defects(event_id)
-    turbines = [
-        _aggregate(df[df["turbine_code"] == code], code)
-        for code in sorted(df["turbine_code"].unique())
-    ]
+    codes = sorted(set(df["turbine_code"].dropna().unique()) | set(report["turbine_codes"]))
+    turbines = [_aggregate(df[df["turbine_code"] == code], code) for code in codes]
 
     return {
-        "event": inspection,
+        "event": report,
         "turbines": turbines,
         "summary": _summarize(turbines, df),
     }

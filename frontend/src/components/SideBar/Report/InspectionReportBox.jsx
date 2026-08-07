@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import InspectionReportPopup from "./Popup/InspectionReportPopup";
 import "./InspectionReportBox.css";
 
@@ -21,6 +22,8 @@ function InspectionReportBox({
   initialData = {},
   onCreateReport,
 }) {
+  const navigate = useNavigate();
+
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [inspectionInfo, setInspectionInfo] = useState({
     ...EMPTY_INSPECTION_INFO,
@@ -39,9 +42,9 @@ function InspectionReportBox({
   };
 
   const handleCreateReport = () => {
-    const files = inspectionInfo.files || Object.values(
-      inspectionInfo.filesBySurface || {}
-    );
+    const files =
+      inspectionInfo.files ||
+      Object.values(inspectionInfo.filesBySurface || {});
 
     const isEmptyInspectionInfo =
       !inspectionInfo.startDate ||
@@ -82,7 +85,7 @@ function InspectionReportBox({
     console.log("====================================");
     console.log("점검 보고서 생성 버튼 클릭");
     console.log("점검 보고서 생성 최종 데이터:", reportData);
-    console.log("업로드 ZIP 파일 목록:", files);
+    console.log("업로드 이미지 그룹 목록:", files);
     console.table(
       files.map((fileItem) => ({
         turbineName: fileItem.turbineName,
@@ -90,9 +93,7 @@ function InspectionReportBox({
         bladeId: fileItem.bladeId,
         surfaceLabel: fileItem.surfaceLabel,
         surfaceId: fileItem.surfaceId,
-        fileName: fileItem.fileName,
-        fileSize: fileItem.fileSize,
-        fileType: fileItem.fileType,
+        imageCount: fileItem.imageCount,
       }))
     );
     console.log("====================================");
@@ -105,6 +106,10 @@ function InspectionReportBox({
     });
   };
 
+  const handleGoToReportList = () => {
+    navigate("/reportlist");
+  };
+
   const displayInspectionPeriod =
     inspectionInfo.startDate && inspectionInfo.endDate
       ? `${inspectionInfo.startDate} ${inspectionInfo.startTime} ~ ${inspectionInfo.endDate} ${inspectionInfo.endTime}`
@@ -114,8 +119,6 @@ function InspectionReportBox({
     inspectionInfo.turbines.length > 0
       ? inspectionInfo.turbines.join(", ")
       : turbineName;
-
-  const displayContent = inspectionInfo.content?.trim() || "-";
 
   return (
     <>
@@ -136,11 +139,7 @@ function InspectionReportBox({
             <span className="inspection-info-label">터빈</span>
             <span className="inspection-info-value">{displayTurbineName}</span>
           </div>
-
-          <div className="inspection-info-row">
-            <span className="inspection-info-label">추가 내용</span>
-            <span className="inspection-info-value">{displayContent}</span>
-          </div>
+          
         </button>
 
         <button
@@ -151,7 +150,11 @@ function InspectionReportBox({
           보고서 생성
         </button>
 
-        <button className="report-list-button" type="button">
+        <button
+          className="report-list-button"
+          type="button"
+          onClick={handleGoToReportList}
+        >
           보고서 목록
         </button>
       </div>
