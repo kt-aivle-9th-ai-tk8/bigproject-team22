@@ -12,7 +12,7 @@ import "./MainScreen.css";
 import "../components/Bar.css";
 
 import.meta.env
-const s3BucketName = import.meta.env.S3_BUCKET_NAME;
+const s3BucketName = S3_BUCKET_NAME;
 
 const alarmReports = [
   {
@@ -66,19 +66,9 @@ const alarmReports = [
 ];
 
 function MainScreen() {
-  
   console.log("현재 S3 버킷 이름:", s3BucketName);
-  const navigate = useNavigate();
 
-  const {
-    plants,
-    isPlantsLoading,
-    plantsError,
-  } = useWindFarms({
-    location: 1,
-    power: 1,
-    weather: 1,
-  });
+  const navigate = useNavigate();
 
   const [screenMode, setScreenMode] = useState(() => {
     return localStorage.getItem("screenMode") || "map";
@@ -86,14 +76,24 @@ function MainScreen() {
 
   const [selectedPlant, setSelectedPlant] = useState(() => {
     const savedPlant = localStorage.getItem("selectedPlant");
-
     return savedPlant ? JSON.parse(savedPlant) : null;
   });
 
   const [selectedTurbine, setSelectedTurbine] = useState(() => {
     const savedTurbine = localStorage.getItem("selectedTurbine");
-
     return savedTurbine ? JSON.parse(savedTurbine) : null;
+  });
+
+  const {
+    plants,
+    isPlantsLoading,
+    plantsError,
+  } = useWindFarms({
+    mode: screenMode,
+    refreshInterval: 600000,
+    location: 1,
+    power: 1,
+    weather: 1,
   });
 
   useEffect(() => {

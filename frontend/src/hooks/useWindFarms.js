@@ -4,8 +4,6 @@ import { fetchWindFarms } from "../api/windFarmApi";
 import { dummyWindFarms } from "../mocks/dummyWindFarms";
 import { convertWindFarmToPlant } from "../utils/windFarmMapper";
 
-const USE_DUMMY_WIND_FARMS = false;
-
 const getWindFarmListFromResponse = (responseBody) => {
   if (Array.isArray(responseBody)) {
     return responseBody;
@@ -19,6 +17,8 @@ const getWindFarmListFromResponse = (responseBody) => {
 };
 
 export const useWindFarms = ({
+  mode,
+  refreshInterval = 5000,
   topN,
   location = 1,
   power = 1,
@@ -29,16 +29,28 @@ export const useWindFarms = ({
   const [plantsError, setPlantsError] = useState(null);
 
   useEffect(() => {
-    const loadWindFarms = async () => {
+    if (mode !== "map") {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadWindFarms = async (isInitial = false) => {
       try {
-        setIsPlantsLoading(true);
+        if (isInitial) {
+          setIsPlantsLoading(true);
+        }
+
         setPlantsError(null);
 
         if (USE_DUMMY_WIND_FARMS) {
           const convertedDummyPlants =
             dummyWindFarms.map(convertWindFarmToPlant);
 
-          setPlants(convertedDummyPlants);
+          if (isMounted) {
+            setPlants(convertedDummyPlants);
+          }
+
           return;
         }
 
@@ -55,17 +67,47 @@ export const useWindFarms = ({
         const convertedPlants =
           windFarmList.map(convertWindFarmToPlant);
 
-        setPlants(convertedPlants);
+        if (isMounted) {
+          setPlants(convertedPlants);
+        }
       } catch (error) {
         console.error("발전소 목록 API 오류:", error);
-        setPlantsError(error.message);
+
+        if (isMounted) {
+          setPlantsError(error.message);
+        }
       } finally {
-        setIsPlantsLoading(false);
+        if (isInitial && isMounted) {
+          setIsPlantsLoading(false);
+        }
       }
     };
 
-    loadWindFarms();
-  }, [topN, location, power, weather]);
+    loadWindFarms(true);
+
+    let intervalId = null;
+
+    if (refreshInterval > 0) {
+      intervalId = setInterval(() => {
+        loadWindFarms(false);
+      }, refreshInterval);
+    }
+
+    return () => {
+      isMounted = false;
+
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [
+    mode,
+    refreshInterval,
+    topN,
+    location,
+    power,
+    weather,
+  ]);
 
   return {
     plants,
