@@ -9,6 +9,7 @@ import SideBar from "../components/SideBar";
 
 import { useWindFarmDetail } from "../hooks/useWindFarmDetail";
 import { useWindFarms } from "../hooks/useWindFarms";
+import { useWindFarmDetail } from "../hooks/useWindFarmDetail";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -89,7 +90,14 @@ function MainScreen() {
     mode: screenMode,
     refreshInterval: 10000,
   });
-
+  const {
+    windFarmDetail,
+    isWindFarmDetailLoading,
+    windFarmDetailError,
+  } = useWindFarmDetail({
+    mode: screenMode,
+    windFarmId: selectedPlant?.id,
+  });
   const {
     windFarmDetail,
     isWindFarmDetailLoading,
@@ -154,7 +162,7 @@ function MainScreen() {
     };
   }, []);
 
-  const turbines = selectedPlant?.turbines || [];
+  const turbines = windFarmDetail?.turbines || [];
 
   useEffect(() => {
     localStorage.setItem("screenMode", screenMode);

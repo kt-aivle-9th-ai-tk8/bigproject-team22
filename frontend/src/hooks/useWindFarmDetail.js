@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { fetchWindFarmById } from "../api/windFarmApi";
+import { convertWindFarmDetailToPlant } from "../utils/windFarmMapper";
 
 export const useWindFarmDetail = ({
   mode,
@@ -25,10 +26,13 @@ export const useWindFarmDetail = ({
         setWindFarmDetailError(null);
 
         const responseBody =
-          await fetchWindFarmById(windFarmId);
+            await fetchWindFarmById(windFarmId);
+
+        const convertedWindFarm =
+            convertWindFarmDetailToPlant(responseBody.data);
 
         if (isMounted) {
-          setWindFarmDetail(responseBody);
+            setWindFarmDetail(convertedWindFarm);
         }
       } catch (error) {
         console.error(
