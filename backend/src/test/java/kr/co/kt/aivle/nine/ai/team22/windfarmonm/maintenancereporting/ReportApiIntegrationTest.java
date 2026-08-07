@@ -255,13 +255,23 @@ class ReportApiIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("목록은 담당 단지로 범위가 좁혀지고 유형으로 필터링된다")
+    @DisplayName("목록은 담당 단지로 좁혀지고, 유형 필터가 먹으며, 본문은 제외된다")
     void getReports_scopedAndFiltered() {
         String cookie = managerCookie();
-        createTurbineReport(cookie, farmA, turbineA);
+        // 담당 단지(farmA) 보고서에 본문을 채운다 — 목록 프로젝션이 본문을 빼는지 검증하려면 본문이 실재해야 한다.
+        String reportId = extractId(createTurbineReport(cookie, farmA, turbineA));
+        send(HttpMethod.PATCH, "/reports/" + reportId, "{\"context\":\"목록에_안나와야_할_본문A\"}", cookie);
+        // 비담당 단지(farmB) 보고서를 직접 심는다 — 범위 격리가 실제로 이를 걸러내는지 검증하려면 존재해야 한다.
+        jdbc.update("""
+                INSERT INTO report (wind_farm_id, report_type, status, title, context, period_start, period_end)
+                VALUES (?, 'WIND_FARM_OPERATION', 'GENERATED', '단지B_전용_보고서', '본문B', '2026-07-01 00:00:00', '2026-07-31 23:00:00')
+                """, farmB);
 
-        assertThat(send(HttpMethod.GET, "/reports", null, cookie).getBody())
-                .contains("TURBINE_OPERATION");
+        String body = send(HttpMethod.GET, "/reports", null, cookie).getBody();
+        assertThat(body)
+                .contains("TURBINE_OPERATION")            // 담당 보고서는 보인다
+                .doesNotContain("단지B_전용_보고서")        // 다른 단지 보고서는 범위 밖(격리)
+                .doesNotContain("목록에_안나와야_할_본문A"); // 본문은 목록 프로젝션에서 제외
         // 다른 유형으로 필터하면 결과가 비어야 한다
         assertThat(send(HttpMethod.GET, "/reports?report_type=DEFECT_DIAGNOSIS", null, cookie).getBody())
                 .contains("\"data\":[]");
