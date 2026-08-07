@@ -52,8 +52,6 @@ _RDS_TABLES = {
         "inspection_id", "turbine_id", "user_id", "report_id",
         "inspection_start", "inspection_end", "status", "created_at",
     )),
-    # area_pixel 은 ERD 신규 컬럼이라 CSV 에 없다 — 집계도 안 쓰므로 SELECT 에서 뺀다
-    # (넣으면 CSV 경로와 컬럼 구성이 달라진다).
     "defect": ("defect", (
         "defect_id", "inspection_id", "blade_id", "defect_type", "severity", "part_side",
         "bbox_x", "bbox_y", "bbox_w", "bbox_h", "confidence", "image_path", "created_at",

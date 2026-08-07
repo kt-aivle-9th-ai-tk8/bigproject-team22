@@ -106,14 +106,15 @@ def build_frames(with_aws: bool) -> dict:
     report = pd.DataFrame({
         "report_id": report["report_id"],
         "wind_farm_id": report["wind_farm_id"].astype("int64"),
-        "turbine_id": None,      # defect 보고서는 터빈 여러 대를 묶을 수 있어 비운다
-        "approver_id": None,     # 미승인
-        "event_id": None,        # 이상감지 보고서가 아님
+        "turbine_id": None,        # defect 보고서는 터빈 여러 대를 묶을 수 있어 비운다
+        "approver_id": None,       # 미승인
+        "anomaly_event_id": None,  # 이상감지 보고서가 아님
         "report_type": report["report_type"],
-        "period_start": report["period_start"].dt.date,
-        "period_end": report["period_end"].dt.date,
+        # 시각까지 그대로 넣는다(DB 가 DATETIME) — 점검이 자정을 넘기는 건이 있어 날짜로 자르면 구간이 뭉개진다.
+        "period_start": report["period_start"],
+        "period_end": report["period_end"],
         "title": None,
-        "content": None,         # 본문은 report-agent 가 생성한다 — 지어내지 않는다
+        "context": None,           # 본문은 report-agent 가 생성한다 — 지어내지 않는다
         "status": report["status"],
         "generated_at": None,
     })
@@ -126,8 +127,7 @@ def build_frames(with_aws: bool) -> dict:
         "users": users,
         "report": report,
         "inspection": insp,
-        # area_pixel 은 ERD 에만 있는 신규 컬럼 — CSV 에 값이 없으므로 NULL 로 둔다.
-        "defect": df.assign(area_pixel=None),
+        "defect": df,
     }
     if with_aws:
         frames["aws_record"] = _read("aws_record", parse_dates=["timestamp"])

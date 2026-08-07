@@ -17,12 +17,12 @@ ALTER TABLE users
 -- (그래서 대상 행이 지워져도 이력은 남는다 — 감사 로그로서는 그게 맞는 동작이다).
 CREATE TABLE audit_log
 (
-    log_id           BIGINT      NOT NULL AUTO_INCREMENT,
-    user_id          BIGINT      NOT NULL,
-    action_type      VARCHAR(20) NOT NULL,
-    target_table     VARCHAR(50) DEFAULT NULL,
-    target_record_id BIGINT      DEFAULT NULL,
-    created_at       DATETIME(6) NOT NULL,
+    log_id       BIGINT      NOT NULL AUTO_INCREMENT,
+    user_id      BIGINT      NOT NULL COMMENT '행위 주체',
+    action_type  VARCHAR(50) NOT NULL COMMENT 'report_edit / report_approve / notification_sent / role_change / login / logout',
+    target_table VARCHAR(50) DEFAULT NULL COMMENT '예: report, users',
+    target_id    BIGINT      DEFAULT NULL COMMENT '예: report_id 값',
+    created_at   DATETIME(6) NOT NULL,
     PRIMARY KEY (log_id),
     KEY idx_audit_log_user_created (user_id, created_at),
     CONSTRAINT fk_audit_log_user FOREIGN KEY (user_id) REFERENCES users (user_id)
@@ -34,12 +34,12 @@ CREATE TABLE audit_log
 CREATE TABLE notification
 (
     notification_id BIGINT       NOT NULL AUTO_INCREMENT,
-    user_id         BIGINT       NOT NULL,
-    report_id       BIGINT       DEFAULT NULL,
+    user_id         BIGINT       NOT NULL COMMENT '알림 받는 관리자',
+    report_id       BIGINT       DEFAULT NULL COMMENT '알림 발생 원인',
     -- 보고서 제목 사본. 원본 제목이 바뀌어도 발송 당시 문구가 보존되도록 스냅샷으로 들고 있다.
     report_title    VARCHAR(200) DEFAULT NULL,
     is_read         BOOLEAN      NOT NULL DEFAULT FALSE,
-    sent_at         DATETIME(6)  DEFAULT NULL,
+    sent_at         DATETIME(6)  NOT NULL,
     PRIMARY KEY (notification_id),
     -- '내 안 읽은 알림' 이 기본 질의다.
     KEY idx_notification_user_read (user_id, is_read),
@@ -53,13 +53,14 @@ CREATE TABLE notification
 -- 트랜잭셔널 아웃박스: 도메인 변경과 이벤트 발행을 한 트랜잭션에 묶고, 실제 발행은 별도 릴레이가 한다.
 CREATE TABLE outbox_event
 (
-    id             BIGINT      NOT NULL AUTO_INCREMENT,
-    aggregate_type VARCHAR(50) NOT NULL,
-    aggregate_id   VARCHAR(50) NOT NULL,
-    event_type     VARCHAR(50) NOT NULL,
-    payload        JSON        NOT NULL,
-    status         VARCHAR(20) NOT NULL,
-    created_at     DATETIME(6) NOT NULL,
+    id             BIGINT       NOT NULL AUTO_INCREMENT,
+    aggregate_type VARCHAR(50)  NOT NULL COMMENT '도메인 타입 (예: Inspection)',
+    -- INT 식별자와 호환되도록 VARCHAR 로 둔다(어떤 애그리거트든 문자열로 담는다).
+    aggregate_id   VARCHAR(50)  NOT NULL COMMENT '대상 엔티티 ID',
+    event_type     VARCHAR(100) NOT NULL COMMENT '예: InspectionImageUploaded',
+    payload        JSON         NOT NULL COMMENT 'SQS 로 발행할 실제 데이터 본문',
+    status         VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING / PUBLISHED / FAILED',
+    created_at     DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     PRIMARY KEY (id),
     -- 릴레이가 '미발행 건을 발생 순서대로' 폴링한다.
     KEY idx_outbox_event_status_created (status, created_at)

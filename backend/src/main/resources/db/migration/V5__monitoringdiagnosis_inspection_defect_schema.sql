@@ -23,27 +23,36 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE report
 (
-    report_id    BIGINT       NOT NULL AUTO_INCREMENT,
-    wind_farm_id BIGINT       NOT NULL,
-    turbine_id   BIGINT       DEFAULT NULL,
+    report_id        BIGINT       NOT NULL AUTO_INCREMENT,
+    wind_farm_id     BIGINT       NOT NULL,
+    turbine_id       BIGINT       DEFAULT NULL,
     -- 결재자. 승인 전에는 비어 있다.
-    approver_id  BIGINT       DEFAULT NULL,
-    event_id     BIGINT       DEFAULT NULL COMMENT 'anomaly 보고서의 대상 이벤트(V4 anomaly_events)',
-    report_type  VARCHAR(50)  NOT NULL,
-    period_start DATE         NOT NULL,
-    period_end   DATE         DEFAULT NULL,
-    title        VARCHAR(200) DEFAULT NULL,
-    -- 생성된 보고서 본문(마크다운). 길이 상한이 없어야 하므로 TEXT.
-    content      TEXT,
-    status       VARCHAR(50)  DEFAULT NULL,
-    generated_at DATETIME(6)  DEFAULT NULL,
+    approver_id      BIGINT       DEFAULT NULL,
+    anomaly_event_id BIGINT       DEFAULT NULL COMMENT '자동 생성 트리거가 된 이벤트. 운영/정기 보고서는 NULL',
+    report_type      VARCHAR(50)  NOT NULL COMMENT 'wind_farm_operation / turbine_operation / defect_diagnosis / anomaly_event',
+    -- 보고서가 다루는 구간. DATE 가 아니라 DATETIME 인 이유: 대상이 시각 단위로 발생한다.
+    --   anomaly : anomaly_events.start_time/end_time (매시각 배치)
+    --   defect  : inspection_start/end — 점검이 자정을 넘겨 이틀에 걸치는 건이 있다
+    -- 날짜 단위 보고서(월간 운영 등)는 00:00:00 으로 채우면 되므로 손해가 없다.
+    period_start     DATETIME(6)  NOT NULL,
+    period_end       DATETIME(6)  NOT NULL,
+    title            VARCHAR(200) DEFAULT NULL,
+    -- LangGraph 에이전트가 생성한 본문(마크다운).
+    -- TEXT(65,535바이트)가 아니라 MEDIUMTEXT(16,777,215바이트)인 이유:
+    --   TEXT 는 utf8mb4 기준 한글 약 21,800자(글자당 3바이트, 이모지는 4바이트)에서 잘린다.
+    --   결함 보고서는 검출 이미지 수만큼 줄이 늘어나고 image_path(S3 URL)가 길어질 수 있어
+    --   상한을 예측할 수 없다. MEDIUMTEXT 면 한글 약 550만 자로 사실상 제약이 없다.
+    -- 저장 용량 기준: 1건당 16MB. 현재 실측은 결함 보고서 1~4KB 수준.
+    context          MEDIUMTEXT,
+    status           VARCHAR(50)  DEFAULT NULL COMMENT 'pending: 적재만 됨 / processing: 생성중 / generated: 생성됨',
+    generated_at     DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (report_id),
     KEY idx_report_farm_type_period (wind_farm_id, report_type, period_start),
     CONSTRAINT fk_report_wind_farm FOREIGN KEY (wind_farm_id) REFERENCES wind_farms (wind_farm_id),
     CONSTRAINT fk_report_turbine FOREIGN KEY (turbine_id) REFERENCES turbines (turbine_id),
     CONSTRAINT fk_report_approver FOREIGN KEY (approver_id) REFERENCES users (user_id),
     -- V4 가 만든 anomaly_events(복수형)를 참조한다.
-    CONSTRAINT fk_report_event FOREIGN KEY (event_id) REFERENCES anomaly_events (event_id)
+    CONSTRAINT fk_report_anomaly_event FOREIGN KEY (anomaly_event_id) REFERENCES anomaly_events (event_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
@@ -57,14 +66,14 @@ CREATE TABLE inspection
 (
     inspection_id    BIGINT      NOT NULL AUTO_INCREMENT,
     turbine_id       BIGINT      NOT NULL,
-    -- 점검 수행자.
-    user_id          BIGINT      NOT NULL,
+    -- 점검 수행자. ERD 는 INT 지만 users.user_id 가 BIGINT 라 FK 타입을 맞춰야 한다
+    -- (타입이 다르면 FK 생성 자체가 실패한다).
+    user_id          BIGINT      DEFAULT NULL,
     report_id        BIGINT      NOT NULL,
-    inspection_start DATETIME(6) NOT NULL,
-    -- 판독이 끝나기 전에는 비어 있다.
-    inspection_end   DATETIME(6) DEFAULT NULL,
+    inspection_start DATETIME(6) NOT NULL COMMENT '드론 촬영 날짜',
+    inspection_end   DATETIME(6) NOT NULL,
     -- UPLOADING → INSPECTING → INSPECTED 진행 순서. 값 검증은 애플리케이션이 담당.
-    status           VARCHAR(20) NOT NULL,
+    status           VARCHAR(50) NOT NULL,
     created_at       DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (inspection_id),
     -- 보고서 1건에 달린 점검 전부를 긁는 질의가 기본 경로다.
@@ -88,19 +97,17 @@ CREATE TABLE defect
     defect_id     BIGINT       NOT NULL AUTO_INCREMENT,
     inspection_id BIGINT       NOT NULL,
     blade_id      BIGINT       NOT NULL,
-    defect_type   VARCHAR(50)  NOT NULL COMMENT 'YOLO 모델의 클래스명',
-    -- 심각도 1~4. 값 범위 검증은 애플리케이션이 담당한다(등급 확장 시 마이그레이션 불필요).
-    severity      INT          NOT NULL,
-    -- 앞전/뒷전 등 블레이드 부위.
-    part_side     VARCHAR(20)  NOT NULL,
+    defect_type   VARCHAR(50)  NOT NULL COMMENT 'YOLO 모델의 클래스명 (9종: Contamination, Paint Damage 등)',
+    -- 심각도 1~4 (CNN 분류). 값 범위 검증은 애플리케이션이 담당한다(등급 확장 시 마이그레이션 불필요).
+    severity      INT          DEFAULT NULL,
+    part_side     VARCHAR(20)  DEFAULT NULL COMMENT 'LE / TE / PS / SS',
     bbox_x        DOUBLE       DEFAULT NULL,
     bbox_y        DOUBLE       DEFAULT NULL,
     bbox_w        DOUBLE       DEFAULT NULL,
     bbox_h        DOUBLE       DEFAULT NULL,
-    area_pixel    DOUBLE       DEFAULT NULL,
-    confidence    DOUBLE       DEFAULT NULL COMMENT 'AI 검출 신뢰도',
+    confidence    DOUBLE       DEFAULT NULL COMMENT 'AI 검출 신뢰도 0~1',
     -- S3 키 또는 상대 경로. 렌더링 시 IMAGE_BASE_URL 을 앞에 붙인다.
-    image_path    VARCHAR(300) DEFAULT NULL,
+    image_path    VARCHAR(500) DEFAULT NULL,
     created_at    DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (defect_id),
     -- 보고서가 '점검 1건의 결함 전부'를 긁는 것이 기본 경로다.
