@@ -16,6 +16,7 @@ import "./PlantSideBar.css";
 
 function PlantSideBar({
   selectedPlant,
+  windFarmDetail,
   onSelectTurbine,
   onCreateInspectionReport,
 }) {
@@ -48,17 +49,17 @@ function PlantSideBar({
 
   const weatherInfo = {
     title: plantName || "발전소",
-    weatherType: WEATHER_TYPE.RAIN,
-    temperature: 32.0,
-    windSpeed: 5.0,
+    weatherType: windFarmDetail?.weather?.weatherType,
+    temperature: windFarmDetail?.weather?.temperature ?? 0,
+    windSpeed: windFarmDetail?.weather?.windSpeed ?? 0,
   };
 
   const powerInfo = {
     title: plantName || "발전소",
-    currentOutput: 1005.4,
-    currentPower: 412,
-    monthPower: 8.7,
-    yearPower: 96.4,
+    currentOutput: windFarmDetail?.power?.currentOutput ?? 0,
+    currentPower: windFarmDetail?.power?.currentPower ?? 0,
+    monthPower: windFarmDetail?.power?.monthPower ?? 0,
+    yearPower: windFarmDetail?.power?.yearPower ?? 0,
   };
 
   return (
