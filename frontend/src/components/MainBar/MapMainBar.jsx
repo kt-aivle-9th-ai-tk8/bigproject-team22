@@ -41,6 +41,7 @@ function MapMainBar({
     <div className="map-main-bar">
       <Map
         plants={plants}
+        iconSrc={plantIcon}
         onSelectPlant={handleSelectPlant}
       />
 
@@ -111,27 +112,22 @@ function MapMainBar({
 }
 
 const areEqual = (prevProps, nextProps) => {
-  // 로딩 상태가 바뀌면 다시 렌더링
   if (prevProps.isLoading !== nextProps.isLoading) {
     return false;
   }
 
-  // 에러 상태가 바뀌면 다시 렌더링
   if (prevProps.error !== nextProps.error) {
     return false;
   }
 
-  // callback이 바뀌면 다시 렌더링
   if (prevProps.onSelectPlant !== nextProps.onSelectPlant) {
     return false;
   }
 
-  // 발전소 개수가 바뀌면 다시 렌더링
   if (prevProps.plants.length !== nextProps.plants.length) {
     return false;
   }
 
-  // MapMainBar에서 필요한 데이터만 비교
   return prevProps.plants.every((prevPlant, index) => {
     const nextPlant = nextProps.plants[index];
 
