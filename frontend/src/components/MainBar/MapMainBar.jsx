@@ -20,7 +20,7 @@ function MapMainBar({
     onSelectPlant?.(plant);
     setIsPlantListOpen(false);
   };
-
+  
   if (isLoading) {
     return (
       <div className="map-main-bar">
@@ -40,15 +40,16 @@ function MapMainBar({
   return (
     <div className="map-main-bar">
       <Map
-        plants={plants}
+        objects={plants}
         iconSrc={plantIcon}
-        onSelectPlant={handleSelectPlant}
+        iconScale={0.05}
+        clusterDistance={40}
+        clusterMinDistance={15}
+        onSelectObject={onSelectPlant}
       />
 
       <button
-        className={`map-plant-menu-button ${
-          isPlantListOpen ? "active" : ""
-        }`}
+        className={`map-plant-menu-button ${isPlantListOpen ? "active" : ""}`}
         type="button"
         aria-label="발전소 리스트 열기"
         onClick={handleTogglePlantList}
@@ -62,7 +63,6 @@ function MapMainBar({
         <div className="map-plant-list-panel">
           <div className="map-plant-list-header">
             <strong>발전소 리스트</strong>
-
             <button
               type="button"
               onClick={() => setIsPlantListOpen(false)}
