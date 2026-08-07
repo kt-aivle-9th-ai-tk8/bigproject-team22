@@ -7,6 +7,7 @@ import MainBar from "../components/MainBar";
 import UnderBar from "../components/UnderBar";
 import SideBar from "../components/SideBar";
 
+import { useWindFarmDetail } from "../hooks/useWindFarmDetail";
 import { useWindFarms } from "../hooks/useWindFarms";
 
 import "./MainScreen.css";
@@ -88,6 +89,14 @@ function MainScreen() {
     mode: screenMode,
     refreshInterval: 10000,
   });
+  const {
+    windFarmDetail,
+    isWindFarmDetailLoading,
+    windFarmDetailError,
+  } = useWindFarmDetail({
+    mode: screenMode,
+    windFarmId: selectedPlant?.id,
+  });
 
   useEffect(() => {
     if (!selectedPlant) {
@@ -144,7 +153,7 @@ function MainScreen() {
     };
   }, []);
 
-  const turbines = selectedPlant?.turbines || [];
+  const turbines = windFarmDetail?.turbines || [];
 
   useEffect(() => {
     localStorage.setItem("screenMode", screenMode);
@@ -253,6 +262,8 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           isPlantsLoading={isPlantsLoading}
           plantsError={plantsError}
+          isWindFarmDetailLoading={isWindFarmDetailLoading}
+          windFarmDetailError={windFarmDetailError}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
         />

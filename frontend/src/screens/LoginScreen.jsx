@@ -85,6 +85,9 @@ function LoginScreen() {
       if (responseBody.data) {
         localStorage.setItem("userInfo", JSON.stringify(responseBody.data));
       }
+      localStorage.setItem("screenMode", "map");
+      localStorage.removeItem("selectedPlant");
+      localStorage.removeItem("selectedTurbine");
 
       setErrorCount(0);
       setModalType("success");
