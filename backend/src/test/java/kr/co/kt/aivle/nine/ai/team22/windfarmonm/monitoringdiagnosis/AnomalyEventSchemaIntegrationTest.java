@@ -40,9 +40,9 @@ class AnomalyEventSchemaIntegrationTest extends IntegrationTestSupport {
     @BeforeEach
     void setUp() {
         truncateAll(jdbc);
-        jdbc.update("INSERT INTO turbine_models (model) VALUES ('WinDS3000')");
+        jdbc.update("INSERT INTO turbine_model (model) VALUES ('WinDS3000')");
         long modelId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        jdbc.update("INSERT INTO wind_farms (wind_farm_name, wind_farm_latitude, wind_farm_longitude) VALUES ('단지', 34.7, 126.8)");
+        jdbc.update("INSERT INTO wind_farm (wind_farm_name, wind_farm_latitude, wind_farm_longitude) VALUES ('단지', 34.7, 126.8)");
         long farmId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
         turbineA = insertTurbine(farmId, modelId, "U1");
         turbineB = insertTurbine(farmId, modelId, "U2");
@@ -50,7 +50,7 @@ class AnomalyEventSchemaIntegrationTest extends IntegrationTestSupport {
 
     private long insertTurbine(long farmId, long modelId, String code) {
         jdbc.update("""
-                INSERT INTO turbines (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
+                INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
                 VALUES (?, ?, ?, ?, ?)
                 """, farmId, modelId, code, 34.7, 126.8);
         return jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
@@ -79,7 +79,7 @@ class AnomalyEventSchemaIntegrationTest extends IntegrationTestSupport {
         anomalyEventRepository.save(AnomalyEvent.detected(                        // 유형 다름
                 turbineA, AnomalyTier.A, AnomalyEventType.DATA_MISSING, START, null, AnomalyScope.FARM));
 
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM anomaly_events", Integer.class)).isEqualTo(4);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM anomaly_event", Integer.class)).isEqualTo(4);
     }
 
     @Test
@@ -93,8 +93,8 @@ class AnomalyEventSchemaIntegrationTest extends IntegrationTestSupport {
         found.refresh(null, null, 100.0, 0.0, null, -100.0, null, 900.0);
         anomalyEventRepository.save(found);
 
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM anomaly_events", Integer.class)).isEqualTo(1);
-        assertThat(jdbc.queryForObject("SELECT estimated_loss_kwh FROM anomaly_events", Double.class)).isEqualTo(900.0);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM anomaly_event", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT estimated_loss_kwh FROM anomaly_event", Double.class)).isEqualTo(900.0);
     }
 
     @Test
@@ -117,7 +117,7 @@ class AnomalyEventSchemaIntegrationTest extends IntegrationTestSupport {
                 turbineA, AnomalyTier.A, AnomalyEventType.DATA_MISSING, START, null, AnomalyScope.FARM));
 
         assertThat(jdbc.queryForObject(
-                "SELECT COUNT(*) FROM anomaly_events WHERE z_score IS NULL AND estimated_loss_kwh IS NULL",
+                "SELECT COUNT(*) FROM anomaly_event WHERE z_score IS NULL AND estimated_loss_kwh IS NULL",
                 Integer.class)).isEqualTo(1);
     }
 

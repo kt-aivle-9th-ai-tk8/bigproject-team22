@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * 터빈. 소속 단지/모델은 id 값으로 참조한다(연관관계 매핑 대신 id 참조).
  */
 @Entity
-@Table(name = "turbines")
+@Table(name = "turbine")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Turbine {

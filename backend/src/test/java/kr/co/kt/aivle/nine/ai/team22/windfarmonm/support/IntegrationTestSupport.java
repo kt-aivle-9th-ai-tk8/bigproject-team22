@@ -58,15 +58,15 @@ public abstract class IntegrationTestSupport {
 
     /** 참조하는 쪽이 먼저 온다. */
     private static final List<String> TABLES_IN_DELETE_ORDER = List.of(
-            "anomaly_events",
-            "assignments",
+            "anomaly_event",
+            "assignment",
             "monthly_generation",
             "daily_generation",
             "scada_record",
-            "blades",
-            "turbines",
-            "wind_farms",
-            "turbine_models",
-            "users"
+            "blade",
+            "turbine",
+            "wind_farm",
+            "turbine_model",
+            "`user`" // user 는 예약어라 DELETE FROM 시 백틱 필요
     );
 }
