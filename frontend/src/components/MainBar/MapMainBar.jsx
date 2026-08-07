@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import Map from "./Map/Map";
 import "./MapMainBar.css";
@@ -20,32 +20,25 @@ function MapMainBar({
     onSelectPlant?.(plant);
     setIsPlantListOpen(false);
   };
-  
+
   if (isLoading) {
     return (
-      <div className="map-main-bar">
-        발전소 데이터를 불러오는 중입니다.
-      </div>
+      발전소 데이터를 불러오는 중입니다.
     );
   }
 
   if (error) {
     return (
-      <div className="map-main-bar">
-        발전소 데이터를 불러오지 못했습니다.
-      </div>
+      발전소 데이터를 불러오지 못했습니다.
     );
   }
 
   return (
-    <div className="map-main-bar">
+    <div>
       <Map
-        objects={plants}
+        plants={plants}
         iconSrc={plantIcon}
-        iconScale={0.05}
-        clusterDistance={40}
-        clusterMinDistance={15}
-        onSelectObject={onSelectPlant}
+        onSelectPlant={handleSelectPlant}
       />
 
       <button
@@ -111,4 +104,38 @@ function MapMainBar({
   );
 }
 
-export default MapMainBar;
+const areEqual = (prevProps, nextProps) => {
+  if (prevProps.isLoading !== nextProps.isLoading) {
+    return false;
+  }
+
+  if (prevProps.error !== nextProps.error) {
+    return false;
+  }
+
+  if (prevProps.onSelectPlant !== nextProps.onSelectPlant) {
+    return false;
+  }
+
+  if (prevProps.plants.length !== nextProps.plants.length) {
+    return false;
+  }
+
+  return prevProps.plants.every((prevPlant, index) => {
+    const nextPlant = nextProps.plants[index];
+
+    return (
+      prevPlant.id === nextPlant.id &&
+      prevPlant.name === nextPlant.name &&
+      prevPlant.title === nextPlant.title &&
+      prevPlant.plantName === nextPlant.plantName &&
+      prevPlant.address === nextPlant.address &&
+      prevPlant.location === nextPlant.location &&
+      prevPlant.capacity === nextPlant.capacity &&
+      prevPlant.coordinate?.[0] === nextPlant.coordinate?.[0] &&
+      prevPlant.coordinate?.[1] === nextPlant.coordinate?.[1]
+    );
+  });
+};
+
+export default memo(MapMainBar, areEqual);
