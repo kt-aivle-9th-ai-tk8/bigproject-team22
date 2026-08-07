@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import { fetchWindFarms } from "../api/windFarmApi";
-import { dummyWindFarms } from "../mocks/dummyWindFarms";
 import { convertWindFarmToPlant } from "../utils/windFarmMapper";
 
 const getWindFarmListFromResponse = (responseBody) => {
@@ -9,7 +8,7 @@ const getWindFarmListFromResponse = (responseBody) => {
     return responseBody;
   }
 
-  if (Array.isArray(responseBody.data)) {
+  if (Array.isArray(responseBody?.data)) {
     return responseBody.data;
   }
 
@@ -18,11 +17,7 @@ const getWindFarmListFromResponse = (responseBody) => {
 
 export const useWindFarms = ({
   mode,
-  refreshInterval = 5000,
-  topN,
-  location = 1,
-  power = 1,
-  weather = 1,
+  refreshInterval = 600000,
 } = {}) => {
   const [plants, setPlants] = useState([]);
   const [isPlantsLoading, setIsPlantsLoading] = useState(true);
@@ -35,30 +30,16 @@ export const useWindFarms = ({
 
     let isMounted = true;
 
-    const loadWindFarms = async (isInitial = false) => {
+    // 최초 진입: 위치 + 발전량 + 날씨 전체 조회
+    const loadInitialWindFarms = async () => {
       try {
-        if (isInitial) {
-          setIsPlantsLoading(true);
-        }
-
+        setIsPlantsLoading(true);
         setPlantsError(null);
 
-        if (USE_DUMMY_WIND_FARMS) {
-          const convertedDummyPlants =
-            dummyWindFarms.map(convertWindFarmToPlant);
-
-          if (isMounted) {
-            setPlants(convertedDummyPlants);
-          }
-
-          return;
-        }
-
         const responseBody = await fetchWindFarms({
-          topN,
-          location,
-          power,
-          weather,
+          location: 1,
+          power: 1,
+          weather: 1,
         });
 
         const windFarmList =
@@ -71,25 +52,77 @@ export const useWindFarms = ({
           setPlants(convertedPlants);
         }
       } catch (error) {
-        console.error("발전소 목록 API 오류:", error);
+        console.error(
+          "발전소 초기 조회 API 오류:",
+          error
+        );
 
         if (isMounted) {
           setPlantsError(error.message);
         }
       } finally {
-        if (isInitial && isMounted) {
+        if (isMounted) {
           setIsPlantsLoading(false);
         }
       }
     };
 
-    loadWindFarms(true);
+    // 갱신: 발전량 + 날씨만 조회
+    const refreshWindFarms = async () => {
+      try {
+        const responseBody = await fetchWindFarms({
+          power: 1,
+          weather: 1,
+        });
+
+        const windFarmList =
+          getWindFarmListFromResponse(responseBody);
+
+        const refreshedPlants =
+          windFarmList.map(convertWindFarmToPlant);
+
+        if (isMounted) {
+          setPlants((prevPlants) =>
+            prevPlants.map((prevPlant) => {
+              const refreshedPlant =
+                refreshedPlants.find(
+                  (plant) =>
+                    plant.id === prevPlant.id
+                );
+
+              if (!refreshedPlant) {
+                return prevPlant;
+              }
+
+              return {
+                ...prevPlant,
+                weather: refreshedPlant.weather,
+                power: refreshedPlant.power,
+              };
+            })
+          );
+        }
+      } catch (error) {
+        console.error(
+          "발전소 갱신 API 오류:",
+          error
+        );
+
+        if (isMounted) {
+          setPlantsError(error.message);
+        }
+      }
+    };
+
+    // map 진입 시 즉시 전체 조회
+    loadInitialWindFarms();
 
     let intervalId = null;
 
+    // 이후 10분마다 power + weather 갱신
     if (refreshInterval > 0) {
       intervalId = setInterval(() => {
-        loadWindFarms(false);
+        refreshWindFarms();
       }, refreshInterval);
     }
 
@@ -100,14 +133,7 @@ export const useWindFarms = ({
         clearInterval(intervalId);
       }
     };
-  }, [
-    mode,
-    refreshInterval,
-    topN,
-    location,
-    power,
-    weather,
-  ]);
+  }, [mode, refreshInterval]);
 
   return {
     plants,

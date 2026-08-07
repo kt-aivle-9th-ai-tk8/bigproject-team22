@@ -86,9 +86,6 @@ function MainScreen() {
   } = useWindFarms({
     mode: screenMode,
     refreshInterval: 600000,
-    location: 1,
-    power: 1,
-    weather: 1,
   });
 
   useEffect(() => {
@@ -255,7 +252,7 @@ function MainScreen() {
 
         <SideBar
           mode={screenMode}
-          plants={plants}
+          plants={plants.slice(0, 3)}
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
           onSelectPlant={handleSelectPlant}
