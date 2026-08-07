@@ -104,7 +104,10 @@ if ($Reset) {
 $state = docker ps -a --filter "name=^$Ct$" --format '{{.State}}' 2> $null
 if (-not $state) {
     Say "    새로 생성 (localhost:$Port)"
-    docker run -d --name $Ct -p "${Port}:3306" `
+    # 127.0.0.1 에만 바인딩한다. "-p 13306:3306" 은 0.0.0.0 이라 같은 네트워크의 다른 기기에서도
+    # 붙을 수 있는데, 이 컨테이너는 비밀번호가 'verify' 인 검증용이라 노출되면 안 된다.
+    # (root@% 계정은 공식 이미지가 MYSQL_ROOT_HOST 기본값 % 로 이미 만들어 주므로 호스트 접속은 된다.)
+    docker run -d --name $Ct -p "127.0.0.1:${Port}:3306" `
         -e MYSQL_ROOT_PASSWORD=$Pw -e MYSQL_DATABASE=$Db `
         mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci > $null
     if ($LASTEXITCODE -ne 0) { Die '컨테이너 생성 실패.' }
