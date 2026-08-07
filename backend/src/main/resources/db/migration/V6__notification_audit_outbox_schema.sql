@@ -1,10 +1,10 @@
 -- 알림(notification)·작업이력(audit_log)·아웃박스(outbox_event) + users 부서 컬럼.
 -- ERD 에는 있으나 아직 스키마에 없던 것들 — report-agent 와는 무관한 별개 기능이라
--- V4(monitoringdiagnosis)와 분리한다. 해당 기능 담당자가 자기 마이그레이션으로 가져가면
+-- V5(monitoringdiagnosis)와 분리한다. 해당 기능 담당자가 자기 마이그레이션으로 가져가면
 -- 이 파일은 통째로 버려도 된다(단, 이미 적용된 뒤라면 Flyway 이력이 남으므로 삭제 금지 —
 -- 그때는 되돌리는 마이그레이션을 새로 쓸 것).
 --
--- notification 이 report 를 참조하므로 V4 뒤에 와야 한다.
+-- notification 이 report 를 참조하므로 V5 뒤에 와야 한다.
 
 
 -- users 보강 — ERD 의 소속 부서.
