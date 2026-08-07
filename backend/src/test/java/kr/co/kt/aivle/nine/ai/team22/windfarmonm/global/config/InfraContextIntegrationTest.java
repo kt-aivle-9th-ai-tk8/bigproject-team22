@@ -1,0 +1,76 @@
+package kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.config;
+
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.aws.S3ObjectStorage;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.aws.SageMakerInvoker;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.support.IntegrationTestSupport;
+import net.javacrumbs.shedlock.core.LockConfiguration;
+import net.javacrumbs.shedlock.core.LockProvider;
+import net.javacrumbs.shedlock.core.SimpleLock;
+import net.javacrumbs.shedlock.provider.redis.spring.RedisLockProvider;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * 기반 인프라 설정의 기동 보장.
+ * <p>
+ * 이 테스트가 지키는 계약은 둘이다.
+ * <ol>
+ *   <li><b>AWS·에이전트 설정이 전혀 없어도 애플리케이션 컨텍스트가 뜬다.</b> 외부 클라이언트를 빈 생성 시점에
+ *       만들면 자격증명이 없는 환경(로컬·CI)에서 기동이 실패하는데, 과거 리포트 에이전트가 정확히 그 방식으로
+ *       배포 롤백을 낸 적이 있다. 지연 초기화가 풀리면 여기서 잡힌다.</li>
+ *   <li><b>분산 락이 실제로 동작한다.</b> 빈 존재만 확인하면 라이브러리 버전이 런타임과 맞지 않아도 통과한다 —
+ *       실제로 락을 잡아 봐야 검증이 된다.</li>
+ * </ol>
+ */
+class InfraContextIntegrationTest extends IntegrationTestSupport {
+
+    @Autowired
+    ApplicationContext context;
+
+    @Test
+    @DisplayName("AWS 설정이 전무해도 컨텍스트가 기동하고 게이트웨이 빈이 미설정 상태로 존재한다")
+    void contextLoads_withoutAwsConfiguration() {
+        S3ObjectStorage storage = context.getBean(S3ObjectStorage.class);
+        SageMakerInvoker invoker = context.getBean(SageMakerInvoker.class);
+
+        assertThat(storage.isConfigured()).isFalse();
+        assertThat(invoker.isAnomalyEndpointConfigured()).isFalse();
+    }
+
+    @Test
+    @DisplayName("LockProvider 는 Redis 구현이다")
+    void lockProviderIsRedisBacked() {
+        assertThat(context.getBean(LockProvider.class)).isInstanceOf(RedisLockProvider.class);
+    }
+
+    @Test
+    @DisplayName("같은 이름의 락은 한 번만 잡힌다(중복 스케줄 실행 방지의 실동작 확인)")
+    void lock_isExclusiveForSameName() {
+        LockProvider lockProvider = context.getBean(LockProvider.class);
+        // 락 이름을 실행마다 새로 만든다. Redis 컨테이너는 실행 간 재사용되므로 고정 이름을 쓰면
+        // 이전 실행이 남긴 락이 만료(30초)되기 전에 첫 획득부터 실패한다.
+        LockConfiguration config = new LockConfiguration(
+                Instant.now(), "infra-context-test-" + UUID.randomUUID(), Duration.ofSeconds(30), Duration.ZERO);
+
+        Optional<SimpleLock> first = lockProvider.lock(config);
+        assertThat(first).as("첫 획득은 성공해야 한다").isPresent();
+
+        try {
+            // 락이 잡혀 있는 동안 같은 이름으로는 획득할 수 없어야 한다 = 다른 인스턴스의 중복 실행이 막힌다
+            assertThat(lockProvider.lock(config)).as("잡힌 락은 재획득되지 않아야 한다").isEmpty();
+        } finally {
+            // 단언이 실패해도 반드시 푼다. 안 그러면 만료(30초)까지 Redis 에 락이 남아
+            // 뒤따르는 테스트가 원인 없이 함께 깨진다.
+            first.get().unlock();
+        }
+    }
+}

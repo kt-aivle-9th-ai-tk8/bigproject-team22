@@ -17,6 +17,7 @@ import CloudyLayer from "./layers/CloudyLayer";
 import CameraZoomController from "./CameraZoomController";
 import BladeInfoPopup from "./BladeInfoPopup";
 import Turbine3DSidebar from "./Turbine3DSidebar";
+// Vite를 사용 중이라면 import.meta.env로 접근합니다.
 
 /*
  * 풍력 터빈 운전 기준
