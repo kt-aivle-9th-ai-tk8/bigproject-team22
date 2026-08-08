@@ -42,12 +42,13 @@ class NotificationApiIntegrationTest extends IntegrationTestSupport {
     private final RestClient client = RestClient.create();
 
     private long ownerId;
+    private long otherUserId;
 
     @BeforeEach
     void setUp() {
         truncateAll(jdbc);
         ownerId = seedUser("MGR1");
-        seedUser("MGR2"); // 타인
+        otherUserId = seedUser("MGR2"); // 타인
     }
 
     @AfterEach
@@ -99,11 +100,13 @@ class NotificationApiIntegrationTest extends IntegrationTestSupport {
     void getNotifications_ownScopeAndUnreadFilter() {
         seedNotification(ownerId, "읽지않은알림", false);
         seedNotification(ownerId, "읽은알림", true);
+        seedNotification(otherUserId, "타인알림", false); // 목록이 범위를 실제로 좁히는지 검증용
         String cookie = loginCookie("MGR1");
 
         String all = send(HttpMethod.GET, "/notifications", cookie).getBody();
         assertThat(all).contains("읽지않은알림").contains("읽은알림")
-                .contains("\"id\":\"").contains("\"is_read\":");
+                .contains("\"id\":\"").contains("\"is_read\":")
+                .doesNotContain("타인알림"); // 타인 알림은 범위 밖
 
         String unread = send(HttpMethod.GET, "/notifications?unread=true", cookie).getBody();
         assertThat(unread).contains("읽지않은알림").doesNotContain("읽은알림");
