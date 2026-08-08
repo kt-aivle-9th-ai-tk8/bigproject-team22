@@ -83,7 +83,14 @@ public class ReportGenerationService {
         }
         Matcher m = DIGITS.matcher(turbineCode);
         if (m.find()) {
-            return Integer.parseInt(m.group());
+            try {
+                return Integer.parseInt(m.group());
+            } catch (NumberFormatException e) {
+                // 비정상적으로 긴 숫자열이면 int 범위를 넘겨 예외가 난다. 다른 실패 경로처럼 0 으로 폴백해
+                // markProcessing 트랜잭션 밖으로 예외가 전파되지 않도록 한다(리스너 try 는 generate 만 감싼다).
+                log.warn("터빈 코드의 번호가 int 범위를 벗어난다: {}", turbineCode);
+                return 0;
+            }
         }
         log.warn("터빈 코드에서 번호를 뽑지 못했다: {}", turbineCode);
         return 0;

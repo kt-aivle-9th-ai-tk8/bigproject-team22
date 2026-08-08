@@ -95,6 +95,23 @@ class ReportGenerationServiceTest extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("터빈 코드 숫자가 int 범위를 넘으면 event_id 는 0 으로 폴백한다(예외 전파 방지)")
+    void markProcessing_turbineCodeOverflow_fallsBackToZero() {
+        long modelId = jdbc.queryForObject(
+                "SELECT turbine_model_id FROM turbine WHERE turbine_id = ?", Long.class, turbineId);
+        jdbc.update("""
+                INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
+                VALUES (?, ?, 'U99999999999999999', 34.7, 126.8)
+                """, farmId, modelId);
+        long bigTurbine = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        Long reportId = saveReport(ReportType.TURBINE_OPERATION, bigTurbine);
+
+        ReportGenerationService.Dispatch dispatch = generationService.markProcessing(reportId);
+
+        assertThat(dispatch.target().eventId()).isZero();
+    }
+
+    @Test
     @DisplayName("경쟁 삭제: 대상 보고서가 없으면 null 을 돌려주고 조용히 끝난다")
     void markProcessing_missingReport_returnsNull() {
         assertThat(generationService.markProcessing(99_999_999L)).isNull();
