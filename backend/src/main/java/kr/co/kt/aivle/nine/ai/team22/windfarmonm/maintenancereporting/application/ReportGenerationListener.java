@@ -51,7 +51,8 @@ public class ReportGenerationListener {
             result = generationPort.generate(dispatch.target()); // 긴 외부 동기 호출 — 트랜잭션 밖
         } catch (RuntimeException e) {
             // 어댑터가 이미 삼키지만 방어적으로 한 번 더 — 실패해도 보고서는 PROCESSING 으로 남고 회수 가능.
-            log.warn("보고서 {} 생성 호출 실패: {}", reportId, e.getMessage());
+            // throwable 을 넘겨 stack trace 를 보존한다(@Async 라 호출 스택이 끊기기 쉬움).
+            log.warn("보고서 {} 생성 호출 실패", reportId, e);
             return;
         }
 

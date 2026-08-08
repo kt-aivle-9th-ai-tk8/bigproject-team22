@@ -64,8 +64,9 @@ public class ReportAgentAdapter implements ReportGenerationPort {
             return new ReportGenerationResult(response.found(), response.draft(), response.verdict());
         } catch (RuntimeException e) {
             // 대상없음(404)·LLM 실패(502)·타임아웃 등 모두 여기로. 보고서는 PROCESSING 유지.
-            log.warn("report-agent 생성 호출 실패(type={}, eventId={}): {}",
-                    target.agentType(), target.eventId(), e.getMessage());
+            // throwable 을 넘겨 stack trace·원인(HTTP status/timeout)을 보존한다(SageMakerInvoker 관례).
+            log.warn("report-agent 생성 호출 실패(type={}, eventId={})",
+                    target.agentType(), target.eventId(), e);
             return ReportGenerationResult.notGenerated();
         }
     }
