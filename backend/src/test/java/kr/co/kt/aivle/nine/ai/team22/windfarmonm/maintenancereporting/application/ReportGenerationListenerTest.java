@@ -101,6 +101,18 @@ class ReportGenerationListenerTest {
     }
 
     @Test
+    @DisplayName("markProcessing 이 예외를 던져도 파이프라인 밖으로 전파되지 않는다(@Async 핸들러로 탈출 방지)")
+    void markProcessingThrows_swallowed() {
+        enabled();
+        when(generationService.markProcessing(7L)).thenThrow(new RuntimeException("db down"));
+
+        listener.onReportGenerationRequested(EVENT); // 예외가 전파되면 테스트 실패
+
+        verify(generationPort, never()).generate(any());
+        verify(generationService, never()).applyGenerated(any(), any(), any());
+    }
+
+    @Test
     @DisplayName("에이전트 호출이 예외를 던져도 삼키고 적재하지 않는다(PROCESSING 유지)")
     void agentThrows_swallowed() {
         enabled();
