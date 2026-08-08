@@ -58,6 +58,14 @@ public abstract class IntegrationTestSupport {
 
     /** 참조하는 쪽이 먼저 온다. */
     private static final List<String> TABLES_IN_DELETE_ORDER = List.of(
+            "defect",             // → inspection, blade
+            "notification",       // → report, user
+            "audit_log",          // → user
+            "inspection",         // → report, turbine, user
+            "report",             // → wind_farm, turbine, user, anomaly_event
+            "outbox_event",       // FK 없음
+            "aws_record",         // FK 없음
+            "asos_record",        // FK 없음
             "anomaly_event",
             "assignment",
             "monthly_generation",
@@ -67,6 +75,6 @@ public abstract class IntegrationTestSupport {
             "turbine",
             "wind_farm",
             "turbine_model",
-            "`user`" // user 는 예약어라 DELETE FROM 시 백틱 필요
+            "`user`"              // user 는 예약어라 DELETE FROM 시 백틱 필요
     );
 }
