@@ -19,6 +19,10 @@ public interface AssignmentJpaRepository extends JpaRepository<Assignment, UserW
     @Query("select a.windFarmId from Assignment a where a.userId = :userId")
     List<Long> findWindFarmIdsByUserId(@Param("userId") Long userId);
 
+    // 단지 담당자 역방향 조회(알림 fan-out). user_id 만 뽑는다.
+    @Query("select a.userId from Assignment a where a.windFarmId = :windFarmId")
+    List<Long> findUserIdsByWindFarmId(@Param("windFarmId") Long windFarmId);
+
     boolean existsByUserIdAndWindFarmId(Long userId, Long windFarmId);
 
     /** 터빈 → 소속 단지 → 담당 배정을 한 번에 확인(터빈 존재 여부를 드러내지 않기 위해 인가를 선행 검사). */
