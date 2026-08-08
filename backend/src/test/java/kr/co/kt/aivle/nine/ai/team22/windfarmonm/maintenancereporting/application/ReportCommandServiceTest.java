@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,6 +46,8 @@ class ReportCommandServiceTest {
     ReportQueryService reportQueryService;
     @Mock
     ReportAssetPort assetPort;
+    @Mock
+    ApplicationEventPublisher eventPublisher;
     @InjectMocks
     ReportCommandService service;
 

@@ -2,12 +2,14 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.applicati
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.dto.CreateReportCommand;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.dto.ReportResult;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.event.ReportGenerationRequested;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.port.ReportAssetPort;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.Report;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.ReportRepository;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ public class ReportCommandService {
     private final ReportRepository reportRepository;
     private final ReportQueryService reportQueryService;
     private final ReportAssetPort assetPort;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 보고서 생성 요청. 생성된 식별자를 돌려준다.
@@ -55,7 +58,10 @@ public class ReportCommandService {
                 command.anomalyEventId(),
                 userId);
         try {
-            return reportRepository.save(report).getId();
+            Long reportId = reportRepository.save(report).getId();
+            // 커밋 후 리스너가 생성 파이프라인을 돈다(AFTER_COMMIT). 커밋 전이면 콜백이 행보다 먼저 도착한다.
+            eventPublisher.publishEvent(new ReportGenerationRequested(reportId));
+            return reportId;
         } catch (DataIntegrityViolationException e) {
             // 단지/터빈 FK 또는 (터빈,단지) 복합 FK 위반. 어느 참조가 문제인지는 구분하지 않는다.
             throw new BusinessException(ErrorCode.INVALID_REPORT_TARGET);
