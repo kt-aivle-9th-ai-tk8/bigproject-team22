@@ -4,13 +4,13 @@
     wind_farm → turbine_model → turbine → blade → user → report → inspection → defect
 이 순서는 FK 의존 순서라 바꾸면 안 된다.
 
-이상감지(anomaly) 체인 — --with-anomaly 로 추가 적재 (기본은 제외):
+이상감지(anomaly) 체인 — data/ 에 CSV 가 있으면 자동 적재(없으면 조용히 스킵):
   scada_record · anomaly_event · aws_record · asos_record
-  과거엔 CSV 가 turbine_code(U1~U8)라 turbine_id FK 와 안 맞아(62% 미대응) 뺐지만,
-  병합 데이터(turbine_id 정규화 + 화순 10~17)를 쓰면 매핑이 확정돼 안전하게 적재된다.
+  과거엔 CSV 가 turbine_code(U1~U8)라 turbine_id FK 와 안 맞아(62% 미대응) 플래그로 뺐지만,
+  병합 데이터(turbine_id 정규화 + 화순 10~17)로 매핑이 확정돼 상시 안전하게 적재된다 —
+  그래서 플래그(--with-anomaly)를 없애고 파일 존재로 판단한다(깜빡해서 빠지는 일이 없다).
   화순을 10~17 로 두어 defect 의 강원/평창/태백(1~9)과 겹치지 않는다.
   anomaly_event.created_at 은 CSV 에 비어(NOT NULL) now 로 채운다.
-  aws_record 는 --with-aws 또는 --with-anomaly 로 적재.
 
 CSV 에 없어 합성하는 값 (지어낸 값은 여기 한 곳에만 있다):
   user.employee_id    EMP0001 형식 — user_id 로 만든 결정론적 사번
@@ -25,8 +25,8 @@ CSV 에 없어 합성하는 값 (지어낸 값은 여기 한 곳에만 있다):
     python scripts/seed_rds.py --db-url mysql+pymysql://user:pw@host:3306/db
     python scripts/seed_rds.py --db-url ... --replace        # 기존 행 지우고 다시
     python scripts/seed_rds.py --db-url ... --dry-run        # 적재 없이 검증만(sqlalchemy 불필요)
-    python scripts/seed_rds.py --db-url ... --with-anomaly   # 이상감지 4테이블까지(병합 데이터 필요)
 DB_URL 을 생략하면 환경변수 DB_URL 을 쓴다.
+이상감지 4테이블은 data/ 에 CSV 가 있으면 자동으로 함께 적재된다(별도 플래그 없음).
 """
 import argparse
 import os
@@ -50,8 +50,22 @@ def _read(name, **kw):
     return pd.read_csv(os.path.join(DATA_DIR, f"{name}.csv"), encoding="utf-8-sig", **kw)
 
 
-def build_frames(with_aws: bool, with_anomaly: bool = False) -> dict:
-    """CSV → 테이블별 DataFrame(DB 컬럼명·순서에 맞춤)."""
+def _exists(name) -> bool:
+    return os.path.exists(os.path.join(DATA_DIR, f"{name}.csv"))
+
+
+# 선택 테이블 = 이상감지 체인. data/ 에 CSV 가 있으면 자동 적재, 없으면 스킵(플래그 대신 파일 존재로 판단).
+# 순서는 여기서 안 정한다 — DB 적재 순서는 main 의 anomaly_order(FK 의존) 가 담당한다.
+_OPTIONAL = {
+    "aws_record":    {"parse_dates": ["recorded_at"]},
+    "scada_record":  {"parse_dates": ["recorded_at"]},
+    "asos_record":   {"parse_dates": ["recorded_at"]},
+    "anomaly_event": {"parse_dates": ["start_time", "end_time", "created_at"]},
+}
+
+
+def build_frames() -> dict:
+    """CSV → 테이블별 DataFrame(DB 컬럼명·순서에 맞춤). 이상감지 체인은 CSV 가 있으면 자동 포함."""
     wf = _read("wind_farm")
     tm = _read("turbine_model")
     tb = _read("turbine")
@@ -128,19 +142,14 @@ def build_frames(with_aws: bool, with_anomaly: bool = False) -> dict:
         "inspection": insp,
         "defect": df,
     }
-    if with_aws or with_anomaly:
-        frames["aws_record"] = _read("aws_record", parse_dates=["recorded_at"])
-
-    # ── 이상감지(anomaly) 체인 — 병합 데이터(turbine_id 정규화, 화순 10~17)일 때만 안전 ──
+    # ── 이상감지(anomaly) 체인 — CSV 가 data/ 에 있으면 자동 적재(없으면 스킵) ──────────
+    #   병합 데이터(turbine_id 정규화, 화순 10~17)라 turbine FK 가 확정 → 상시 안전.
     #   CSV 논리명 anomaly_event → 물리 테이블 anomaly_event(V4 생성, V7로 단수 개명).
-    #   created_at 이 CSV 에 비어 있어(NOT NULL) now 로 채운다 — 지어낸 값은 여기 명시.
-    if with_anomaly:
-        scada = _read("scada_record", parse_dates=["recorded_at"])
-        ae = _read("anomaly_event", parse_dates=["start_time", "end_time", "created_at"])
-        ae["created_at"] = ae["created_at"].fillna(now)
-        frames["scada_record"] = scada
-        frames["anomaly_event"] = ae
-        frames["asos_record"] = _read("asos_record", parse_dates=["recorded_at"])
+    for name, kw in _OPTIONAL.items():
+        if _exists(name):
+            frames[name] = _read(name, **kw)
+    if "anomaly_event" in frames:                    # created_at 이 CSV 에 비어(NOT NULL) now 로 채운다
+        frames["anomaly_event"]["created_at"] = frames["anomaly_event"]["created_at"].fillna(now)
     return frames
 
 
@@ -178,15 +187,10 @@ def main():
     ap.add_argument("--db-url", default=os.getenv("DB_URL", ""))
     ap.add_argument("--replace", action="store_true", help="기존 행을 지우고 다시 적재")
     ap.add_argument("--dry-run", action="store_true", help="DB 에 쓰지 않고 검증만")
-    ap.add_argument("--with-aws", action="store_true",
-                    help="aws_record 도 적재(관측소 id 가 wind_farm 과 안 맞는 것을 알고도 넣을 때)")
-    ap.add_argument("--with-anomaly", action="store_true",
-                    help="이상감지 체인(scada_record·anomaly_event·aws_record·asos_record) 추가 적재. "
-                         "병합 데이터(turbine_id 정규화, 화순 10~17)여야 안전 — defect(1~9)와 안 겹침.")
     a = ap.parse_args()
 
     print("### 1) CSV 읽기 + 파생값 생성")
-    frames = build_frames(a.with_aws, a.with_anomaly)
+    frames = build_frames()
     for t in frames:
         print(f"  {t:16s} {len(frames[t]):>7,} 행")
 

@@ -16,10 +16,10 @@
 .PARAMETER Type
     생성할 보고서 종류. 기본 defect. 예: -Type anomaly (event_id 를 -Report 로 준다).
 
-.PARAMETER WithAnomaly
-    시드에 이상감지 4테이블(scada_record·anomaly_event·aws_record·asos_record)까지 넣는다.
-    defect(1~9)와 안 겹치게 화순을 10~17 로 둔 병합 데이터가 data/ 에 있어야 한다.
-    (defect + anomaly 를 --replace 로 함께 재적재한다.)
+.PARAMETER Reseed
+    이미 시드돼 있어도 --replace 로 다시 적재한다(컨테이너·마이그레이션은 그대로 두고 데이터만 갱신).
+    CSV 를 고쳤을 때 -Reset(컨테이너 재생성)보다 빠르게 재적재하는 용도.
+    이상감지 4테이블은 data/ 에 CSV 가 있으면 시드가 자동으로 함께 넣는다(별도 플래그 없음).
 
 .PARAMETER Reset
     컨테이너를 지우고 처음부터 다시 만든다. 스키마나 시드를 고쳤을 때 쓴다.
@@ -44,8 +44,9 @@
     .\scripts\local-rds.ps1 -Check
     .\scripts\local-rds.ps1 -Check -Strict
     .\scripts\local-rds.ps1 -Reset -Report 5009
-    .\scripts\local-rds.ps1 -Reset -WithAnomaly -Check -Strict       # anomaly 포함 RDS 검증
-    .\scripts\local-rds.ps1 -WithAnomaly -Report 2 -Type anomaly     # anomaly 보고서 생성
+    .\scripts\local-rds.ps1 -Reset -Check -Strict                    # anomaly 포함 RDS 검증(CSV 있으면 자동)
+    .\scripts\local-rds.ps1 -Report 2 -Type anomaly                 # anomaly 보고서 생성
+    .\scripts\local-rds.ps1 -Reseed                                 # CSV 고친 뒤 데이터만 재적재
     .\scripts\local-rds.ps1 -Down
 #>
 [CmdletBinding()]
@@ -56,7 +57,7 @@ param(
     [switch]$NoAnalysis,
     [switch]$Check,
     [switch]$Strict,
-    [switch]$WithAnomaly,
+    [switch]$Reseed,
     [string]$Type = 'defect'
 )
 
@@ -172,24 +173,20 @@ else {
 
 # ── 4. 시드 ──────────────────────────────────────────────────────────────────
 Say '=== 4) CSV 시드'
+# 이상감지 4테이블(scada_record·anomaly_event·aws_record·asos_record)은 data/ 에 CSV 가 있으면
+# seed_rds.py 가 자동으로 함께 적재한다(플래그 불필요). 없으면 defect 체인만 적재.
 Push-Location $SvcRoot
-if ($WithAnomaly) {
-    # 이상감지 포함 — defect + anomaly 를 함께 재적재(멱등하게 --replace).
-    # 병합 데이터(turbine_id 정규화, 화순 10~17)여야 안전 — data/ 확인.
-    Say '    -WithAnomaly : defect + anomaly 재적재(--replace)'
-    python scripts/seed_rds.py --db-url $DbUrl --with-anomaly --replace
-    $seedFailed = ($LASTEXITCODE -ne 0)
+$rows = Sql 'SELECT COUNT(*) FROM report'
+$seeded = ($rows -and [int]$rows -gt 0)
+if ($seeded -and -not $Reseed) {
+    Say "    이미 데이터 있음 (report $rows 행) — 건너뜀 (다시 넣으려면 -Reseed 또는 -Reset)"
+    $seedFailed = $false
 }
 else {
-    $rows = Sql 'SELECT COUNT(*) FROM report'
-    if ($rows -and [int]$rows -gt 0) {
-        Say "    이미 데이터 있음 (report $rows 행) — 건너뜀 (다시 넣으려면 -Reset)"
-        $seedFailed = $false
-    }
-    else {
-        python scripts/seed_rds.py --db-url $DbUrl
-        $seedFailed = ($LASTEXITCODE -ne 0)
-    }
+    $seedArgs = @('scripts/seed_rds.py', '--db-url', $DbUrl)
+    if ($seeded) { Say '    -Reseed : 데이터 재적재(--replace)'; $seedArgs += '--replace' }
+    python @seedArgs
+    $seedFailed = ($LASTEXITCODE -ne 0)
 }
 Pop-Location
 if ($seedFailed) { Die '시드 실패 (위 에러 확인).' }
