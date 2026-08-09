@@ -1,14 +1,14 @@
 """data/*.csv → RDS 시드 적재.
 
-적재 대상은 '결함 진단(defect) 보고서 체인' 전부다:
-    wind_farm → turbine_model → turbine → blade → user → report → inspection → defect
+defect 체인 + 이상감지(anomaly) 체인을 모두 적재한다. 팀 공용 data/ 세트가 12개 CSV 를
+전부 담으므로 조건 없이 함께 넣는다(하나라도 없으면 FileNotFoundError 로 중단 — 표준 세트가 아니란 신호).
+    [defect]  wind_farm → turbine_model → turbine → blade → user → report → inspection → defect
+    [anomaly] scada_record · anomaly_event · aws_record · asos_record
 이 순서는 FK 의존 순서라 바꾸면 안 된다.
 
-이상감지(anomaly) 체인 — data/ 에 CSV 가 있으면 자동 적재(없으면 조용히 스킵):
-  scada_record · anomaly_event · aws_record · asos_record
-  과거엔 CSV 가 turbine_code(U1~U8)라 turbine_id FK 와 안 맞아(62% 미대응) 플래그로 뺐지만,
-  병합 데이터(turbine_id 정규화 + 화순 10~17)로 매핑이 확정돼 상시 안전하게 적재된다 —
-  그래서 플래그(--with-anomaly)를 없애고 파일 존재로 판단한다(깜빡해서 빠지는 일이 없다).
+이상감지 체인 주의점:
+  과거엔 CSV 가 turbine_code(U1~U8)라 turbine_id FK 와 안 맞아(62% 미대응) 뺐지만,
+  병합 데이터(turbine_id 정규화 + 화순 10~17)로 매핑이 확정돼 안전하게 적재된다.
   화순을 10~17 로 두어 defect 의 강원/평창/태백(1~9)과 겹치지 않는다.
   anomaly_event.created_at 은 CSV 에 비어(NOT NULL) now 로 채운다.
 
@@ -25,8 +25,7 @@ CSV 에 없어 합성하는 값 (지어낸 값은 여기 한 곳에만 있다):
     python scripts/seed_rds.py --db-url mysql+pymysql://user:pw@host:3306/db
     python scripts/seed_rds.py --db-url ... --replace        # 기존 행 지우고 다시
     python scripts/seed_rds.py --db-url ... --dry-run        # 적재 없이 검증만(sqlalchemy 불필요)
-DB_URL 을 생략하면 환경변수 DB_URL 을 쓴다.
-이상감지 4테이블은 data/ 에 CSV 가 있으면 자동으로 함께 적재된다(별도 플래그 없음).
+DB_URL 을 생략하면 환경변수 DB_URL 을 쓴다. defect·이상감지 12테이블을 항상 함께 적재한다.
 """
 import argparse
 import os
@@ -50,22 +49,8 @@ def _read(name, **kw):
     return pd.read_csv(os.path.join(DATA_DIR, f"{name}.csv"), encoding="utf-8-sig", **kw)
 
 
-def _exists(name) -> bool:
-    return os.path.exists(os.path.join(DATA_DIR, f"{name}.csv"))
-
-
-# 선택 테이블 = 이상감지 체인. data/ 에 CSV 가 있으면 자동 적재, 없으면 스킵(플래그 대신 파일 존재로 판단).
-# 순서는 여기서 안 정한다 — DB 적재 순서는 main 의 anomaly_order(FK 의존) 가 담당한다.
-_OPTIONAL = {
-    "aws_record":    {"parse_dates": ["recorded_at"]},
-    "scada_record":  {"parse_dates": ["recorded_at"]},
-    "asos_record":   {"parse_dates": ["recorded_at"]},
-    "anomaly_event": {"parse_dates": ["start_time", "end_time", "created_at"]},
-}
-
-
 def build_frames() -> dict:
-    """CSV → 테이블별 DataFrame(DB 컬럼명·순서에 맞춤). 이상감지 체인은 CSV 가 있으면 자동 포함."""
+    """CSV → 테이블별 DataFrame(DB 컬럼명·순서에 맞춤). defect 체인 + 이상감지 체인 전부 적재."""
     wf = _read("wind_farm")
     tm = _read("turbine_model")
     tb = _read("turbine")
@@ -142,14 +127,16 @@ def build_frames() -> dict:
         "inspection": insp,
         "defect": df,
     }
-    # ── 이상감지(anomaly) 체인 — CSV 가 data/ 에 있으면 자동 적재(없으면 스킵) ──────────
-    #   병합 데이터(turbine_id 정규화, 화순 10~17)라 turbine FK 가 확정 → 상시 안전.
+
+    # ── 이상감지(anomaly) 체인 — defect 체인과 함께 항상 적재(팀 공용 data/ 세트 기준) ──────
+    #   병합 데이터(turbine_id 정규화, 화순 10~17)라 turbine FK 가 확정 → 안전.
     #   CSV 논리명 anomaly_event → 물리 테이블 anomaly_event(V4 생성, V7로 단수 개명).
-    for name, kw in _OPTIONAL.items():
-        if _exists(name):
-            frames[name] = _read(name, **kw)
-    if "anomaly_event" in frames:                    # created_at 이 CSV 에 비어(NOT NULL) now 로 채운다
-        frames["anomaly_event"]["created_at"] = frames["anomaly_event"]["created_at"].fillna(now)
+    ae = _read("anomaly_event", parse_dates=["start_time", "end_time", "created_at"])
+    ae["created_at"] = ae["created_at"].fillna(now)   # created_at 이 CSV 에 비어(NOT NULL) now 로 채운다
+    frames["scada_record"] = _read("scada_record", parse_dates=["recorded_at"])
+    frames["anomaly_event"] = ae
+    frames["aws_record"] = _read("aws_record", parse_dates=["recorded_at"])
+    frames["asos_record"] = _read("asos_record", parse_dates=["recorded_at"])
     return frames
 
 
@@ -168,12 +155,10 @@ def check_fk(frames: dict):
         ("inspection", "report_id", "report", "report_id"),
         ("defect", "inspection_id", "inspection", "inspection_id"),
         ("defect", "blade_id", "blade", "blade_id"),
+        # anomaly 체인: scada/anomaly_event 의 turbine_id 가 turbine 에 있나
+        ("scada_record", "turbine_id", "turbine", "turbine_id"),
+        ("anomaly_event", "turbine_id", "turbine", "turbine_id"),
     ]
-    # anomaly 체인(있을 때만): scada/anomaly_event 의 turbine_id 가 turbine 에 있나
-    if "scada_record" in frames:
-        checks.append(("scada_record", "turbine_id", "turbine", "turbine_id"))
-    if "anomaly_event" in frames:
-        checks.append(("anomaly_event", "turbine_id", "turbine", "turbine_id"))
     bad = [(c, cc, p, m) for c, cc, p, pc in checks if (m := missing(c, cc, p, pc))]
     for c, cc, p, m in bad:
         print(f"  ✗ {c}.{cc} → {p}: 부모에 없는 값 {m[:10]}{' ...' if len(m) > 10 else ''}")
@@ -209,7 +194,7 @@ def main():
     # FK 순서: 마스터·defect 체인(ORDER) 뒤에 이상감지 체인. scada/anomaly_event 는 turbine 을
     # 참조하므로 뒤에 와도 안전(turbine 은 ORDER 초반에 이미 적재). aws/asos 는 FK 없음.
     anomaly_order = ["scada_record", "anomaly_event", "aws_record", "asos_record"]
-    order = [t for t in ORDER if t in frames] + [t for t in anomaly_order if t in frames]
+    order = ORDER + anomaly_order
 
     print("\n### 3) 적재")
     with engine.begin() as conn:          # 전부 성공하거나 전부 롤백
