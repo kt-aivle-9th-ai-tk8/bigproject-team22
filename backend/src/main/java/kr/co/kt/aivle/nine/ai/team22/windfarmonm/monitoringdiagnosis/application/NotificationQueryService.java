@@ -25,9 +25,8 @@ public class NotificationQueryService {
      * 내 알림 목록(최신순). {@code unreadOnly} 면 안 읽은 것만. 페이징은 두지 않는다(MVP).
      * <p>
      * TODO: 현재 FE 는 전체 목록에 {@code is_read} 를 함께 담아 받아 표시하며, <b>안 읽은 것만 조회하는 경로는
-     *   실제로 쓰지 않는다.</b> 그래서 인덱스는 주 질의(user_id, sent_at)만 두고 (user_id, is_read)는 제거했다(V9).
-     *   {@code unreadOnly}(및 findByUserIdAndReadIsFalse...)는 향후 미읽음 전용 뷰를 대비한 예비 경로다 —
-     *   그 뷰를 실제로 도입할 땐 (user_id, is_read, sent_at) 인덱스를 다시 검토할 것.
+     *   실제로 쓰지 않는다.</b> {@code unreadOnly}(및 findByUserIdAndReadIsFalse...)는 향후 미읽음 전용 뷰를
+     *   대비한 예비 경로다 — 인덱스는 V9 에서 미리 깔아 두었다((user_id, is_read, sent_at)).
      */
     @Transactional(readOnly = true)
     public List<NotificationResult> getNotifications(Long userId, boolean unreadOnly) {
