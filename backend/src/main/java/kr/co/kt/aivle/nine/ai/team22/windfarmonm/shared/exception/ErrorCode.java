@@ -36,6 +36,9 @@ public enum ErrorCode {
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "보고서를 찾을 수 없습니다."),
     INVALID_REPORT_TYPE(HttpStatus.BAD_REQUEST, "R002", "지원하지 않는 보고서 유형입니다."),
     INVALID_REPORT_PERIOD(HttpStatus.BAD_REQUEST, "R003", "보고서 기간이 올바르지 않습니다."),
+    // 대상 발전소/터빈 지정이 실재하지 않거나 서로 맞지 않을 때. 복합 FK 위반(교차 컬럼 정합성)을
+    // 사용자 오류로 번역한 것이라, 어느 쪽이 문제인지는 구분하지 않는다(포괄 400).
+    INVALID_REPORT_TARGET(HttpStatus.BAD_REQUEST, "R004", "보고서 대상(발전소/터빈) 지정이 올바르지 않습니다."),
 
     // Notification — 타인 소유 알림도 동일하게 NOT_FOUND(존재 은닉)
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "알림을 찾을 수 없습니다."),

@@ -26,24 +26,24 @@ from app.core.config import DATA_DIR, DATA_SOURCE, DB_URL
 # 논리 테이블명 → (RDS 테이블명, 조회 컬럼). 컬럼을 명시로 고정한다 — "SELECT *" 로 두면
 # DB 에 컬럼이 추가될 때 DataFrame 모양이 조용히 바뀌어 집계가 소리 없이 달라진다.
 _RDS_TABLES = {
-    "turbine": ("turbines", (
+    "turbine": ("turbine", (
         "turbine_id", "wind_farm_id", "turbine_model_id", "turbine_code",
         "turbine_latitude", "turbine_longitude", "installation_date", "created_at",
     )),
-    "blade": ("blades", (
+    "blade": ("blade", (
         "blade_id", "turbine_id", "blade_tag", "installation_date", "created_at",
     )),
-    "wind_farm": ("wind_farms", (
+    "wind_farm": ("wind_farm", (
         "wind_farm_id", "wind_farm_name", "wind_farm_latitude", "wind_farm_longitude",
         "capacity", "installation_date", "address", "created_at",
         "aws_station_id", "asos_station_id",
     )),
-    "turbine_model": ("turbine_models", (
+    "turbine_model": ("turbine_model", (
         "turbine_model_id", "model", "manufacturer", "rated_power", "rotor_diameter",
         "hub_height", "blade_length", "cut_in_speed", "rated_speed", "cut_out_speed",
     )),
-    # users 는 인증 컬럼(password·employee_id 등)까지 갖고 있다 — 보고서가 쓰는 것만 고른다.
-    "user": ("users", ("user_id", "user_name", "role", "status")),
+    # user 는 인증 컬럼(password·employee_id 등)까지 갖고 있다 — 보고서가 쓰는 것만 고른다.
+    "user": ("user", ("user_id", "user_name", "role", "status")),
 
     # ── 결함 진단(defect) 체인 — V4 마이그레이션으로 생겼다 ──────────────────
     # report 는 DB 쪽이 CSV(3컬럼)보다 넓지만, 보고서가 읽는 컬럼만 고르면 CSV 와 같은 모양이 된다.
@@ -60,11 +60,12 @@ _RDS_TABLES = {
         "bbox_x", "bbox_y", "bbox_w", "bbox_h", "confidence", "image_path", "created_at",
     )),
 
-    # ── 이상감지(anomaly) — V4(anomaly_events·scada 보강) / V5(aws·asos) 마이그레이션 ──
-    #   논리명(단수) → 물리명. anomaly_events 만 복수형(V4). 컬럼명은 확정 스키마(recorded_at/sd_)와 일치.
+    # ── 이상감지(anomaly) — V4(anomaly·scada 보강) / V5(aws·asos) 마이그레이션 ──
+    #   논리명 → 물리명. V7(복수→단수 개명)으로 anomaly_events 도 anomaly_event 가 됐다(전 테이블 단수).
+    #   컬럼명은 확정 스키마(recorded_at/sd_)와 일치.
     #   event_type·scope 는 RDS 가 대문자 관례(PROLONGED_STOP/FARM)로 저장 → LOWER 로 코드(소문자)에 맞춘다.
     #   (tier 는 A/B 그대로. 날짜는 _DATE_COLS 가 파싱. LOWER 는 이미 소문자면 무해한 no-op.)
-    "anomaly_event": ("anomaly_events", (
+    "anomaly_event": ("anomaly_event", (
         "event_id", "turbine_id", "start_time", "end_time", "expected_power",
         "actual_power", "z_score", "deviation_pct", "tier",
         "LOWER(event_type) AS event_type", "LOWER(scope) AS scope",
@@ -182,7 +183,9 @@ def _read_csv(name: str) -> pd.DataFrame:
 def _query(name: str) -> pd.DataFrame:
     table, cols = _RDS_TABLES[name]
     # 식별자는 위 상수에서만 온다 — 외부 입력이 섞이지 않으므로 f-string 조립이 안전하다.
-    df = pd.read_sql(f"SELECT {', '.join(cols)} FROM {table}", _get_engine())
+    # 테이블명은 백틱으로 인용한다 — MySQL 에서 `user` 등 예약어와의 충돌을 피하기 위함이다
+    # (백틱은 MySQL 전용 인용 문법이라 타 DB 이식성을 주는 것은 아니다).
+    df = pd.read_sql(f"SELECT {', '.join(cols)} FROM `{table}`", _get_engine())
     # DATE 를 date 객체로 돌려주는 드라이버가 있어 CSV 경로(datetime64)와 dtype 이 갈린다 — 통일.
     for c in _DATE_COLS.get(name, ()):
         if c in df.columns:

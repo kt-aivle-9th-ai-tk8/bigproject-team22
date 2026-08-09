@@ -30,6 +30,10 @@ from app.core.datasource import cached, load_table, turbine_index
 # 임계 정책이 정해지면 이 값만 바꾸면 모든 집계에 일괄 반영된다.
 MIN_CONFIDENCE = None
 
+# 조인이 비어(blade→turbine FK 파손) 터빈을 특정하지 못한 결함을 담는 자리표시자.
+# 이런 행을 조용히 빼면 총건수와 터빈별 합계가 어긋나므로, 한 그룹으로 묶어 보고서에 드러낸다.
+UNKNOWN_TURBINE = "터빈 미상"
+
 
 def _join_inspection():
     """inspection + 터빈/발전소 이름."""
@@ -261,7 +265,9 @@ def _summarize(turbines: list, df) -> dict:
         }
 
     top_type = df["defect_type"].value_counts().idxmax()
-    worst = max(with_defect, key=lambda t: t["n_defects"])
+    # with_defect 는 df 가 비지 않으면 보통 채워지지만, 빈 경우에도 죽지 않게 둔다
+    # (max([]) 는 ValueError 라 보고서 생성이 통째로 중단된다).
+    worst = max(with_defect, key=lambda t: t["n_defects"]) if with_defect else None
     return {
         **summary,
         "severity_counts": {
@@ -273,8 +279,8 @@ def _summarize(turbines: list, df) -> dict:
         "type_counts": _counts(df["defect_type"]),
         "top_defect_type": top_type,
         "top_defect_type_n": int((df["defect_type"] == top_type).sum()),
-        "worst_turbine": worst["turbine_code"],
-        "worst_turbine_n": worst["n_defects"],
+        "worst_turbine": worst["turbine_code"] if worst else None,
+        "worst_turbine_n": worst["n_defects"] if worst else 0,
         "confidence": {
             "min": round(float(df["confidence"].min()), 3),
             "mean": round(float(df["confidence"].mean()), 3),
@@ -293,15 +299,21 @@ def fetch(event_id: int) -> dict:
       - 보고서에 점검이 2건 묶이면 터빈도 2대가 되고, turbines 가 2개로 나온다.
       - 점검 대상 터빈은 inspection.turbine_id 가 원본이며, 결함이 한 건도 없어도 남는다
         (그 터빈은 n_defects=0 으로 집계되어 summary.zero_defect_turbines 에 들어간다).
-      - 조인이 비어(FK 파손) 대상 터빈을 못 찾으면 defect 쪽 코드로 대체한다.
+      - 터빈을 못 찾은 결함(FK 파손)은 버리지 않고 UNKNOWN_TURBINE 그룹으로 모은다.
+        버리면 n_defects_total(=len(df))과 터빈별 합계가 어긋나고, 전부 미상이면
+        터빈 집계가 하나도 안 생겨 _summarize 의 max(with_defect) 가 터진다.
     """
     report = get_report(event_id)
     if not report.get("found"):
         return {"event": report}
 
     df = get_defects(event_id)
-    codes = sorted(set(df["turbine_code"].dropna().unique()) | set(report["turbine_codes"]))
-    turbines = [_aggregate(df[df["turbine_code"] == code], code) for code in codes]
+    # 미상 결함도 한 그룹으로 세어야 '총 N건'과 터빈별 합계가 맞는다. 조용히 빠지면
+    # 보고서에 합이 안 맞는 숫자가 실리고, critic 이 그걸 근거로 검증하게 된다.
+    grouped = df["turbine_code"].fillna(UNKNOWN_TURBINE) if len(df) else df.get("turbine_code")
+    codes = sorted(set(grouped.unique()) | set(report["turbine_codes"])) if len(df) \
+        else sorted(set(report["turbine_codes"]))
+    turbines = [_aggregate(df[grouped == code] if len(df) else df, code) for code in codes]
 
     return {
         "event": report,

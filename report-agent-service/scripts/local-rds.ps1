@@ -17,7 +17,7 @@
     생성할 보고서 종류. 기본 defect. 예: -Type anomaly (event_id 를 -Report 로 준다).
 
 .PARAMETER WithAnomaly
-    시드에 이상감지 4테이블(scada_record·anomaly_events·aws_record·asos_record)까지 넣는다.
+    시드에 이상감지 4테이블(scada_record·anomaly_event·aws_record·asos_record)까지 넣는다.
     defect(1~9)와 안 겹치게 화순을 10~17 로 둔 병합 데이터가 data/ 에 있어야 한다.
     (defect + anomaly 를 --replace 로 함께 재적재한다.)
 
@@ -117,7 +117,10 @@ if ($Reset) {
 $state = docker ps -a --filter "name=^$Ct$" --format '{{.State}}' 2> $null
 if (-not $state) {
     Say "    새로 생성 (localhost:$Port)"
-    docker run -d --name $Ct -p "${Port}:3306" `
+    # 127.0.0.1 에만 바인딩한다. "-p 13306:3306" 은 0.0.0.0 이라 같은 네트워크의 다른 기기에서도
+    # 붙을 수 있는데, 이 컨테이너는 비밀번호가 'verify' 인 검증용이라 노출되면 안 된다.
+    # (root@% 계정은 공식 이미지가 MYSQL_ROOT_HOST 기본값 % 로 이미 만들어 주므로 호스트 접속은 된다.)
+    docker run -d --name $Ct -p "127.0.0.1:${Port}:3306" `
         -e MYSQL_ROOT_PASSWORD=$Pw -e MYSQL_DATABASE=$Db `
         mysql:8 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci > $null
     if ($LASTEXITCODE -ne 0) { Die '컨테이너 생성 실패.' }

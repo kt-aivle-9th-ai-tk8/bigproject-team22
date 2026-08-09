@@ -37,6 +37,12 @@ LLM_MAX_RETRIES = int(os.getenv("REPORT_LLM_MAX_RETRIES", "4"))
 
 # (critic 재시도 상한 max_retries 는 config가 아니라 각 report_type이 REGISTRY에서 소유 — 필수.)
 
+# 동시에 생성할 수 있는 보고서 수(API 경로 한정). 보고서 1건이 LLM 을 여러 번
+# (분석 + critic + 재시도) 부르므로 상한이 없으면 반복 호출이 그대로 병렬 LLM 호출이 되어
+# 비용·쿼터가 터진다. 초과분은 대기시키지 않고 429 로 즉시 거절한다 —
+# 생성이 수십 초라 큐잉하면 요청만 쌓이고 워커 스레드가 잠긴다(빠른 실패가 낫다).
+MAX_CONCURRENT_REPORTS = int(os.getenv("REPORT_MAX_CONCURRENCY", "2"))
+
 # 분석(## 분석) 섹션 생성 여부. on이면 LLM이 '숫자 없는 정성 해석'을 쓰고 critic이 검증.
 #   off면 완전 결정론(수치·차트만, LLM/critic 미사용). 콘솔/배치는 off로 비용 0.
 WITH_ANALYSIS = os.getenv("REPORT_WITH_ANALYSIS", "true").lower() == "true"

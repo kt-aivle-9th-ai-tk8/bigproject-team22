@@ -1,8 +1,12 @@
 """CLI 엔트리포인트 — event_id로 보고서 생성 → outputs/report_{type}_{id}.md 저장.
 
+event_id 는 report_type 마다 가리키는 대상이 다르다(4개 타입이 fetch(event_id) 하나를
+공유하는 계약이라 이름은 하나뿐). 의미는 registry.EVENT_ID_MEANING 이 정의하고,
+--help 와 '없음' 메시지가 그 표를 그대로 인용한다.
+
 사용법:
-    python run.py 2                       # report_type 기본 anomaly
-    python run.py 2 --report-type anomaly
+    python run.py 2                          # report_type 기본 anomaly
+    python run.py 5001 --report-type defect  # defect 의 event_id 는 report_id
 """
 import argparse
 import os
@@ -16,12 +20,21 @@ except Exception:
 
 from app.core.config import OUTPUT_DIR, TRACING, LANGSMITH_PROJECT  # .env 로드 포함
 from app.agents.graph import REPORT_TYPES
+from app.agents.registry import EVENT_ID_MEANING
 from app.service import generate_report
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("event_id", type=int)
+    ap = argparse.ArgumentParser(
+        description="report_type 별 보고서 생성. event_id 의 의미는 타입마다 다르다:\n"
+        + "\n".join(f"  {t:15s} {m}" for t, m in EVENT_ID_MEANING.items()),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    ap.add_argument(
+        "event_id",
+        type=int,
+        help="대상 식별자. --report-type 에 따라 의미가 다르다(위 설명 참고)",
+    )
     ap.add_argument("--report-type", default="anomaly", choices=REPORT_TYPES)
     args = ap.parse_args()
 
@@ -40,7 +53,10 @@ def main():
         sys.exit(2)
 
     if not res["found"]:
-        print(f"[run] event_id={args.event_id} 없음. 종료")
+        # 대상이 없을 때 '무엇을 넣어야 하는지'까지 알려준다 — 타입마다 id 체계가 달라
+        # 엉뚱한 id 를 넣어도 크래시 없이 여기로 떨어지기 때문이다.
+        print(f"[run] {args.report_type} 에 event_id={args.event_id} 인 대상이 없습니다.")
+        print(f"[run] {args.report_type} 의 event_id = {EVENT_ID_MEANING[args.report_type]}")
         sys.exit(1)
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)

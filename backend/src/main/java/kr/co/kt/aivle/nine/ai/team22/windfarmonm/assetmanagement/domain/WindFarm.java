@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * 풍력 발전단지. 다른 BC(User 등)는 id 값으로만 참조한다.
  */
 @Entity
-@Table(name = "wind_farms")
+@Table(name = "wind_farm")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class WindFarm {

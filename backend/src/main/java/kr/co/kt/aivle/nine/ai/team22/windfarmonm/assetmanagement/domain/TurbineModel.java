@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
  * 터빈 모델(제원). Turbine 은 turbineModelId 로만 참조한다.
  */
 @Entity
-@Table(name = "turbine_models")
+@Table(name = "turbine_model")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TurbineModel {

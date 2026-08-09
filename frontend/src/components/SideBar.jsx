@@ -7,6 +7,7 @@ function SideBar({
   plants,
   selectedPlant,
   selectedTurbine,
+  windFarmDetail,
   onSelectPlant,
   onSelectTurbine,
   onCreateInspectionReport,
@@ -24,6 +25,7 @@ function SideBar({
       {mode === "plant" && (
         <PlantSideBar
           selectedPlant={selectedPlant}
+          windFarmDetail={windFarmDetail}
           onSelectTurbine={onSelectTurbine}
           onCreateRepairReport={onCreateRepairReport}
         />

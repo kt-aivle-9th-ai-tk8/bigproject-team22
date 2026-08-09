@@ -160,21 +160,39 @@ function Map({
      * 경도 폭을 매우 좁게 만들어
      * 위도 범위가 확대·축소 수준을 결정하도록 함
      */
-    const fitLongitudePadding = 0.000001;
+    // const fitLongitudePadding = 0.000001;
+
+    // const fitExtent = transformExtent(
+    //   [
+    //     centerLongitude -
+    //       fitLongitudePadding,
+
+    //     minLatitude -
+    //       latitudePadding,
+
+    //     centerLongitude +
+    //       fitLongitudePadding,
+
+    //     maxLatitude +
+    //       latitudePadding,
+    //   ],
+    //   "EPSG:4326",
+    //   "EPSG:3857"
+    // );
+    const longitudeLength =
+      maxLongitude - minLongitude;
+
+    const longitudePadding = Math.max(
+      longitudeLength * 0.2,
+      0.0004
+    );
 
     const fitExtent = transformExtent(
       [
-        centerLongitude -
-          fitLongitudePadding,
-
-        minLatitude -
-          latitudePadding,
-
-        centerLongitude +
-          fitLongitudePadding,
-
-        maxLatitude +
-          latitudePadding,
+        minLongitude - longitudePadding,
+        minLatitude - latitudePadding,
+        maxLongitude + longitudePadding,
+        maxLatitude + latitudePadding,
       ],
       "EPSG:4326",
       "EPSG:3857"
