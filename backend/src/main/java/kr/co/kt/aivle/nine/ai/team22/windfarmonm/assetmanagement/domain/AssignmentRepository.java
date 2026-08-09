@@ -12,6 +12,9 @@ public interface AssignmentRepository {
     /** 사용자가 담당하는 단지 id 목록 */
     List<Long> findWindFarmIdsByUserId(Long userId);
 
+    /** 단지를 담당하는 사용자 id 목록(알림 fan-out 의 역방향 조회). */
+    List<Long> findUserIdsByWindFarmId(Long windFarmId);
+
     /** 여러 사용자의 배정을 한 번에 조회(관리자 목록 조회 N+1 방지). */
     List<Assignment> findByUserIdIn(Collection<Long> userIds);
 

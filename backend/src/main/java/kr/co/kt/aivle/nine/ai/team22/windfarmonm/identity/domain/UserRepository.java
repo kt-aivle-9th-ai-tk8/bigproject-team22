@@ -21,4 +21,7 @@ public interface UserRepository {
     boolean existsByEmployeeId(String employeeId);
 
     List<User> findAll();
+
+    /** 특정 역할의 사용자 id 목록(알림 fan-out 의 ADMIN 수신자 조회 등). */
+    List<Long> findUserIdsByRole(Role role);
 }

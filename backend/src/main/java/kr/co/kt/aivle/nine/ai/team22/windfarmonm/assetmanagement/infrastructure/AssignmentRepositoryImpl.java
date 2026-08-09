@@ -20,6 +20,11 @@ public class AssignmentRepositoryImpl implements AssignmentRepository {
     }
 
     @Override
+    public List<Long> findUserIdsByWindFarmId(Long windFarmId) {
+        return jpaRepository.findUserIdsByWindFarmId(windFarmId);
+    }
+
+    @Override
     public boolean existsByUserIdAndWindFarmId(Long userId, Long windFarmId) {
         return jpaRepository.existsByUserIdAndWindFarmId(userId, windFarmId);
     }
