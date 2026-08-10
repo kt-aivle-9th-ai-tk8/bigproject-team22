@@ -19,7 +19,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "`user`") // user 는 SQL 예약어라 백틱으로 인용한다(Hibernate 가 방언별 인용으로 변환)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {

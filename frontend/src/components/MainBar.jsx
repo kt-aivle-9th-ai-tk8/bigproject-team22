@@ -5,16 +5,16 @@ import TurbineMainBar from "./MainBar/TurbineMainBar";
 function MainBar({
   mode,
   plants = [],
+  turbines = [],
   selectedPlant,
   selectedTurbine,
   isPlantsLoading,
   plantsError,
+  isWindFarmDetailLoading,
+  windFarmDetailError,
   onSelectPlant,
   onSelectTurbine,
 }) {
-  const turbines =
-    selectedPlant?.turbines || [];
-
   return (
     <aside className="main-bar">
       {mode === "map" && (
@@ -29,6 +29,8 @@ function MainBar({
       {mode === "plant" && (
         <PlantMainBar
           turbines={turbines}
+          isLoading={isWindFarmDetailLoading}
+          error={windFarmDetailError}
           onSelectTurbine={onSelectTurbine}
         />
       )}

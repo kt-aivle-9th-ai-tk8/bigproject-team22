@@ -9,6 +9,7 @@ import re
 
 from pydantic import BaseModel, Field
 
+from app.core.config import WITH_ANALYSIS
 from app.agents.llm import llm
 from app.agents.verify import extract_numbers
 from app.agents.reports.defect.builder import DEFECT_TYPE_KO, allowed_numbers
@@ -95,7 +96,10 @@ def llm_check(state) -> list:
     """표현 가드레일 — 조치 단정 / AI 검출의 확정 단정 / 원인 단정."""
     analysis = state.get("narrative", "") or ""
     if not analysis.strip():
-        return ["분석 내용이 비어 있음"]
+        # WITH_ANALYSIS off 면 분석이 없는 게 정상이다 — 검증할 문장이 없으니 통과.
+        # 켜져 있는데 비었다면 그건 LLM 실패이므로 그대로 반려한다(operation/anomaly 는
+        # 키워드 필터가 빈 문자열에 걸리지 않아 자연히 통과한다).
+        return [] if not WITH_ANALYSIS else ["분석 내용이 비어 있음"]
 
     res = _critic_llm.invoke(
         "다음은 풍력 블레이드 결함 진단 보고서의 '종합 분석' 문단이다.\n"

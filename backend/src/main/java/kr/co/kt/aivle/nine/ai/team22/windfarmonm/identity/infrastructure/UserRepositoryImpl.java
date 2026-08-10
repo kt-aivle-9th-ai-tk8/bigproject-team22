@@ -1,5 +1,6 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.infrastructure;
 
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,5 +46,10 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public List<User> findAll() {
         return userJpaRepository.findAll();
+    }
+
+    @Override
+    public List<Long> findUserIdsByRole(Role role) {
+        return userJpaRepository.findUserIdsByRole(role);
     }
 }

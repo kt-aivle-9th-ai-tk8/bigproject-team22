@@ -27,6 +27,15 @@ public class AssignmentQueryService {
     private final WindFarmRepository windFarmRepository;
 
     /**
+     * 단지를 담당하는 사용자 id 목록. <b>인가를 하지 않는</b> 내부 조회 — 알림 fan-out 의 수신자 산출 등
+     * 시스템 내부 용도로만 쓴다(호출측 인가 선행 전제).
+     */
+    @Transactional(readOnly = true)
+    public List<Long> findUserIdsByWindFarmId(Long windFarmId) {
+        return assignmentRepository.findUserIdsByWindFarmId(windFarmId);
+    }
+
+    /**
      * 여러 사용자의 담당 단지를 한 번에 조회한다(사용자별 배정 조회 N+1 방지).
      * 배정이 없는 사용자는 결과 맵에 키가 없다(호출측에서 빈 목록으로 해석).
      *

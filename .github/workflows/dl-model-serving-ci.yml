@@ -1,0 +1,36 @@
+# YOLOv11+EfficientNet-B3(dl) 서빙 코드 빌드-테스트
+
+name: DL Serving CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'serving/dl/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ./serving/dl
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies and validate syntax
+        # 배포 없이 문법/임포트 검증만 수행하여 코드 안정성 검증
+        run: |
+          pip install -r requirements.txt --quiet
+          python -m py_compile inference.py

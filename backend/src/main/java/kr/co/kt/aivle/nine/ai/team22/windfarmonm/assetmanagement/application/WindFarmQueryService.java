@@ -112,17 +112,23 @@ public class WindFarmQueryService {
 
         List<Turbine> turbines = turbineRepository.findByWindFarmId(windFarmId);
         Map<Long, String> modelNames = modelNamesOf(turbines);
+        List<Long> turbineIds = turbines.stream().map(Turbine::getId).toList();
+        Map<Long, Double> currentPowerByTurbine = powerQueryService.currentPowerByTurbines(turbineIds);
         List<TurbineSummaryResult> turbineResults = turbines.stream()
                 .map(t -> new TurbineSummaryResult(
                         t.getId(),
                         t.getLatitude(),
                         t.getLongitude(),
                         modelNames.get(t.getTurbineModelId()),
-                        t.getCode()))
+                        t.getCode(),
+                        currentPowerByTurbine.get(t.getId())))
                 .toList();
 
-        List<Long> turbineIds = turbines.stream().map(Turbine::getId).toList();
-        PowerSummary power = powerQueryService.summaryByTurbines(turbineIds);
+        Double currentPower = currentPowerByTurbine.values().stream()
+                .filter(java.util.Objects::nonNull)
+                .reduce(Double::sum)
+                .orElse(null);
+        PowerSummary power = powerQueryService.summaryByTurbines(turbineIds, currentPower);
         WeatherInfo weather = weatherProvider.getWeather(windFarm.getAsosStationId());
 
         return new WindFarmDetailResult(
@@ -133,6 +139,17 @@ public class WindFarmQueryService {
                 power,
                 turbineResults
         );
+    }
+
+    /**
+     * 단지명을 조회한다. <b>인가를 하지 않는</b> 내부 조회이므로 호출측 인가 선행을 전제한다
+     * (예: 생성된 보고서의 대상 표시·제목 조립).
+     *
+     * @return 단지명, 없으면 null
+     */
+    @Transactional(readOnly = true)
+    public String getWindFarmName(Long windFarmId) {
+        return windFarmRepository.findById(windFarmId).map(WindFarm::getName).orElse(null);
     }
 
     /**

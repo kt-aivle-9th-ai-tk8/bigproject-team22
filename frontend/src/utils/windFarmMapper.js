@@ -10,69 +10,6 @@ export const normalizeWeatherType = (weatherType) => {
   return WEATHER_TYPE[weatherType] || WEATHER_TYPE.CLEAR;
 };
 
-const getDummyTurbinesByWindFarmId = (windFarmId) => {
-  if (windFarmId !== 1) {
-    return [];
-  }
-
-  return [
-    {
-      id: 1,
-      name: "터빈 A",
-      status: TURBINE_STATUS.NORMAL,
-      abnormalDetected: false,
-      coordinate: [126.9064, 34.6815],
-    },
-    {
-      id: 2,
-      name: "터빈 B",
-      status: TURBINE_STATUS.ZERO_POWER,
-      abnormalDetected: true,
-      coordinate: [126.9077, 34.6816],
-    },
-    {
-      id: 3,
-      name: "터빈 C",
-      status: TURBINE_STATUS.NO_DATA,
-      abnormalDetected: false,
-      coordinate: [126.9066, 34.6804],
-    },
-    {
-      id: 4,
-      name: "터빈 D",
-      status: TURBINE_STATUS.NORMAL,
-      abnormalDetected: false,
-      coordinate: [126.9078, 34.6805],
-    },
-  ];
-};
-
-const getDummyFaultsByWindFarmId = (windFarmId) => {
-  if (windFarmId === 1) {
-    return [
-      {
-        id: 1,
-        date: "07.08",
-        time: "12:00",
-        status: FAULT_STATUS.ALERT,
-      },
-    ];
-  }
-
-  if (windFarmId === 3) {
-    return [
-      {
-        id: 2,
-        date: "07.08",
-        time: "11:00",
-        status: FAULT_STATUS.WARNING,
-      },
-    ];
-  }
-
-  return [];
-};
-
 export const convertWindFarmToPlant = (windFarm) => {
   const weather = windFarm.weather || {};
   const power = windFarm.power || {};
@@ -100,7 +37,48 @@ export const convertWindFarmToPlant = (windFarm) => {
       yearPower: 0,
     },
 
-    faults: getDummyFaultsByWindFarmId(windFarm.id),
-    turbines: getDummyTurbinesByWindFarmId(windFarm.id),
+    faults: [],
+    turbines: [],
+  };
+};
+
+export const convertTurbineToMapObject = (turbine) => {
+  return {
+    id: turbine.id,
+    name: turbine.code,
+    code: turbine.code,
+    model: turbine.model,
+
+    coordinate: [
+      turbine.longitude,
+      turbine.latitude,
+    ],
+  };
+};
+
+export const convertWindFarmDetailToPlant = (windFarm) => {
+  const weather = windFarm.weather || {};
+  const power = windFarm.power || {};
+  const turbines = windFarm.turbines || [];
+
+  return {
+    id: windFarm.id,
+    name: windFarm.name,
+    capacity: windFarm.capacity,
+
+    weather: {
+      weatherType: normalizeWeatherType(weather.weather_type),
+      temperature: weather.temperature ?? 0,
+      windSpeed: weather.wind_speed ?? 0,
+    },
+
+    power: {
+      currentOutput: power.current_power ?? 0,
+      currentPower: power.today_power ?? 0,
+      monthPower: power.month_power ?? 0,
+      yearPower: 0,
+    },
+
+    turbines: turbines.map(convertTurbineToMapObject),
   };
 };

@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * 접근 패턴(user 기준 목록 조회 / 쌍 존재검사)이 모두 PK 프리픽스·정확일치로 처리된다.
  */
 @Entity
-@Table(name = "assignments")
+@Table(name = "assignment")
 @IdClass(UserWindFarmId.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

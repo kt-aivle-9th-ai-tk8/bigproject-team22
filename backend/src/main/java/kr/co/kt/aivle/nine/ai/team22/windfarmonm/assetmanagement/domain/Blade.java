@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * 블레이드. 소속 터빈은 turbineId 로만 참조한다.
  */
 @Entity
-@Table(name = "blades")
+@Table(name = "blade")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Blade {
