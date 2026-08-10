@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
 import "./ReportListScreen.css";
 
 const PLANT_TURBINE_MAP = {
@@ -9,31 +10,48 @@ const PLANT_TURBINE_MAP = {
   "양산 발전소": ["터빈I", "터빈J"],
 };
 
-const INITIAL_REPORTS = [
-  { id: 1, plant: "장흥 발전소", turbine: "터빈A", type: "운영보고서", date: "2026-07-20", summary: "장흥 발전소 터빈A 정상 운용 중입니다.", aiDiagnostic: "특이사항 없음." },
-  { id: 2, plant: "장흥 발전소", turbine: "터빈C", type: "결함보고서", date: "2026-07-14", summary: "터빈C 날개 미세 균열 발생 감지.", aiDiagnostic: "긴급 드론 점검 권장." },
-  { id: 3, plant: "경주 발전소", turbine: "터빈G", type: "이상보고서", date: "2026-07-10", summary: "터빈G 베어링 온도 상승 추세.", aiDiagnostic: "72시간 내 점검 필요." },
-  { id: 4, plant: "대구 발전소", turbine: "터빈E", type: "결함보고서", date: "2026-07-01", summary: "터빈E 센서 통신 오작동.", aiDiagnostic: "통신 모듈 교체 권장." },
-  { id: 5, plant: "양산 발전소", turbine: "터빈I", type: "이상보고서", date: "2026-06-25", summary: "터빈I 진동 수치 증가.", aiDiagnostic: "진동 진단 실시 필요." },
-  { id: 6, plant: "대구 발전소", turbine: "터빈D", type: "운영보고서", date: "2026-06-20", summary: "대구 발전소 터빈D 정기 점검 완료.", aiDiagnostic: "가동 상태 양호." },
-];
-
 function ReportListScreen() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // API 수신 보고서 데이터 및 로딩 상태
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // URL Query Parameters 파싱
   const queryParams = new URLSearchParams(location.search);
   const initialPlant = queryParams.get("plant") || "전체";
   const initialTurbine = queryParams.get("turbine") || "전체";
 
+  // 필터 및 정렬 상태
   const [selectedType, setSelectedType] = useState("전체");
   const [selectedPlant, setSelectedPlant] = useState(initialPlant);
   const [selectedTurbine, setSelectedTurbine] = useState(initialTurbine);
-
   const [sortKey, setSortKey] = useState("date");
   const [isAscending, setIsAscending] = useState(false);
 
   const todayString = new Date().toISOString().slice(0, 10).replace(/-/g, ".");
+
+  // 백엔드 API 목록 불러오기
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get("/api/reports");
+        if (response.status === 200) {
+          // 백엔드 응답이 response.data 또는 response.data.data 형태일 수 있으므로 유연하게 처리
+          const data = Array.isArray(response.data) ? response.data : response.data.data || [];
+          setReports(data);
+        }
+      } catch (error) {
+        console.error("보고서 목록 조회 에러:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
 
   const handlePlantChange = (e) => {
     setSelectedPlant(e.target.value);
@@ -60,28 +78,39 @@ function ReportListScreen() {
     sortKey !== "date" ||
     isAscending !== false;
 
+  // 필터링 및 정렬 연산
   const filteredAndSortedReports = useMemo(() => {
-    return INITIAL_REPORTS.filter((report) => {
-      const matchesType = selectedType === "전체" || report.type === selectedType;
-      const matchesPlant = selectedPlant === "전체" || report.plant === selectedPlant;
-      const matchesTurbine = selectedTurbine === "전체" || report.turbine === selectedTurbine;
-      return matchesType && matchesPlant && matchesTurbine;
-    }).sort((a, b) => {
-      let comparison = 0;
-      if (sortKey === "date") {
-        comparison = a.date.localeCompare(b.date);
-      } else if (sortKey === "title") {
-        const nameA = `${a.plant} ${a.turbine}`;
-        const nameB = `${b.plant} ${b.turbine}`;
-        comparison = nameA.localeCompare(nameB, "ko");
-      }
-      return isAscending ? comparison : -comparison;
-    });
-  }, [selectedType, selectedPlant, selectedTurbine, sortKey, isAscending]);
+    return reports
+      .filter((report) => {
+        const matchesType = selectedType === "전체" || report.type === selectedType || report.report_type === selectedType;
+        const matchesPlant = selectedPlant === "전체" || report.plant === selectedPlant || report.wind_farm_name === selectedPlant;
+        const matchesTurbine = selectedTurbine === "전체" || report.turbine === selectedTurbine || report.turbine_name === selectedTurbine;
+        return matchesType && matchesPlant && matchesTurbine;
+      })
+      .sort((a, b) => {
+        let comparison = 0;
+        const dateA = a.date || a.created_at || "";
+        const dateB = b.date || b.created_at || "";
+        const plantA = a.plant || a.wind_farm_name || "";
+        const plantB = b.plant || b.wind_farm_name || "";
+        const turbineA = a.turbine || a.turbine_name || "";
+        const turbineB = b.turbine || b.turbine_name || "";
 
-  // 카드를 클릭하면 선택한 보고서를 state로 넘겨주며 /report-edit 로 이동
+        if (sortKey === "date") {
+          comparison = dateA.localeCompare(dateB);
+        } else if (sortKey === "title") {
+          const nameA = `${plantA} ${turbineA}`;
+          const nameB = `${plantB} ${turbineB}`;
+          comparison = nameA.localeCompare(nameB, "ko");
+        }
+        return isAscending ? comparison : -comparison;
+      });
+  }, [reports, selectedType, selectedPlant, selectedTurbine, sortKey, isAscending]);
+
+  // 카드를 클릭하면 해당 보고서의 ID를 URL에 실어서 방식 A 경로로 이동
   const handleCardClick = (report) => {
-    navigate("/report-edit", { state: { report } });
+    const reportId = report.id || report.report_id;
+    navigate(`/reports/${reportId}/edit`);
   };
 
   return (
@@ -137,26 +166,36 @@ function ReportListScreen() {
       </div>
 
       <main className="report-list">
-        {filteredAndSortedReports.length > 0 ? (
-          filteredAndSortedReports.map((report) => (
-            <div 
-              key={report.id} 
-              className="report-card" 
-              onClick={() => handleCardClick(report)}
-              style={{ cursor: "pointer" }}
-            >
-              <div className="report-content">
-                <div className="card-main-row">
-                  <h3 className="plant-name">
-                    {report.plant} <span className="turbine-tag">[{report.turbine}]</span>
-                  </h3>
-                  <span className={`type-badge ${report.type}`}>{report.type}</span>
-                  <span className="report-date">{report.date}</span>
+        {loading ? (
+          <div className="no-data">보고서 목록을 불러오는 중입니다...</div>
+        ) : filteredAndSortedReports.length > 0 ? (
+          filteredAndSortedReports.map((report) => {
+            const reportId = report.id || report.report_id;
+            const plantName = report.plant || report.wind_farm_name || "발전소";
+            const turbineName = report.turbine || report.turbine_name || "터빈";
+            const typeName = report.type || report.report_type || "보고서";
+            const dateStr = report.date || report.created_at || "";
+
+            return (
+              <div 
+                key={reportId} 
+                className="report-card" 
+                onClick={() => handleCardClick(report)}
+                style={{ cursor: "pointer" }}
+              >
+                <div className="report-content">
+                  <div className="card-main-row">
+                    <h3 className="plant-name">
+                      {plantName} <span className="turbine-tag">[{turbineName}]</span>
+                    </h3>
+                    <span className={`type-badge ${typeName}`}>{typeName}</span>
+                    <span className="report-date">{dateStr}</span>
+                  </div>
                 </div>
+                <div className="card-arrow"><span>›</span></div>
               </div>
-              <div className="card-arrow"><span>›</span></div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="no-data">조건에 일치하는 보고서가 없습니다.</div>
         )}
