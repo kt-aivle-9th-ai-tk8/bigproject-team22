@@ -20,6 +20,16 @@ function UnderBar({
    * 1. 전체 x축 범위 조회
    * 예: 백엔드가 6월 1일 00시 ~ 현재 시간 반환
    */
+  const formatLocalDateTime = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
+    const second = String(date.getSeconds()).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+  };
   const fetchAxisRange = async () => {
     /*
      * 실제 API 예시:
@@ -58,11 +68,10 @@ function UnderBar({
         if (!selectedTurbine?.id) {
           return;
         }
-
         responseBody = await fetchTurbinePower({
           turbineId: selectedTurbine.id,
-          startTime: nextStartAt.toISOString(),
-          endTime: nextEndAt.toISOString(),
+          startTime: formatLocalDateTime(nextStartAt),
+          endTime: formatLocalDateTime(nextEndAt),
           term: "HOURLY",
         });
       } else {
@@ -72,8 +81,8 @@ function UnderBar({
 
         responseBody = await fetchWindFarmPower({
           windFarmId: selectedPlant.id,
-          startTime: nextStartAt.toISOString(),
-          endTime: nextEndAt.toISOString(),
+          startTime: formatLocalDateTime(nextStartAt),
+          endTime: formatLocalDateTime(nextEndAt),
           term: "HOURLY",
         });
       }
