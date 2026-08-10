@@ -462,7 +462,7 @@ function PowerChartDrag({
                 />
 
                 <Tooltip
-                  formatter={(value) => [`${value} kWh`, "발전량"]}
+                  formatter={(value) => [`${Number(value).toFixed(2).replace(/\.?0+$/, "")} kWh`, "발전량"]}
                   labelFormatter={(label) => `시간: ${formatTickLabel(label)}`}
                   contentStyle={{
                     padding: "4px 6px",
