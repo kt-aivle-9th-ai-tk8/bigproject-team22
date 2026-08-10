@@ -6,9 +6,10 @@ from app.agents.graph import build_app, REPORT_TYPES
 from app.agents.registry import REGISTRY
 
 
-def _init_state(report_type: str, event_id: int) -> dict:
+def _init_state(report_type: str, event_id: int, params: dict = None) -> dict:
     return {
         "event_id": event_id,
+        "params": dict(params) if params else None,
         "report_type": report_type,
         "tool_outputs": None,
         "narrative": None,
@@ -37,10 +38,15 @@ def _error_result(report_type: str, event_id: int, error: str) -> dict:
     }
 
 
-def generate_report(report_type: str, event_id: int) -> dict:
-    """report_type·event_id로 보고서 생성 → 결과 dict.
+def generate_report(report_type: str, event_id: int, params: dict = None) -> dict:
+    """report_type·event_id(+선택 params)로 보고서 생성 → 결과 dict.
 
-    반환: {report_type, event_id, found, draft, verdict, retry_count, issues, warnings, error}
+    params: 유형별 부가 조회 파라미터(선택). 미지정 시 각 유형의 기본 동작.
+      - operation/farm_operation: {"period_start": "YYYY-MM-DD", "period_end": "YYYY-MM-DD"}
+        (미지정 시 대상의 관측 전 구간)
+      - anomaly/defect: 사용하지 않음(이벤트 자체가 기간을 규정)
+
+    반환: {report_type, event_id, params, found, draft, verdict, retry_count, issues, warnings, error}
     error 는 정상 시 None, LLM 호출이 재시도 소진 후에도 실패하면 사유 문자열.
     warnings 는 재시도 소진 후 soft 이슈만 남아 '적합'으로 강등된 경우의 지적(사람 확인용).
     """
@@ -53,10 +59,10 @@ def generate_report(report_type: str, event_id: int) -> dict:
     run_config = {
         "run_name": f"{report_type}:{event_id}",
         "tags": [report_type],
-        "metadata": {"report_type": report_type, "event_id": event_id},
+        "metadata": {"report_type": report_type, "event_id": event_id, "params": params or {}},
     }
     try:
-        final = app.invoke(_init_state(report_type, event_id), config=run_config)
+        final = app.invoke(_init_state(report_type, event_id, params), config=run_config)
     except Exception as e:
         # llm.py의 재시도가 소진된 뒤의 최종 실패(쿼터/네트워크/타임아웃 등).
         # 호출자(CLI/API)에 트레이스백 대신 처리 가능한 결과를 돌려준다.
@@ -67,6 +73,7 @@ def generate_report(report_type: str, event_id: int) -> dict:
     return {
         "report_type": report_type,
         "event_id": event_id,
+        "params": params or None,
         "found": event.get("found", False),
         "draft": final.get("draft"),
         "verdict": critic.get("verdict"),
