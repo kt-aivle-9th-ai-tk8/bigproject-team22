@@ -57,6 +57,16 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
     setSelectedReport(null);
   };
 
+  const formatSentAt = (sentAt) => {
+    if (!sentAt) {
+      return "";
+    }
+
+    const [date, time] = sentAt.split("T");
+
+    return `${date.replaceAll("-", ".")}  ${time?.slice(0, 5) || ""}`;
+  };
+
   return (
     <div
       className="alarm-overlay"
@@ -72,7 +82,7 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
       >
         <div className="alarm-popup-header">
           <h2 id="alarm-popup-title">
-            {selectedReport?.title ?? "알림 보고서 리스트"}
+            {selectedReport?.report_title ?? "알림 보고서 리스트"}
           </h2>
 
           <button
@@ -121,7 +131,7 @@ function AlarmReportList({ alarm, onSelectReport }) {
           </div>
 
           <div className="alarm-list-sub">
-            {report.time}
+            {formatSentAt(report.sent_at)}
           </div>
         </button>
       ))}
