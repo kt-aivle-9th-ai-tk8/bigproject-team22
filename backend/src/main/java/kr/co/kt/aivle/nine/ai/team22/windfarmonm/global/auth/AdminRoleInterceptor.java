@@ -11,7 +11,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
  * 관리자 경로(/admin/**) 전용 인가 인터셉터. ADMIN 권한이 아니면 차단한다.
- * 로그인·GUEST 여부는 {@link LoginCheckInterceptor}(선행)가 이미 검사한다.
+ * 로그인 여부는 {@link LoginCheckInterceptor}(선행)가 검사한다. GUEST 는 로그인 자체가 차단되어
+ * 세션이 없으므로(AuthService, A004) 여기까지 도달하지 못한다.
  */
 @Component
 public class AdminRoleInterceptor implements HandlerInterceptor {
