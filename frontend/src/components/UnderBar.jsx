@@ -1,24 +1,15 @@
 import { useEffect, useState } from "react";
+import {
+  fetchWindFarmPower,
+  fetchTurbinePower,
+} from "../api/windFarmApi";
 import PowerChartDrag from "./UnderBar/PowerChartDrag";
 
-function createDummyPowerData(startAt, endAt) {
-  const startTime = startAt.getTime();
-  const endTime = endAt.getTime();
-
-  const twoHourMs = 2 * 60 * 60 * 1000;
-  const count = Math.max(1, Math.floor((endTime - startTime) / twoHourMs) + 1);
-
-  return Array.from({ length: count }, (_, index) => {
-    const measuredAt = new Date(startTime + index * twoHourMs);
-
-    return {
-      measuredAt: measuredAt.toISOString(),
-      powerGeneration: Math.floor(100 + Math.random() * 500),
-    };
-  });
-}
-
-function UnderBar({ selectedPlant }) {
+function UnderBar({
+  mode,
+  selectedPlant,
+  selectedTurbine,
+}) {
   const [axisStartAt, setAxisStartAt] = useState(null);
   const [axisEndAt, setAxisEndAt] = useState(null);
 
@@ -50,31 +41,65 @@ function UnderBar({ selectedPlant }) {
   /*
    * 2. 현재 보이는 x축 구간의 발전량 조회
    */
-  const fetchPowerGeneration = async ({ nextStartAt, nextEndAt }) => {
-    setIsLoading(true);
+  const fetchPowerGeneration = async ({
+    nextStartAt,
+    nextEndAt,
+  }) => {
+    if (!selectedPlant?.id) {
+      return;
+    }
 
-    /*
-     * 실제 API 예시:
-     *
-     * const query = new URLSearchParams({
-     *   startAt: nextStartAt.toISOString(),
-     *   endAt: nextEndAt.toISOString(),
-     * });
-     *
-     * const response = await fetch(
-     *   `/api/plants/${selectedPlant.id}/power-generation?${query.toString()}`
-     * );
-     *
-     * const data = await response.json();
-     * setPowerData(data);
-     */
+    try {
+      setIsLoading(true);
 
-    setTimeout(() => {
-      const dummyData = createDummyPowerData(nextStartAt, nextEndAt);
+      let responseBody;
 
-      setPowerData(dummyData);
+      if (mode === "turbine") {
+        if (!selectedTurbine?.id) {
+          return;
+        }
+
+        responseBody = await fetchTurbinePower({
+          turbineId: selectedTurbine.id,
+          startTime: nextStartAt.toISOString(),
+          endTime: nextEndAt.toISOString(),
+          term: "HOURLY",
+        });
+      } else {
+        if (!selectedPlant?.id) {
+          return;
+        }
+
+        responseBody = await fetchWindFarmPower({
+          windFarmId: selectedPlant.id,
+          startTime: nextStartAt.toISOString(),
+          endTime: nextEndAt.toISOString(),
+          term: "HOURLY",
+        });
+      }
+
+      const powerList = Array.isArray(responseBody)
+        ? responseBody
+        : Array.isArray(responseBody?.data)
+          ? responseBody.data
+          : [];
+
+      const convertedPowerData = powerList.map((item) => ({
+        measuredAt: item.time,
+        powerGeneration: item.power ?? 0,
+      }));
+
+      setPowerData(convertedPowerData);
+    } catch (error) {
+      console.error(
+        "발전량 조회 API 오류:",
+        error
+      );
+
+      setPowerData([]);
+    } finally {
       setIsLoading(false);
-    }, 300);
+    }
   };
 
   useEffect(() => {

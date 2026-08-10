@@ -116,6 +116,11 @@ function MainScreen() {
 
   const turbines = windFarmDetail?.turbines || [];
 
+  const underBarPlant =
+    screenMode === "map"
+      ? plants[0] || null
+      : selectedPlant;
+
   useEffect(() => {
     localStorage.setItem("screenMode", screenMode);
   }, [screenMode]);
@@ -244,7 +249,7 @@ function MainScreen() {
 
         <UnderBar
           mode={screenMode}
-          selectedPlant={selectedPlant}
+          selectedPlant={underBarPlant}
           selectedTurbine={selectedTurbine}
         />
       </div>
