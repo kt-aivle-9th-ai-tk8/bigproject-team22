@@ -10,6 +10,7 @@ import SideBar from "../components/SideBar";
 import { useWindFarmDetail } from "../hooks/useWindFarmDetail";
 import { useWindFarms } from "../hooks/useWindFarms";
 import { useNotifications } from "../hooks/useNotifications";
+import { usePowerGeneration } from "../hooks/usePowerGeneration";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -120,6 +121,17 @@ function MainScreen() {
     screenMode === "map"
       ? plants[0] || null
       : selectedPlant;
+  
+  const {
+    powerData,
+    isPowerLoading,
+    powerError,
+    fetchPowerGeneration,
+  } = usePowerGeneration({
+    mode: screenMode,
+    selectedPlant: underBarPlant,
+    selectedTurbine,
+  });
 
   useEffect(() => {
     localStorage.setItem("screenMode", screenMode);
@@ -251,6 +263,10 @@ function MainScreen() {
           mode={screenMode}
           selectedPlant={underBarPlant}
           selectedTurbine={selectedTurbine}
+          powerData={powerData}
+          isLoading={isPowerLoading}
+          powerError={powerError}
+          onFetchPowerGeneration={fetchPowerGeneration}
         />
       </div>
     </div>
