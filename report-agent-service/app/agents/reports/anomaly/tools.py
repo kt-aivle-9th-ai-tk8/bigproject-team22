@@ -47,8 +47,22 @@ def _asos() -> pd.DataFrame:
     return load_table("asos_record")
 
 
-def _farm_turbines() -> list:
-    return sorted(_scada()["turbine_code"].dropna().unique().tolist())
+def _farm_turbine_ids(wind_farm_id) -> set:
+    """해당 단지의 turbine_id 집합 — scada/이벤트를 '같은 단지'로 좁히는 데 쓴다.
+    turbine_code(U1~U8)는 단지 간 중복이라 스코프에 못 쓴다 — 반드시 turbine_id 로 좁힌다.
+    wind_farm_id 가 None(FK 깨짐)이면 빈 집합(보수적으로 '타 단지 혼입 없음')."""
+    if wind_farm_id is None:
+        return set()
+    ti = turbine_index()
+    return set(ti[ti["wind_farm_id"] == wind_farm_id]["turbine_id"].tolist())
+
+
+def _farm_turbines(wind_farm_id) -> list:
+    """해당 단지의 turbine_code 목록(정렬) — presence 막대차트의 호기 로스터."""
+    if wind_farm_id is None:
+        return []
+    ti = turbine_index()
+    return sorted(ti[ti["wind_farm_id"] == wind_farm_id]["turbine_code"].dropna().unique().tolist())
 
 
 def _farm_row(wind_farm_id):
@@ -111,12 +125,14 @@ def get_anomaly_event(event_id: int) -> dict:
     }
 
 
-def get_scada_during_event(turbine_code, start_time, event_type) -> dict:
-    """관측창 scada 집계(표·종합분석 공용). 평균·최대 풍속, 기대/실측 누적."""
+def get_scada_during_event(turbine_id, start_time, event_type) -> dict:
+    """관측창 scada 집계(표·종합분석 공용). 평균·최대 풍속, 기대/실측 누적.
+
+    turbine_id 로 필터한다 — turbine_code(U1~U8)는 단지 간 중복이라 멀티팜에서 타 단지가 섞인다."""
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
     sc = _scada()
-    df = sc[(sc["turbine_code"] == turbine_code) & (sc["recorded_at"] >= win_start)
+    df = sc[(sc["turbine_id"] == turbine_id) & (sc["recorded_at"] >= win_start)
             & (sc["recorded_at"] < win_end)]
     if df.empty:
         return {"found": False, "n_rows": 0}
@@ -129,40 +145,43 @@ def get_scada_during_event(turbine_code, start_time, event_type) -> dict:
     }
 
 
-def get_other_turbines(turbine_code, start_time, event_type) -> dict:
-    """관측창 동안 '타 호기' 수 + 발전량 평균 범위(lo~hi) — 종합분석용."""
+def get_other_turbines(turbine_id, wind_farm_id, start_time, event_type) -> dict:
+    """관측창 동안 '같은 단지 내 타 호기' 수 + 발전량 평균 범위(lo~hi) — 종합분석용.
+
+    반드시 단지로 좁힌다 — turbine_code 로 '!= 대상' 만 걸면 멀티팜에서 타 단지 호기까지 '타 호기'로 샌다."""
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
     sc = _scada()
-    df = sc[(sc["turbine_code"] != turbine_code) & (sc["recorded_at"] >= win_start)
-            & (sc["recorded_at"] < win_end)]
+    farm_ids = _farm_turbine_ids(wind_farm_id)
+    df = sc[sc["turbine_id"].isin(farm_ids) & (sc["turbine_id"] != turbine_id)
+            & (sc["recorded_at"] >= win_start) & (sc["recorded_at"] < win_end)]
     if df.empty:
         return {"n": 0, "lo": None, "hi": None}
-    means = df.groupby("turbine_code")["power_output"].mean()
+    means = df.groupby("turbine_id")["power_output"].mean()
     return {"n": int(means.shape[0]), "lo": _num(means.min()), "hi": _num(means.max())}
 
 
-def get_scada_series(turbine_code, start_time, event_type) -> list:
+def get_scada_series(turbine_id, start_time, event_type) -> list:
     """prolonged_stop 24h 시간별 (기대, 실측) — 라인차트용. 그 외 빈 리스트."""
     if event_type != "prolonged_stop":
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
     sc = _scada()
-    df = sc[(sc["turbine_code"] == turbine_code) & (sc["recorded_at"] >= win_start)
+    df = sc[(sc["turbine_id"] == turbine_id) & (sc["recorded_at"] >= win_start)
             & (sc["recorded_at"] < win_end)]
     return [{"t": r["recorded_at"].strftime("%H:%M"), "expected": _num(r["expected_power_pooled"]),
              "actual": _num(r["power_output"])} for _, r in df.iterrows()]
 
 
-def get_powercurve_bins(turbine_code, start_time, event_type, bin_w=2) -> list:
+def get_powercurve_bins(turbine_id, start_time, event_type, bin_w=2) -> list:
     """만성: 30일 풍속 구간별 (실측 평균, 기대 평균) — 파워커브용. 그 외 빈 리스트."""
     if event_type not in _CHRONIC:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
     sc = _scada()
-    df = sc[(sc["turbine_code"] == turbine_code) & (sc["recorded_at"] >= win_start)
+    df = sc[(sc["turbine_id"] == turbine_id) & (sc["recorded_at"] >= win_start)
             & (sc["recorded_at"] < win_end) & (sc["wind_speed"] > 0)].copy()
     if df.empty:
         return []
@@ -171,27 +190,31 @@ def get_powercurve_bins(turbine_code, start_time, event_type, bin_w=2) -> list:
     return [{"w": int(wbin), "actual": _num(r["actual"]), "expected": _num(r["expected"])} for wbin, r in g.iterrows()]
 
 
-def get_farm_presence(start_time, event_type) -> list:
-    """data_missing: 부재창 동안 호기별 관측 행 수(0=부재) — 막대차트/부재범위용. 그 외 빈 리스트."""
+def get_farm_presence(wind_farm_id, start_time, event_type) -> list:
+    """data_missing: 부재창 동안 호기별 관측 행 수(0=부재) — 막대차트/부재범위용. 그 외 빈 리스트.
+
+    같은 단지로 좁혀 집계한다 — 전 단지 scada 를 그대로 세면 멀티팜에서 타 단지 호기가 로스터에 섞인다."""
     if event_type != "data_missing":
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
     sc = _scada()
-    df = sc[(sc["recorded_at"] >= win_start) & (sc["recorded_at"] < win_end)]
-    counts = df.groupby("turbine_code").size().to_dict()
-    return [{"turbine": t, "rows": int(counts.get(t, 0))} for t in _farm_turbines()]
+    farm_ids = _farm_turbine_ids(wind_farm_id)
+    df = sc[sc["turbine_id"].isin(farm_ids) & (sc["recorded_at"] >= win_start) & (sc["recorded_at"] < win_end)]
+    counts = df.groupby("turbine_code").size().to_dict()   # 단지 내에선 turbine_code 가 유일
+    return [{"turbine": t, "rows": int(counts.get(t, 0))} for t in _farm_turbines(wind_farm_id)]
 
 
-def get_recent_events(turbine_code, event_type, before_time, months=RECENT_HISTORY_MONTHS) -> list:
+def get_recent_events(turbine_id, event_type, before_time, months=RECENT_HISTORY_MONTHS) -> list:
     """최근 N개월 같은 유형 발생 내역(이 이벤트 이전, 최신순). 건별 dict 목록 반환.
 
     [{start_time, tier, estimated_loss_kwh}, ...] — count가 아니라 '내역'을 준다.
+    turbine_id 로 필터한다 — turbine_code 는 단지 간 중복이라 멀티팜에서 타 단지 이력이 섞인다.
     """
     before = pd.to_datetime(before_time)
     lo = before - pd.DateOffset(months=months)
     ev = _events()
-    df = ev[(ev["turbine_code"] == turbine_code) & (ev["event_type"] == event_type)
+    df = ev[(ev["turbine_id"] == turbine_id) & (ev["event_type"] == event_type)
             & (ev["start_time"] >= lo) & (ev["start_time"] < before)]
     df = df.sort_values("start_time", ascending=False)
     return [{"start_time": _num(r["start_time"]), "tier": r["tier"],
@@ -229,18 +252,21 @@ def fetch(event_id: int) -> dict:
     event = get_anomaly_event(event_id)
     if not event.get("found"):
         return {"event": event}
-    code, start, et = event["turbine_code"], event["start_time"], event["event_type"]
-    recent_events = get_recent_events(code, et, start)   # 최근 6개월 건별 내역
+    # 멀티팜 안전: scada/이벤트 필터는 turbine_id(유일)로, 단지 스코프는 wind_farm_id 로 한다.
+    # turbine_code(U1~U8)는 단지 간 중복이라 필터에 쓰면 타 단지가 섞인다.
+    tid, fid = event["turbine_id"], event["wind_farm_id"]
+    start, et = event["start_time"], event["event_type"]
+    recent_events = get_recent_events(tid, et, start)   # 최근 6개월 건별 내역
     return {
         "event": event,
-        "scada": get_scada_during_event(code, start, et),
-        "others": get_other_turbines(code, start, et),
+        "scada": get_scada_during_event(tid, start, et),
+        "others": get_other_turbines(tid, fid, start, et),
         "weather": get_weather(event["aws_station_id"], event["asos_station_id"], start),
         "recent_events": recent_events,
         "recent_count": {"count": len(recent_events)},   # 표용(이제 최근 6개월 창)
-        "series": get_scada_series(code, start, et),
-        "powercurve": get_powercurve_bins(code, start, et),
+        "series": get_scada_series(tid, start, et),
+        "powercurve": get_powercurve_bins(tid, start, et),
         # presence(전 호기 관측 상태)는 scope=farm 의 '동시 부재' 증거로만 필요 —
         # scope=turbine 은 탐지기 판정을 그대로 서술하므로 farm-wide scada 를 읽지 않는다.
-        "presence": get_farm_presence(start, et) if event.get("scope") == "farm" else [],
+        "presence": get_farm_presence(fid, start, et) if event.get("scope") == "farm" else [],
     }
