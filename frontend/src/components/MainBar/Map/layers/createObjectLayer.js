@@ -7,7 +7,7 @@ import VectorSource from "ol/source/Vector";
 import Cluster from "ol/source/Cluster";
 
 import { fromLonLat } from "ol/proj";
-import { TURBINE_STATUS } from "../../SideBar/Turbine/TurbineItem";
+import { TURBINE_STATUS } from "../../../SideBar/Turbine/TurbineItem";
 
 import Style from "ol/style/Style";
 import Icon from "ol/style/Icon";
