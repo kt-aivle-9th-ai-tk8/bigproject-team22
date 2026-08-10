@@ -142,8 +142,7 @@ public class PowerQueryService {
             if (!sums.containsKey(bucket)) {
                 sums.put(bucket, value); // null 이어도 버킷은 남긴다(결측 표시)
             } else if (value != null) {
-                Double prev = sums.get(bucket);
-                sums.put(bucket, prev == null ? value : prev + value);
+                sums.compute(bucket, (key, prev) -> prev == null ? value : prev + value);
             }
         }
         return sums.entrySet().stream()
