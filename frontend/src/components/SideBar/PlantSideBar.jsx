@@ -26,27 +26,24 @@ function PlantSideBar({
   const plantName = selectedPlant?.title || selectedPlant?.name;
   const today = new Date().toISOString().slice(0, 10);
 
-  const turbineItems = [
-    {
-      id: 1,
-      name: "터빈 A",
-      status: TURBINE_STATUS.NORMAL,
-      abnormalDetected: false,
-    },
-    {
-      id: 2,
-      name: "터빈 B",
-      status: TURBINE_STATUS.ZERO_POWER,
-      abnormalDetected: true,
-    },
-    {
-      id: 3,
-      name: "터빈 C",
-      status: TURBINE_STATUS.NO_DATA,
-      abnormalDetected: false,
-    },
-  ];
+  const turbineItems = (windFarmDetail?.turbines || []).map(
+    (turbine) => {
+      let status = TURBINE_STATUS.NORMAL;
 
+      if (turbine.currentPower === null) {
+        status = TURBINE_STATUS.NO_DATA;
+      } else if (turbine.currentPower <= 0) {
+        status = TURBINE_STATUS.ZERO_POWER;
+      }
+
+      return {
+        id: turbine.id,
+        name: turbine.name,
+        status,
+        abnormalDetected: false,
+      };
+    }
+  );
   const weatherInfo = {
     title: plantName || "발전소",
     weatherType: windFarmDetail?.weather?.weatherType,

@@ -48,6 +48,7 @@ export const convertTurbineToMapObject = (turbine) => {
     name: turbine.code,
     code: turbine.code,
     model: turbine.model,
+    currentPower: turbine.current_power,
 
     coordinate: [
       turbine.longitude,
