@@ -96,6 +96,7 @@ function MainScreen() {
   } = useWindFarmDetail({
     mode: screenMode,
     windFarmId: selectedPlant?.id,
+    refreshInterval: 10000,
   });
 
   useEffect(() => {

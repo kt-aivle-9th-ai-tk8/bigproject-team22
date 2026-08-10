@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import "./PlantMainBar.css";
 
 import turbineIcon from "../../assets/icon/blade.png";
@@ -48,4 +50,12 @@ function PlantMainBar({
   );
 }
 
-export default PlantMainBar;
+const areEqual = (prevProps, nextProps) => {
+  return (
+    prevProps.turbines === nextProps.turbines &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.error === nextProps.error
+  );
+};
+
+export default memo(PlantMainBar, areEqual);
