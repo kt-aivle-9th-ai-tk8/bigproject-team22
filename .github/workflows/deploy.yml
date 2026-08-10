@@ -207,7 +207,7 @@ jobs:
       ### 빌드 결과물(dist 또는 build)을 S3로 업로드
       - name: Deploy to S3
         run: |
-          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} --delete
+          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} --delete --exclude "models/*"
 
       ### CloudFront 캐시 무효화 (사용자가 즉시 최신 웹페이지를 보도록 설정)
       - name: Invalidate CloudFront Cache
