@@ -7,6 +7,7 @@ import VectorSource from "ol/source/Vector";
 import Cluster from "ol/source/Cluster";
 
 import { fromLonLat } from "ol/proj";
+import { TURBINE_STATUS } from "../../SideBar/Turbine/TurbineItem";
 
 import Style from "ol/style/Style";
 import Icon from "ol/style/Icon";
@@ -30,6 +31,38 @@ const getCssVariableColor = (variableName, fallbackColor) => {
   return value || fallbackColor;
 };
 
+const getTurbineMarkerColors = (
+  status,
+  defaultFillColor,
+  defaultStrokeColor
+) => {
+  if (status === TURBINE_STATUS.ZERO_POWER) {
+    return {
+      fillColor: "#ffe8e8",
+      strokeColor: "#fd474a",
+    };
+  }
+
+  if (status === TURBINE_STATUS.NO_DATA) {
+    return {
+      fillColor: "#fcf9d6",
+      strokeColor: "#e9d821",
+    };
+  }
+
+  if (status === TURBINE_STATUS.NORMAL) {
+    return {
+      fillColor: defaultFillColor,
+      strokeColor: defaultStrokeColor,
+    };
+  }
+
+  return {
+    fillColor: defaultFillColor,
+    strokeColor: defaultStrokeColor,
+  };
+};
+
 /*
  * 단일 객체 아이콘 스타일
  *
@@ -43,17 +76,28 @@ const createSingleObjectStyle = (
   singleMarkerFillColor,
   singleMarkerStrokeColor
 ) => {
+  const objectData = objectFeature.get("objectData");
+
+  const {
+    fillColor,
+    strokeColor,
+  } = getTurbineMarkerColors(
+    objectData?.status,
+    singleMarkerFillColor,
+    singleMarkerStrokeColor
+  );
+
   return [
     new Style({
       image: new CircleStyle({
         radius: SINGLE_MARKER_RADIUS,
 
         fill: new Fill({
-          color: singleMarkerFillColor,
+          color: fillColor,
         }),
 
         stroke: new Stroke({
-          color: singleMarkerStrokeColor,
+          color: strokeColor,
           width: SINGLE_MARKER_STROKE_WIDTH,
         }),
       }),
@@ -127,17 +171,27 @@ const createExpandedObjectStyle = (
   singleMarkerFillColor,
   singleMarkerStrokeColor
 ) => {
+  const objectData = feature.get("objectData");
+
+  const {
+    fillColor,
+    strokeColor,
+  } = getTurbineMarkerColors(
+    objectData?.status,
+    singleMarkerFillColor,
+    singleMarkerStrokeColor
+  );
   return [
     new Style({
       image: new CircleStyle({
         radius: SINGLE_MARKER_RADIUS,
 
         fill: new Fill({
-          color: singleMarkerFillColor,
+          color: fillColor,
         }),
 
         stroke: new Stroke({
-          color: singleMarkerStrokeColor,
+          color: strokeColor,
           width: SINGLE_MARKER_STROKE_WIDTH,
         }),
       }),
