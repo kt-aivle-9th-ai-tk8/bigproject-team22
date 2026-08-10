@@ -15,9 +15,23 @@ from app.agents.registry import REGISTRY, REPORT_TYPES
 
 
 def fetch_node(state):
-    """report_type별 fetch로 tool_outputs 채움 (LLM 아님, 검증 기준 수치)."""
+    """report_type별 fetch로 tool_outputs 채움 (LLM 아님, 검증 기준 수치).
+
+    계약: fetch(event_id) 필수. params(기간 등)를 쓰는 유형은 fetch(event_id, params)로
+    선언하면 함께 전달된다 — 선언하지 않은 fetch는 기존대로 호출되므로 하위호환.
+    """
+    import inspect
+
     report_type = state["report_type"]
-    return {"tool_outputs": REGISTRY[report_type]["fetch"](state["event_id"])}
+    fetch = REGISTRY[report_type]["fetch"]
+    try:
+        accepts_params = len(inspect.signature(fetch).parameters) >= 2
+    except (TypeError, ValueError):   # 시그니처 조회 불가(C 확장 등) → 기본 호출
+        accepts_params = False
+
+    if accepts_params:
+        return {"tool_outputs": fetch(state["event_id"], state.get("params"))}
+    return {"tool_outputs": fetch(state["event_id"])}
 
 
 _app = None
