@@ -22,14 +22,10 @@ function TurbineModel({
   // 클릭 가능한 개별 블레이드 Mesh
   const bladeMeshRefs = useRef([]);
 
-  // Plane의 처음 회전 상태
-  const initialGroupQuaternionRef = useRef(null);
-
-  // Plane의 처음 rotation.y
-  const initialGroupRotationYRef = useRef(0);
-
   // 처음 위치 기준 누적 회전량
   const accumulatedRotationRef = useRef(0);
+
+  const zeroBladeRotationXRef = useRef(0);
 
   const isStoppingRef = useRef(false);
   const remainingStopRotationRef = useRef(0);
@@ -49,8 +45,6 @@ function TurbineModel({
       if (object.name === bladeGroupName) {
         bladeGroupRef.current = object;
 
-        initialGroupQuaternionRef.current = object.quaternion.clone();
-        initialGroupRotationYRef.current = object.rotation.y;
         accumulatedRotationRef.current = 0;
 
         console.log("회전 대상 Plane 찾음:", object.name, object.type);
@@ -66,13 +60,44 @@ function TurbineModel({
       "클릭 가능한 블레이드:",
       bladeMeshRefs.current.map((mesh) => mesh.name)
     );
+    const zeroBlade = bladeMeshRefs.current.find(
+      (mesh) => mesh.name === bladeMeshNames[0]
+    );
+
+    if (bladeGroupRef.current && zeroBlade) {
+      scene.updateMatrixWorld(true);
+
+      const bladeBox = new THREE.Box3().setFromObject(zeroBlade);
+      const bladeCenterWorld = new THREE.Vector3();
+
+      bladeBox.getCenter(bladeCenterWorld);
+
+      const bladeCenterLocal =
+        bladeGroupRef.current.worldToLocal(
+          bladeCenterWorld.clone()
+        );
+
+      const bladeAngle = Math.atan2(
+        bladeCenterLocal.z,
+        bladeCenterLocal.y
+      );
+
+      zeroBladeRotationXRef.current = -bladeAngle;
+
+      bladeGroupRef.current.rotation.x =
+        zeroBladeRotationXRef.current;
+
+      bladeGroupRef.current.updateMatrixWorld(true);
+
+      accumulatedRotationRef.current = 0;
+    }
 
     console.log("============================================");
   }, [scene, bladeGroupName]);
 
   const restoreInitialBladeGroup = () => {
-    if (!bladeGroupRef.current || !initialGroupQuaternionRef.current) return;
-    bladeGroupRef.current.rotation.x = 0;
+    if (!bladeGroupRef.current) return;
+    bladeGroupRef.current.rotation.x = zeroBladeRotationXRef.current;
     bladeGroupRef.current.updateMatrixWorld(true);
 
     accumulatedRotationRef.current = 0;
@@ -81,7 +106,7 @@ function TurbineModel({
   };
 
   useEffect(() => {
-    if (!bladeGroupRef.current || !initialGroupQuaternionRef.current) {
+    if (!bladeGroupRef.current) {
       prevIsRunningRef.current = isRunning;
       return;
     }
@@ -116,7 +141,7 @@ function TurbineModel({
   }, [isRunning]);
 
   useFrame(() => {
-    if (!bladeGroupRef.current || !initialGroupQuaternionRef.current) return;
+    if (!bladeGroupRef.current) return;
 
     if (isRunning) {
       bladeGroupRef.current.rotateX(-bladeSpeed);
