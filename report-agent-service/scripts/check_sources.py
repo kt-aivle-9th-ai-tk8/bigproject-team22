@@ -39,7 +39,9 @@ L.llm = _NoLLM()
 from app.core import datasource as ds        # noqa: E402
 from app.service import generate_report      # noqa: E402
 
-CASES = [("defect", 5001), ("operation", 2), ("farm_operation", 1), ("anomaly", 1)]
+# event_id 의미(유형별): defect=report_id · operation=turbine_id · farm_operation=wind_farm_id · anomaly=event_id.
+# operation/farm 은 scada 가 있는 대상이어야 실적이 나온다 — 화순(turbine_id 10~17, wind_farm_id 4).
+CASES = [("defect", 5001), ("operation", 10), ("farm_operation", 4), ("anomaly", 1)]
 
 
 def main():
