@@ -62,5 +62,6 @@ def _run(report_type: str, event_id: int, params: Optional[dict] = None) -> dict
 
 @router.post("", response_model=ReportResponse)
 def create_report(req: ReportRequest):
-    """보고서 생성 (제네릭 — 4종 공통 입구). operation=turbine_id, farm_operation=wind_farm_id."""
+    """보고서 생성 (제네릭 — 4종 공통 입구). event_id 의미는 registry.EVENT_ID_MEANING 단일 기준
+    (anomaly=event_id · defect=report_id · operation=turbine_id · farm_operation=wind_farm_id)."""
     return _run(req.report_type, req.event_id, req.to_params())
