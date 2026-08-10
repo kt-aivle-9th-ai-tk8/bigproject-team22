@@ -8,22 +8,24 @@ scada에 데이터가 있으면 found=True). 기간은 scada 전 구간.
   scada  : 단지 총 발전량(MWh)·달성률·가동률·손실 분해·평균 풍속·월별 총량 + 터빈별 실적
   anomaly: 단지 전체 이상 이벤트(상태별/유형별)
   defect : 단지 전체 결함(데이터 없으면 미가용)
+
+배포(RDS): 소스 선택은 app.core.datasource 가 테이블 단위로 한다 — 이 파일은 그대로 둔다.
 """
-import os
 import pandas as pd
 
-from app.core.config import DATA_DIR
-
-_events = pd.read_csv(
-    os.path.join(DATA_DIR, "anomaly_event.csv"),
-    encoding="utf-8-sig", parse_dates=["start_time", "end_time"],
-)
-_scada = pd.read_csv(
-    os.path.join(DATA_DIR, "scada_record.csv"),
-    encoding="utf-8-sig", parse_dates=["timestamp"],
-)
+from app.core.datasource import load_table, table_available
 
 DEFAULT_FARM = "화순풍력발전소"
+
+
+# 호출 시점 로드(datasource 가 1회 캐시). registry 가 4개 tools 를 전부 import 하므로
+# 전역 로드로 두면 다른 보고서 1건에도 단지 운영용 테이블까지 다 읽게 된다.
+def _events():
+    return load_table("anomaly_event")
+
+
+def _scada():
+    return load_table("scada_record")
 EVENT_CATEGORY = {
     "prolonged_stop": "stop", "data_missing": "data_missing",
     "chronic_screening": "degradation", "chronic_confirmed": "degradation",
@@ -40,7 +42,7 @@ def _num(v):
 
 def get_farm_scada() -> dict:
     """단지 전체 scada 집계 + 터빈별 실적 + 월별 총량."""
-    df = _scada
+    df = _scada()
     if df.empty:
         return {"found": False}
 
@@ -107,7 +109,8 @@ def get_farm_scada() -> dict:
 
 def get_farm_anomaly(start, end_excl) -> dict:
     """단지 전체 이상 이벤트 집계 + 터빈별 분포."""
-    df = _events[(_events["start_time"] >= start) & (_events["start_time"] < end_excl)].copy()
+    ev = _events()
+    df = ev[(ev["start_time"] >= start) & (ev["start_time"] < end_excl)].copy()
     cats = df["event_type"].map(EVENT_CATEGORY).fillna("other")
     cat_counts = cats.value_counts().to_dict()
 
@@ -141,19 +144,17 @@ def get_farm_anomaly(start, end_excl) -> dict:
 
 
 def get_farm_defect(start, end_excl) -> dict:
-    """단지 전체 결함 건수. 데이터 없으면 미가용."""
-    dpath = os.path.join(DATA_DIR, "defect.csv")
-    ipath = os.path.join(DATA_DIR, "inspection.csv")
-    if not (os.path.exists(dpath) and os.path.exists(ipath)):
+    """단지 전체 결함 건수. 점검·결함 데이터가 아예 없으면 미가용.
+
+    '미가용'은 소스가 없을 때만이다 — 조회 중 나는 오류는 삼키지 않고 올린다.
+    (예전엔 except Exception 이 전부를 삼켜, 컬럼이 바뀌어 깨진 것도 0건으로 보고됐다.)
+    """
+    if not (table_available("defect") and table_available("inspection")):
         return {"available": False, "count": 0}
-    try:
-        defects = pd.read_csv(dpath, encoding="utf-8-sig")
-        insp = pd.read_csv(ipath, encoding="utf-8-sig", parse_dates=["inspection_start"])
-        insp = insp[(insp["inspection_start"] >= start) & (insp["inspection_start"] < end_excl)]
-        merged = defects[defects["inspection_id"].isin(insp["inspection_id"])]
-        return {"available": True, "count": int(len(merged))}
-    except Exception:
-        return {"available": False, "count": 0}
+    insp = load_table("inspection")
+    insp = insp[(insp["inspection_start"] >= start) & (insp["inspection_start"] < end_excl)]
+    n = int(load_table("defect")["inspection_id"].isin(insp["inspection_id"]).sum())
+    return {"available": True, "count": n}
 
 
 def fetch(event_id: int) -> dict:

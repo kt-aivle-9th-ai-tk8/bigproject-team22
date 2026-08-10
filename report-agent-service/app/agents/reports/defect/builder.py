@@ -206,28 +206,37 @@ def overview_charts(to) -> list:
 
 
 def report_title(e) -> str:
-    """'1발전소 2023-04-19 점검 보고서'.
+    """'강원 풍력 발전소 2023-04-19 점검 보고서'.
 
     점검일자는 inspection_start 의 날짜 부분. 점검이 자정을 넘겨 이틀에 걸치는 건이
     있어 '시작일' 기준으로 고정한다(정확한 구간은 부제의 '점검 기간'에 그대로 남는다).
-    발전소는 현재 windfarm_id(숫자)뿐이라 'N발전소'로 쓴다. 발전소명 컬럼이 생기면
-    여기만 이름으로 바꾸면 된다.
+    발전소명은 tools._load() 의 조인(inspection→turbine→wind_farm)이 붙여준다.
+    조인이 비면 id로, 그것도 없으면 '발전소 미상'으로 떨어진다 — 제목이 깨지지 않게.
     """
     date = (e.get("inspection_start") or "")[:10] or "일자 미상"
-    return f"{e.get('windfarm_id')}발전소 {date} 점검 보고서"
+    farm = e.get("wind_farm_name")
+    if not farm:
+        fid = e.get("wind_farm_id")
+        farm = f"{fid}발전소" if fid is not None else "발전소 미상"
+    return f"{farm} {date} 점검 보고서"
 
 
 def subtitle_lines(to) -> list:
-    """제목 밑 부제 — 점검 식별·기간. anomaly 의 `유형` · 상태 · 발생시각 줄과 같은 자리.
+    """제목 밑 부제 — 보고서 식별·기간. anomaly 의 `유형` · 상태 · 발생시각 줄과 같은 자리.
 
-    보고서 부제에만 쓰고 LLM facts에는 넣지 않는다 → 분석이 점검번호·날짜를 다시 쓰면
-    allowed_numbers에 없어 환각 후보로 걸린다(의도된 동작).
+    보고서 부제에만 쓰고 LLM facts에는 넣지 않는다 → 분석이 보고서번호·점검번호·날짜를
+    다시 쓰면 allowed_numbers에 없어 환각 후보로 걸린다(의도된 동작).
+
+    점검번호를 함께 남기는 이유: 보고서 1건이 점검 여러 건을 묶으므로(드론 1회 출동에
+    터빈 2대) 어느 점검이 들어갔는지 밝혀야 대시보드·원본과 대조할 수 있다.
     """
     e = to["event"]
     status = e.get("status")
+    # 발전소는 제목에 이미 있으므로, 여기서는 보고서 식별자와 묶인 점검을 밝힌다.
+    ids = e.get("inspection_ids") or []
+    insp = f"점검 {len(ids)}건" + (f" (#{', #'.join(str(i) for i in ids)})" if ids else "")
     return [
-        f"`점검 #{e.get('inspection_id')}` · 보고서 {e.get('report_id')} · "
-        f"단지 {e.get('windfarm_id')} · {STATUS_KO.get(status, status)}",
+        f"`보고서 #{e.get('report_id')}` · {insp} · {STATUS_KO.get(status, status)}",
         "",
         f"점검 기간 {e.get('inspection_start')} ~ {e.get('inspection_end')}",
     ]
@@ -242,10 +251,10 @@ def stat_pairs(to) -> list:
     s = to.get("summary", {}) or {}
     pairs = []
 
-    # inspection에 '점검 대상 터빈' 목록이 없어, 결함이 검출된 터빈만 알 수 있다.
+    # 점검 대상 터빈은 inspection.turbine_id 로 확정된다 — 결함 0건이어도 여기 표기된다.
     codes = s.get("turbine_codes") or []
     pairs.append((
-        "결함 검출 터빈",
+        "점검 대상 터빈",
         f"{s.get('n_turbines', 0)}대" + (f" ({', '.join(codes)})" if codes else ""),
     ))
     pairs.append((
@@ -455,11 +464,12 @@ def allowed_numbers(to) -> set:
     return {abs(n) for n in extract_numbers(text)}
 
 
-def render_report(to, analysis: str) -> str:
+def render_report(to, analysis: str = None) -> str:
     """전체 보고서 조립.
 
     코드 주입: 핵심 지표·터빈별 상세·검출 이미지·판단유보.  LLM: 종합 분석 섹션만.
     결함 0건 터빈은 상세 섹션을 만들지 않고 핵심 지표 표에만 표기한다.
+    analysis 가 비면(WITH_ANALYSIS off) 빈 헤더를 남기지 않고 섹션 자체를 뺀다.
     """
     e = to["event"]
     parts = [
@@ -469,10 +479,9 @@ def render_report(to, analysis: str) -> str:
         "",
         *metric_table(to),
         *overview_charts(to),
-        "",
-        "## 종합 분석",
-        (analysis or "").strip(),
     ]
+    if analysis and analysis.strip():
+        parts += ["", "## 종합 분석", analysis.strip()]
 
     for t in to.get("turbines", []) or []:
         if t["n_defects"] == 0:

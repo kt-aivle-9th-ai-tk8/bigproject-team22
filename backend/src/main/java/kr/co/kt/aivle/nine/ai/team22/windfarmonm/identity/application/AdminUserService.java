@@ -35,6 +35,15 @@ public class AdminUserService {
                 .toList();
     }
 
+    /**
+     * 특정 역할의 사용자 id 목록. <b>인가를 하지 않는</b> 내부 조회 — 알림 fan-out 의 ADMIN 수신자 산출 등
+     * 시스템 내부 용도로만 쓴다(컨트롤러 접근통제는 AdminRoleInterceptor 가 담당).
+     */
+    @Transactional(readOnly = true)
+    public List<Long> findUserIdsByRole(Role role) {
+        return userRepository.findUserIdsByRole(role);
+    }
+
     /** 단일 사용자 조회(세션 활성 여부 포함). 없으면 {@link ErrorCode#USER_NOT_FOUND}. */
     @Transactional(readOnly = true)
     public AdminUserResult getUser(Long userId) {
