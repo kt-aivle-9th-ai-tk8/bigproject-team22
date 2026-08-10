@@ -7,12 +7,13 @@ RDS 로 전환되는 테이블은 _RDS_TABLES 에 등재된 것뿐이다. 등재
 DATA_SOURCE=="rds" 여도 CSV 로 읽는다 — 아직 RDS 에 없거나, 있어도 컬럼이 모자라기 때문:
   report / inspection / defect / anomaly_event / aws_record
       → backend 마이그레이션(V1~V3)에 테이블 자체가 없다. 생성되면 여기 등재만 하면 된다.
-  scada_record
-      → RDS 에는 (turbine_id, recorded_at, power_output) 3컬럼뿐이다(V2__...sql).
-        운영·이상 보고서는 wind_speed / is_stopped / expected_power_unit /
-        expected_power_pooled 가 있어야 집계되므로 지금 붙이면 전부 깨진다.
-        컬럼이 채워지면 등재하면서 turbine_id→turbine_code, recorded_at→timestamp 별칭만
-        붙이면 된다(_query 의 SELECT 에 AS 로).
+  scada_record / anomaly_event / aws_record / asos_record
+      → 이상감지 보고서용. RDS scada 는 현재 (turbine_id, recorded_at, power_output) 3컬럼뿐이고
+        (V2__...sql), 나머지 세 테이블은 아직 RDS 에 없다. 운영·이상 보고서는 wind_speed /
+        is_stopped / expected_power_unit / expected_power_pooled 등이 있어야 집계되므로
+        지금 붙이면 깨진다. 컬럼·테이블이 채워지면 여기 _RDS_TABLES 에 등재만 하면 된다.
+        컬럼명은 확정 스키마 그대로 recorded_at 을 쓰며(별칭 불필요), turbine_id→turbine_code 는
+        turbine_index() 조인으로 푼다(scada/anomaly_event 는 turbine_code 컬럼이 없다).
 """
 import os
 import threading
@@ -52,9 +53,35 @@ _RDS_TABLES = {
         "inspection_id", "turbine_id", "user_id", "report_id",
         "inspection_start", "inspection_end", "status", "created_at",
     )),
+    # area_pixel 은 ERD 신규 컬럼이라 CSV 에 없다 — 집계도 안 쓰므로 SELECT 에서 뺀다
+    # (넣으면 CSV 경로와 컬럼 구성이 달라진다).
     "defect": ("defect", (
         "defect_id", "inspection_id", "blade_id", "defect_type", "severity", "part_side",
         "bbox_x", "bbox_y", "bbox_w", "bbox_h", "confidence", "image_path", "created_at",
+    )),
+
+    # ── 이상감지(anomaly) — V4(anomaly·scada 보강) / V5(aws·asos) 마이그레이션 ──
+    #   논리명 → 물리명. V7(복수→단수 개명)으로 anomaly_events 도 anomaly_event 가 됐다(전 테이블 단수).
+    #   컬럼명은 확정 스키마(recorded_at/sd_)와 일치.
+    #   event_type·scope 는 RDS 가 대문자 관례(PROLONGED_STOP/FARM)로 저장 → LOWER 로 코드(소문자)에 맞춘다.
+    #   (tier 는 A/B 그대로. 날짜는 _DATE_COLS 가 파싱. LOWER 는 이미 소문자면 무해한 no-op.)
+    "anomaly_event": ("anomaly_event", (
+        "event_id", "turbine_id", "start_time", "end_time", "expected_power",
+        "actual_power", "z_score", "deviation_pct", "tier",
+        "LOWER(event_type) AS event_type", "LOWER(scope) AS scope",
+        "energy_ratio_30d", "estimated_loss_kwh", "created_at",
+    )),
+    "scada_record": ("scada_record", (
+        "turbine_id", "recorded_at", "wind_speed", "power_output", "air_density",
+        "norm_wind_speed", "is_stopped", "train_mask",
+        "expected_power_pooled", "expected_power_unit",
+    )),
+    "aws_record": ("aws_record", (
+        "aws_station_id", "recorded_at", "temperature", "pressure",
+        "humidity", "wind_direction", "precipitation",
+    )),
+    "asos_record": ("asos_record", (
+        "asos_station_id", "recorded_at", "sd_hr3", "sd_day", "sd_tot",
     )),
 }
 
@@ -62,11 +89,12 @@ _RDS_TABLES = {
 # 같은 테이블이 서로 다른 parse_dates 로 두 번 캐시되는 일도 없다.
 _DATE_COLS = {
     "anomaly_event": ("start_time", "end_time", "created_at"),
-    "aws_record": ("timestamp",),
+    "aws_record": ("recorded_at",),
+    "asos_record": ("recorded_at",),
     "blade": ("installation_date", "created_at"),
     "defect": ("created_at",),
     "inspection": ("inspection_start", "inspection_end", "created_at"),
-    "scada_record": ("timestamp",),
+    "scada_record": ("recorded_at",),
     "turbine": ("installation_date", "created_at"),
     "wind_farm": ("installation_date", "created_at"),
 }

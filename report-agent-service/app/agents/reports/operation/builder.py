@@ -45,6 +45,7 @@ def _bar(count, max_count, width=20):
 def facts(to) -> dict:
     a = to.get("anomaly", {}) or {}
     sc = to.get("scada", {}) or {}
+    d = to.get("defect", {}) or {}
     by = a.get("by_category", {}) or {}
 
     def r(v, nd=1):
@@ -65,6 +66,10 @@ def facts(to) -> dict:
         "stop": int(by.get("stop", 0)),
         "data_missing": int(by.get("data_missing", 0)),
         "degradation": int(by.get("degradation", 0)),
+        "defect_count": int(d.get("count", 0)),
+        "defect_available": bool(d.get("available", False)),
+        "n_inspections": int(d.get("n_inspections", 0)),
+        "high_severity": int(d.get("high_severity", 0)),
     }
 
 
@@ -130,6 +135,8 @@ def build_kpi_table(to) -> list:
         f"| 총 손실 발전량 | {_f(f['energy_loss_mwh'])} MWh |",
         f"| 관측 평균 풍속 | {_f(f['avg_wind'])} m/s |",
         f"| 이상 이벤트 (진행 중) | {f['total_events']}건 ({f['ongoing']}건) |",
+        (f"| 결함 (점검 {f['n_inspections']}회 / 고위험 {f['high_severity']}건) | {f['defect_count']}건 |"
+         if f["defect_available"] else f"| 결함 | {f['defect_count']}건 (미연동) |"),
         f"| 종합 가동 상태 | {status} |",
     ]
 

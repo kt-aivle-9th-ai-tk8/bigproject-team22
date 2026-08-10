@@ -7,7 +7,8 @@ public record TurbineItemResponse(
         Double latitude,
         Double longitude,
         String model,
-        String code
+        String code,
+        Double currentPower
 ) {
     public static TurbineItemResponse from(TurbineSummaryResult result) {
         return new TurbineItemResponse(
@@ -15,7 +16,8 @@ public record TurbineItemResponse(
                 result.latitude(),
                 result.longitude(),
                 result.model(),
-                result.code()
+                result.code(),
+                result.currentPower()
         );
     }
 }

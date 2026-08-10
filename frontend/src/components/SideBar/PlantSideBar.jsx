@@ -26,26 +26,7 @@ function PlantSideBar({
   const plantName = selectedPlant?.title || selectedPlant?.name;
   const today = new Date().toISOString().slice(0, 10);
 
-  const turbineItems = [
-    {
-      id: 1,
-      name: "터빈 A",
-      status: TURBINE_STATUS.NORMAL,
-      abnormalDetected: false,
-    },
-    {
-      id: 2,
-      name: "터빈 B",
-      status: TURBINE_STATUS.ZERO_POWER,
-      abnormalDetected: true,
-    },
-    {
-      id: 3,
-      name: "터빈 C",
-      status: TURBINE_STATUS.NO_DATA,
-      abnormalDetected: false,
-    },
-  ];
+  const turbineItems = windFarmDetail?.turbines || [];
 
   const weatherInfo = {
     title: plantName || "발전소",

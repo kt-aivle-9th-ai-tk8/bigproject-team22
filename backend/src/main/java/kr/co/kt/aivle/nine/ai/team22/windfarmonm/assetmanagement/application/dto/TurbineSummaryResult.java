@@ -8,6 +8,7 @@ public record TurbineSummaryResult(
         Double latitude,
         Double longitude,
         String model,
-        String code
+        String code,
+        Double currentPower
 ) {
 }

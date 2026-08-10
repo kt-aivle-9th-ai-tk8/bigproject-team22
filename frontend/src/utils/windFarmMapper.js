@@ -43,11 +43,21 @@ export const convertWindFarmToPlant = (windFarm) => {
 };
 
 export const convertTurbineToMapObject = (turbine) => {
+  let status = TURBINE_STATUS.NORMAL;
+
+  if (turbine.current_power === null) {
+    status = TURBINE_STATUS.NO_DATA;
+  } else if (turbine.current_power <= 0) {
+    status = TURBINE_STATUS.ZERO_POWER;
+  }
+
   return {
     id: turbine.id,
     name: turbine.code,
     code: turbine.code,
     model: turbine.model,
+    status,
+    abnormalDetected: false,
 
     coordinate: [
       turbine.longitude,
@@ -55,7 +65,6 @@ export const convertTurbineToMapObject = (turbine) => {
     ],
   };
 };
-
 export const convertWindFarmDetailToPlant = (windFarm) => {
   const weather = windFarm.weather || {};
   const power = windFarm.power || {};
