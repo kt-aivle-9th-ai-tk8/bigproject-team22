@@ -68,8 +68,18 @@ public class PowerQueryService {
         if (turbineIds == null || turbineIds.isEmpty()) {
             return PowerSummary.empty();
         }
+        return summaryByTurbines(turbineIds, currentPower(turbineIds));
+    }
+
+    /**
+     * 이미 조회한 현재 출력값을 재사용해 터빈 발전량 요약을 만든다.
+     * 단지 상세조회처럼 터빈별 현재 출력과 단지 합산값을 함께 응답하는 경우의 중복 SCADA 조회를 막는다.
+     */
+    PowerSummary summaryByTurbines(List<Long> turbineIds, Double current) {
+        if (turbineIds == null || turbineIds.isEmpty()) {
+            return PowerSummary.empty();
+        }
         LocalDate today = LocalDate.now(ZONE);
-        Double current = currentPower(turbineIds);
         Double todayPower = sum(dailyGenerationRepository.findByTurbineIdsAndTime(turbineIds, today.atStartOfDay()).stream()
                 .map(DailyGeneration::getDailyPowerOutput)
                 .toList());
@@ -142,17 +152,15 @@ public class PowerQueryService {
     }
 
     /**
-     * 터빈들의 '현재 출력' 합산. 가장 마지막 행을 찾지 않고 <b>조회 시각을 지정</b>한다.
-     * <p>
-     * 기준은 직전 정시({@code now} 절삭)이며, 해당 행이 없으면 한 시간 전으로 1단계만 폴백한다.
-     * 정시 직후에는 적재 배치가 아직 끝나지 않았을 수 있기 때문이다. 폴백은 <b>터빈별로</b> 독립 적용해
-     * 일부 터빈만 적재된 상황에서도 가용한 값을 최대한 사용한다.
-     * <p>
-     * 구분에 유의: <b>행은 있는데 값이 null</b> 이면 계측 결측이므로 그 행을 그대로 쓴다(폴백하지 않는다).
-     * <b>행 자체가 없을 때만</b> 폴백하며, 두 시각 모두 없으면 적재 배치 이상 신호이므로 경고 로그를 남긴다
-     * (응답 계약은 유지 — 사용자에게는 값 없음(null)으로 나간다).
+     * 여러 터빈의 현재 출력. 가장 마지막 행을 찾지 않고 조회 시각을 지정한다.
+     * 기준은 직전 정시이며, 해당 행이 없으면 한 시간 전으로 터빈별 1단계 폴백한다.
+     * 행은 있으나 값이 null이면 계측 결측이므로 null을 그대로 반환한다.
      */
-    private Double currentPower(List<Long> turbineIds) {
+    public Map<Long, Double> currentPowerByTurbines(List<Long> turbineIds) {
+        if (turbineIds == null || turbineIds.isEmpty()) {
+            return Map.of();
+        }
+
         LocalDateTime at = LocalDateTime.now(ZONE).truncatedTo(ChronoUnit.HOURS);
         LocalDateTime fallback = at.minusHours(LOOKBACK_HOURS);
 
@@ -167,9 +175,14 @@ public class PowerQueryService {
             log.warn("SCADA 미적재 터빈 {}/{}개(기준 {}, 폴백 {}). 적재 배치 동작을 확인할 것.",
                     missing, turbineIds.size(), at, fallback);
         }
-        return sum(newestByTurbine.values().stream()
-                .map(ScadaRecord::getPowerOutput)
-                .toList());
+        Map<Long, Double> currentPowerByTurbine = new HashMap<>();
+        newestByTurbine.values().forEach(record ->
+                currentPowerByTurbine.put(record.getTurbineId(), record.getPowerOutput()));
+        return currentPowerByTurbine;
+    }
+
+    private Double currentPower(List<Long> turbineIds) {
+        return sum(currentPowerByTurbines(turbineIds).values().stream().toList());
     }
 
     /** null 을 무시하고 합산한다. 유효 값이 하나도 없으면 null 을 반환한다. */

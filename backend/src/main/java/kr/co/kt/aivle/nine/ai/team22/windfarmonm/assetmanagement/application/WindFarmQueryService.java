@@ -112,17 +112,23 @@ public class WindFarmQueryService {
 
         List<Turbine> turbines = turbineRepository.findByWindFarmId(windFarmId);
         Map<Long, String> modelNames = modelNamesOf(turbines);
+        List<Long> turbineIds = turbines.stream().map(Turbine::getId).toList();
+        Map<Long, Double> currentPowerByTurbine = powerQueryService.currentPowerByTurbines(turbineIds);
         List<TurbineSummaryResult> turbineResults = turbines.stream()
                 .map(t -> new TurbineSummaryResult(
                         t.getId(),
                         t.getLatitude(),
                         t.getLongitude(),
                         modelNames.get(t.getTurbineModelId()),
-                        t.getCode()))
+                        t.getCode(),
+                        currentPowerByTurbine.get(t.getId())))
                 .toList();
 
-        List<Long> turbineIds = turbines.stream().map(Turbine::getId).toList();
-        PowerSummary power = powerQueryService.summaryByTurbines(turbineIds);
+        Double currentPower = currentPowerByTurbine.values().stream()
+                .filter(java.util.Objects::nonNull)
+                .reduce(Double::sum)
+                .orElse(null);
+        PowerSummary power = powerQueryService.summaryByTurbines(turbineIds, currentPower);
         WeatherInfo weather = weatherProvider.getWeather(windFarm.getAsosStationId());
 
         return new WindFarmDetailResult(
