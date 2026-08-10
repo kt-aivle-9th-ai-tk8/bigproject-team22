@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 
 import "./PlantMainBar.css";
 
@@ -60,7 +60,7 @@ function PlantMainBar({
       />
 
       <button
-        className={`map-plant-menu-button ${isPlantListOpen ? "active" : ""}`}
+        className={`map-plant-menu-button ${isTurbineListOpen ? "active" : ""}`}
         type="button"
         aria-label="터빈 리스트 열기"
         onClick={handleToggleTurbineList}
@@ -90,14 +90,14 @@ function PlantMainBar({
             ) : (
               turbines.map((turbine) => {
                 const turbineName =
-                  turbines.name ||
+                  turbine.name ||
                   `터빈 ${turbines.id}`;
 
                 return (
                   <button
                     className="map-plant-list-item"
                     type="button"
-                    key={turbines.id}
+                    key={turbine.id}
                     onClick={() => handleSelectTurbine(turbine)}
                   >
                     <span className="map-plant-list-name">
