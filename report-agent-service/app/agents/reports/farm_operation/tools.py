@@ -14,7 +14,7 @@ import pandas as pd
 from app.core.config import DATA_DIR
 from app.agents.reports.operation.tools import (
     _events, _scada, _turbine, _farm, _inspection, _defect,
-    EVENT_CATEGORY, HIGH_SEVERITY, _num,
+    EVENT_CATEGORY, HIGH_SEVERITY, _num, _period_bounds,
 )
 
 
@@ -35,11 +35,16 @@ def get_farm_info(wind_farm_id: int) -> dict:
     }
 
 
-def get_farm_scada(turbine_ids, code_map) -> dict:
-    """단지 전체 scada 집계 + 터빈별 실적 + 월별 총량."""
+def get_farm_scada(turbine_ids, code_map, period_start=None, period_end=None) -> dict:
+    """단지 전체 scada 집계 + 터빈별 실적 + 월별 총량. 기간 미지정 시 관측 전 구간."""
     df = _scada[_scada["turbine_id"].isin(turbine_ids)].copy()
     if df.empty:
         return {"found": False}
+
+    start, end_excl = _period_bounds(df, period_start, period_end)
+    df = df[(df["recorded_at"] >= start) & (df["recorded_at"] < end_excl)]
+    if df.empty:
+        return {"found": False, "reason": "해당 기간 관측 데이터 없음"}
 
     # 유효 행(expected/actual 모두 존재)만 사용 — 모든 발전 지표가 같은 모집단을 쓰도록.
     valid = df[["expected_power_unit", "power_output"]].notna().all(axis=1)
@@ -165,17 +170,21 @@ def get_farm_defect(turbine_ids, start, end_excl) -> dict:
     }
 
 
-def fetch(event_id: int) -> dict:
-    """event_id(=wind_farm_id) → tool_outputs. 단지 전체 집계.
+def fetch(event_id: int, params: dict = None) -> dict:
+    """event_id(=wind_farm_id) + params(기간) → tool_outputs. 단지 전체 집계.
+
+    params: {"period_start": "YYYY-MM-DD", "period_end": "YYYY-MM-DD"} (선택).
+      미지정 시 해당 단지의 관측 전 구간. period_end는 그 날짜 끝까지 포함.
 
     'event' 키는 공유 service의 존재 여부(found) 계약용.
     """
+    p = params or {}
     info = get_farm_info(event_id)
     if not info.get("found") or not info["turbine_ids"]:
         return {"event": {"found": False}, "farm": {"found": False, "wind_farm_id": event_id}}
 
     ids, code_map = info["turbine_ids"], info["code_map"]
-    scada = get_farm_scada(ids, code_map)
+    scada = get_farm_scada(ids, code_map, p.get("period_start"), p.get("period_end"))
     if not scada.get("found"):
         return {"event": {"found": False}, "farm": {"found": False, "wind_farm_id": event_id}}
 

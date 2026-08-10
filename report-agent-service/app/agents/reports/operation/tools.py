@@ -113,11 +113,28 @@ def get_anomaly_summary(turbine_id, start, end_excl) -> dict:
     }
 
 
-def get_scada_summary(turbine_id) -> dict:
-    """터빈 전 구간 scada 집계 + 운영 진단 지표 + 월별 시계열."""
+def _period_bounds(df, period_start=None, period_end=None):
+    """(start, end_exclusive) 반환. 미지정이면 df의 관측 전 구간.
+
+    period_end는 그 날짜 '끝까지' 포함(해당 일 23:59:59.999…)하도록 다음 날 00:00을 exclusive 상한으로 쓴다.
+    """
+    start = (pd.to_datetime(period_start).normalize()
+             if period_start else df["recorded_at"].min())
+    end_excl = (pd.to_datetime(period_end).normalize() + pd.Timedelta(days=1)
+                if period_end else df["recorded_at"].max() + pd.Timedelta(seconds=1))
+    return start, end_excl
+
+
+def get_scada_summary(turbine_id, period_start=None, period_end=None) -> dict:
+    """터빈 scada 집계 + 운영 진단 지표 + 월별 시계열. 기간 미지정 시 관측 전 구간."""
     df = _scada[_scada["turbine_id"] == int(turbine_id)].copy()
     if df.empty:
         return {"found": False, "n_rows": 0}
+
+    start, end_excl = _period_bounds(df, period_start, period_end)
+    df = df[(df["recorded_at"] >= start) & (df["recorded_at"] < end_excl)]
+    if df.empty:
+        return {"found": False, "n_rows": 0, "reason": "해당 기간 관측 데이터 없음"}
 
     # 유효 행(expected/actual 모두 존재)만 사용 — 리포트의 모든 발전 지표가 같은 모집단을 쓰도록.
     #   expected에 NaN이 있으면 sum()은 무시(0 취급)하지만 gap(뺄셈)은 NaN이 되어
@@ -195,16 +212,26 @@ def get_defect_summary(turbine_id, start, end_excl) -> dict:
     }
 
 
-def fetch(event_id: int) -> dict:
-    """event_id(=turbine_id) → tool_outputs. 이상 이벤트·발전 실적·결함 집계.
+def fetch(event_id: int, params: dict = None) -> dict:
+    """event_id(=turbine_id, 전역 유일) + params(기간) → tool_outputs.
+
+    params: {"period_start": "YYYY-MM-DD", "period_end": "YYYY-MM-DD"} (선택).
+      미지정 시 해당 터빈의 관측 전 구간. period_end는 그 날짜 끝까지 포함.
+    turbine_id는 전역 유일값이라 단지 구분 없이 정확히 식별된다(turbine_code는 단지 내에서만 유일).
 
     'event' 키는 공유 service가 존재 여부(found)를 읽는 계약이라 함께 노출한다.
     """
+    p = params or {}
     info = get_turbine_info(event_id)
     if not info.get("found") or int(event_id) not in KNOWN_TURBINE_IDS:
         return {"event": {"found": False}, "turbine": {"found": False, "turbine_id": event_id}}
 
-    scada = get_scada_summary(event_id)
+    scada = get_scada_summary(event_id, p.get("period_start"), p.get("period_end"))
+    if not scada.get("found"):
+        return {"event": {"found": False},
+                "turbine": {"found": False, "turbine_id": event_id,
+                            "reason": scada.get("reason", "관측 데이터 없음")}}
+
     start = pd.to_datetime(scada["period_start"])
     end_excl = pd.to_datetime(scada["period_end"]) + pd.Timedelta(seconds=1)
 

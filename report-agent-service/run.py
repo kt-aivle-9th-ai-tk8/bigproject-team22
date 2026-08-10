@@ -23,7 +23,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("event_id", type=int)
     ap.add_argument("--report-type", default="anomaly", choices=REPORT_TYPES)
+    ap.add_argument("--start", default=None,
+                    help="조회 기간 시작 YYYY-MM-DD (operation/farm_operation)")
+    ap.add_argument("--end", default=None,
+                    help="조회 기간 종료 YYYY-MM-DD, 해당 일 포함 (operation/farm_operation)")
     args = ap.parse_args()
+
+    params = {k: v for k, v in (("period_start", args.start), ("period_end", args.end)) if v} or None
 
     if not os.getenv("OPENAI_API_KEY"):
         print("ERROR: OPENAI_API_KEY 가 설정되지 않았습니다 (.env 확인)")
@@ -32,8 +38,9 @@ def main():
     if TRACING:
         print(f"[run] LangSmith 트레이싱 ON (project={LANGSMITH_PROJECT})")
 
-    print(f"[run] report_type={args.report_type} event_id={args.event_id} 실행")
-    res = generate_report(args.report_type, args.event_id)
+    print(f"[run] report_type={args.report_type} event_id={args.event_id}"
+          + (f" params={params}" if params else "") + " 실행")
+    res = generate_report(args.report_type, args.event_id, params)
 
     if res.get("error"):
         print(f"[run] 생성 실패(LLM 호출 오류): {res['error']}")
@@ -44,7 +51,8 @@ def main():
         sys.exit(1)
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    out_path = os.path.join(OUTPUT_DIR, f"report_{args.report_type}_{args.event_id}.md")
+    suffix = f"_{args.start}_{args.end}" if (args.start or args.end) else ""
+    out_path = os.path.join(OUTPUT_DIR, f"report_{args.report_type}_{args.event_id}{suffix}.md")
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(res["draft"] or "")
 
