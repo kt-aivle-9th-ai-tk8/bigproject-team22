@@ -97,15 +97,16 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("GUEST 는 로그인은 되지만 보호 경로 접근은 403(승인 대기)")
-    void adminApi_guest_403Pending() {
+    @DisplayName("GUEST 는 로그인 자체가 차단된다(A004 승인 대기) — 세션을 발급하지 않는다")
+    void guest_loginBlocked() {
         seed("GUEST1", Role.GUEST);
-        String cookie = sessionCookie(login("GUEST1"));
 
-        ResponseEntity<String> response = getAdminUsers(cookie);
+        ResponseEntity<String> response = login("GUEST1"); // 올바른 비밀번호라도 승인 전이면 차단
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(response.getBody()).contains("승인 대기");
+        // 세션 쿠키가 발급되지 않아야 한다(로그인 실패)
+        assertThat(response.getHeaders().get(HttpHeaders.SET_COOKIE)).isNull();
     }
 
     @Test
