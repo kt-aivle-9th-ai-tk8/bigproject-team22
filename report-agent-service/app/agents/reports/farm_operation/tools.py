@@ -99,6 +99,9 @@ def get_farm_scada(turbine_ids, code_map, period_start=None, period_end=None) ->
         "n_turbines": int(dfv["turbine_id"].nunique()),
         "period_start": _num(df["recorded_at"].min()),
         "period_end": _num(df["recorded_at"].max()),
+        # 요청 기간 경계(_period_bounds 결과) — anomaly·defect 를 요청 기간으로 집계하도록 fetch 로 넘긴다.
+        "query_start": _num(start),
+        "query_end_excl": _num(end_excl),
         "total_actual_mwh": _num(total_actual_kwh / 1000.0),
         "total_expected_mwh": _num(total_expected_kwh / 1000.0),
         "utilization_pct": _num(util),
@@ -195,19 +198,22 @@ def fetch(event_id: int, params: dict = None) -> dict:
     if not scada.get("found"):
         return {"event": {"found": False}, "farm": {"found": False, "wind_farm_id": event_id}}
 
-    start = pd.to_datetime(scada["period_start"])
-    end_excl = pd.to_datetime(scada["period_end"]) + pd.Timedelta(seconds=1)
+    # 표시 기간 = 실제 관측 데이터 범위 / 집계 경계 = 요청 기간(미지정 시 동일).
+    disp_start = pd.to_datetime(scada["period_start"])
+    disp_end = pd.to_datetime(scada["period_end"])
+    q_start = pd.to_datetime(scada["query_start"])
+    q_end_excl = pd.to_datetime(scada["query_end_excl"])
     return {
         "event": {"found": True},
         "farm": {
             "found": True,
             "wind_farm_id": info["wind_farm_id"],
             "farm_name": info["farm_name"],
-            "period_start": start.strftime("%Y-%m-%d"),
-            "period_end": pd.to_datetime(scada["period_end"]).strftime("%Y-%m-%d"),
+            "period_start": disp_start.strftime("%Y-%m-%d"),
+            "period_end": disp_end.strftime("%Y-%m-%d"),
             "n_turbines": scada["n_turbines"],
         },
         "scada": scada,
-        "anomaly": get_farm_anomaly(ids, code_map, start, end_excl),
-        "defect": get_farm_defect(ids, start, end_excl),
+        "anomaly": get_farm_anomaly(ids, code_map, q_start, q_end_excl),
+        "defect": get_farm_defect(ids, q_start, q_end_excl),
     }

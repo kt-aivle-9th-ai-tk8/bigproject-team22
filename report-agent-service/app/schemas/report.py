@@ -3,6 +3,8 @@ from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
+from app.agents.registry import EVENT_ID_MEANING
+
 
 class ReportRequest(BaseModel):
     report_type: str = Field(
@@ -12,11 +14,9 @@ class ReportRequest(BaseModel):
     event_id: int = Field(
         ...,
         examples=[2],
-        description=(
-            "트리거 식별자(유형별 의미 상이). "
-            "anomaly/defect=event_id · operation=turbine_id(전역 유일) · "
-            "farm_operation=wind_farm_id"
-        ),
+        # 유형별 의미는 EVENT_ID_MEANING(registry) 단일 기준을 그대로 인용한다 — 계약이 한 곳에서만 바뀌게.
+        description="트리거 식별자 — report_type 마다 의미가 다르다. "
+        + " · ".join(f"{t}={m}" for t, m in EVENT_ID_MEANING.items()),
     )
     period_start: Optional[str] = Field(
         None, examples=["2025-03-01"],

@@ -179,6 +179,10 @@ def get_scada_summary(turbine_id, period_start=None, period_end=None) -> dict:
         "n_rows": int(len(dfv)),
         "period_start": _num(df["recorded_at"].min()),
         "period_end": _num(df["recorded_at"].max()),
+        # 요청 기간 경계(_period_bounds 결과). anomaly·defect 가 '관측 데이터 범위'가 아니라
+        # '요청 기간'으로 집계하도록 fetch 로 넘긴다 — 기간 앞뒤에 scada 가 없어도 그 구간 이벤트를 포함.
+        "query_start": _num(start),
+        "query_end_excl": _num(end_excl),
         "avg_actual_power": _num(avg_actual),
         "avg_expected_power": _num(avg_expected),
         "utilization_pct": _num(util),
@@ -241,8 +245,12 @@ def fetch(event_id: int, params: dict = None) -> dict:
                 "turbine": {"found": False, "turbine_id": event_id,
                             "reason": scada.get("reason", "관측 데이터 없음")}}
 
-    start = pd.to_datetime(scada["period_start"])
-    end_excl = pd.to_datetime(scada["period_end"]) + pd.Timedelta(seconds=1)
+    # 표시 기간 = 실제 관측 데이터 범위(scada 표·차트가 덮는 구간).
+    disp_start = pd.to_datetime(scada["period_start"])
+    disp_end = pd.to_datetime(scada["period_end"])
+    # 집계 경계 = 요청 기간(관측 데이터가 없는 구간의 이벤트/결함도 포함). 기간 미지정 시 데이터 범위와 동일.
+    q_start = pd.to_datetime(scada["query_start"])
+    q_end_excl = pd.to_datetime(scada["query_end_excl"])
 
     return {
         "event": {"found": True},   # service의 generic found-체크용
@@ -251,10 +259,10 @@ def fetch(event_id: int, params: dict = None) -> dict:
             "turbine_id": info["turbine_id"],
             "turbine_code": info["turbine_code"],
             "farm_name": info["farm_name"],
-            "period_start": start.strftime("%Y-%m-%d"),
-            "period_end": pd.to_datetime(scada["period_end"]).strftime("%Y-%m-%d"),
+            "period_start": disp_start.strftime("%Y-%m-%d"),
+            "period_end": disp_end.strftime("%Y-%m-%d"),
         },
-        "anomaly": get_anomaly_summary(event_id, start, end_excl),
+        "anomaly": get_anomaly_summary(event_id, q_start, q_end_excl),
         "scada": scada,
-        "defect": get_defect_summary(event_id, start, end_excl),
+        "defect": get_defect_summary(event_id, q_start, q_end_excl),
     }

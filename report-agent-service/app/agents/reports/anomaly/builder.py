@@ -97,11 +97,18 @@ def _mermaid_powercurve(bins):
     exp = [_num1(b.get("expected")) for b in bins]
     act = [_num1(b.get("actual")) for b in bins]
     top = (int(max(exp + act + [0]) // 100) + 1) * 100
+    # 캡션은 데이터로 검증한다 — "모든 구간에서 실측<기대"는 실제 그럴 때만 단정한다(관측 사실 원칙).
+    pairs = [(b.get("expected"), b.get("actual")) for b in bins]
+    pairs = [(e, a) for e, a in pairs if e is not None and a is not None]
+    all_below = bool(pairs) and all(a < e for e, a in pairs)
+    caption = ("모든 풍속 구간에서 실제 발전량(🔴)이 기대치(🔵)보다 낮아, 성능이 지속적으로 떨어지고 있음을 보여줍니다."
+               if all_below else
+               "풍속 구간별 실제 발전량(🔴)과 기대치(🔵)를 비교해 성능 저하 여부를 보여줍니다.")
     return ["## 파워커브 · 🔵 기대 vs 🔴 실측 (풍속 구간별)", "", "```mermaid", _init(_XY_COLORS),
             "xychart-beta", '    title "풍속대별 발전량 (kWh)"', f"    x-axis [{xs}]",
             f'    y-axis "kWh" 0 --> {top}', f"    line [{', '.join(str(v) for v in exp)}]",
             f"    line [{', '.join(str(v) for v in act)}]", "```",
-            "모든 풍속 구간에서 실제 발전량(🔴)이 기대치(🔵)보다 낮아, 성능이 지속적으로 떨어지고 있음을 보여줍니다."]
+            caption]
 
 
 def _mermaid_deficit(pct):
@@ -172,7 +179,9 @@ def _checklist_block(et, scope=None):
     머리에 '누가/얼마나 급한지'(구 권고 조치)를 흡수한다. 세부 확인 항목은 아래 순서로 대체.
     """
     if et == "data_missing":
-        items = CHECKLIST_DATA_MISSING.get(scope)
+        # scope 는 farm 이면 farm, 그 외(None/turbine 등)는 단일 호기로 본다 —
+        # _summary_line·_facts_data_missing 과 같은 규칙. 정확 키 일치만 요구하면 섹션이 통째로 빠진다.
+        items = CHECKLIST_DATA_MISSING.get("farm" if scope == "farm" else "turbine")
     else:
         items = CHECKLIST.get(et)
     if not items:

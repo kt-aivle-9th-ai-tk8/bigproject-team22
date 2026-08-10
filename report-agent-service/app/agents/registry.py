@@ -36,8 +36,8 @@ from app.agents.reports.farm_operation import critic_rules as _farm_critic
 EVENT_ID_MEANING = {
     "anomaly": "anomaly_event.event_id (이상 감지 이벤트)",
     "defect": "report.report_id (결함 진단 보고서, 예: 5001~5060) — inspection_id 가 아니다",
-    "operation": "터빈 번호 (2 → U2)",
-    "farm_operation": "단지 id (현재 단일 단지라 값은 무시된다)",
+    "operation": "turbine.turbine_id (전역 유일, 예: 10~17)",
+    "farm_operation": "wind_farm.wind_farm_id (단지, 예: 4)",
 }
 
 REGISTRY = {
