@@ -8,6 +8,7 @@ function SideBar({
   selectedPlant,
   selectedTurbine,
   windFarmDetail,
+  notifications,
   onSelectPlant,
   onSelectTurbine,
   onCreateInspectionReport,
@@ -18,6 +19,7 @@ function SideBar({
       {mode === "map" && (
         <MapSideBar
           plants={plants}
+          notifications={notifications}
           onSelectPlant={onSelectPlant}
         />
       )}

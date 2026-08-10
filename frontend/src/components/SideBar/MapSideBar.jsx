@@ -11,6 +11,7 @@ import "./MapSideBar.css";
 
 function MapSideBar({
   plants = [],
+  notifications = [],
   onSelectPlant,
 }) {
   const [isWeatherHelpOpen, setIsWeatherHelpOpen] = useState(false);
@@ -127,7 +128,7 @@ function MapSideBar({
           실시간 점검 알림
         </SideTitle>
 
-        <FaultList items={faultItems} />
+        <FaultList items={notifications} />
       </section>
     </div>
   );

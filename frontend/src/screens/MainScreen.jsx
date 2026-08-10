@@ -235,6 +235,7 @@ function MainScreen() {
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
           windFarmDetail={windFarmDetail}
+          notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
           onCreateInspectionReport={handleCreateInspectionReport}
