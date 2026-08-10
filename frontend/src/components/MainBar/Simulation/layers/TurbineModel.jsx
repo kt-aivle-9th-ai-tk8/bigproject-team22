@@ -72,8 +72,7 @@ function TurbineModel({
 
   const restoreInitialBladeGroup = () => {
     if (!bladeGroupRef.current || !initialGroupQuaternionRef.current) return;
-
-    bladeGroupRef.current.quaternion.copy(initialGroupQuaternionRef.current);
+    bladeGroupRef.current.rotation.x = 0;
     bladeGroupRef.current.updateMatrixWorld(true);
 
     accumulatedRotationRef.current = 0;
@@ -120,7 +119,7 @@ function TurbineModel({
     if (!bladeGroupRef.current || !initialGroupQuaternionRef.current) return;
 
     if (isRunning) {
-      bladeGroupRef.current.rotateX(bladeSpeed);
+      bladeGroupRef.current.rotateX(-bladeSpeed);
       accumulatedRotationRef.current += bladeSpeed;
       return;
     }
@@ -139,7 +138,7 @@ function TurbineModel({
       Math.max(stopSpeed, 0.01)
     );
 
-    bladeGroupRef.current.rotateX(nextStep);
+    bladeGroupRef.current.rotateX(-nextStep);
     accumulatedRotationRef.current += nextStep;
     remainingStopRotationRef.current -= nextStep;
 
