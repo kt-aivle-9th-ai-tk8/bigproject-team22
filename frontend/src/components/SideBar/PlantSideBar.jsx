@@ -26,6 +26,8 @@ function PlantSideBar({
   const plantName = selectedPlant?.title || selectedPlant?.name;
   const today = new Date().toISOString().slice(0, 10);
 
+  const turbineItems = windFarmDetail?.turbines || [];
+
   const weatherInfo = {
     title: plantName || "발전소",
     weatherType: windFarmDetail?.weather?.weatherType,
