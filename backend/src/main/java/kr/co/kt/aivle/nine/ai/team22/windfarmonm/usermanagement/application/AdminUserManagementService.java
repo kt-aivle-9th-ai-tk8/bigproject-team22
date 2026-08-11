@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -30,13 +31,21 @@ public class AdminUserManagementService {
     private final UserAssignmentPort userAssignmentPort;
 
     /**
-     * 사용자 목록 조회. {@code role} 이 주어지면 해당 권한만 필터링한다.
+     * 사용자 목록 조회. {@code role} 이 주어지면 해당 권한만, {@code keyword} 가 주어지면 사번 또는
+     * 이름에 그 문자열을 포함하는 사용자만 반환한다(대소문자 무시, 공백만 있으면 필터 없음).
      * 담당 단지는 비-ADMIN 사용자들만 한 번에 조회한다(N+1 방지).
+     * <p>
+     * <b>검색이 서버에 있어야 하는 이유</b>: 응답의 사번·이름은 마스킹되어 나가므로 FE 가 받은 값으로는
+     * 대조할 수 없다. 원문을 가진 서버에서 걸러야 하고, 그래야 검색어에 걸린 몇 건만 내려가
+     * 전 사용자 개인정보가 매번 브라우저로 흘러가지도 않는다.
      */
     @Transactional(readOnly = true)
-    public List<AdminUserDetail> getUsers(Role roleFilter) {
+    public List<AdminUserDetail> getUsers(Role roleFilter, String keyword) {
+        String normalizedKeyword = normalizeKeyword(keyword);
+
         List<UserAccount> accounts = userAdminPort.findAll().stream()
                 .filter(account -> roleFilter == null || account.role() == roleFilter)
+                .filter(account -> matchesKeyword(account, normalizedKeyword))
                 .toList();
 
         List<Long> assignableUserIds = accounts.stream()
@@ -98,6 +107,28 @@ public class AdminUserManagementService {
     @Transactional
     public void forceLogout(Long userId) {
         userAdminPort.forceLogout(userId);
+    }
+
+    /** 검색어 정규화. null/공백만 있는 값은 "필터 없음"(null)으로 취급한다. */
+    private static String normalizeKeyword(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+        String trimmed = keyword.trim();
+        return trimmed.isEmpty() ? null : trimmed.toLowerCase(Locale.ROOT);
+    }
+
+    /** 사번 또는 이름 부분일치. 대조 대상은 <b>마스킹 전 원문</b>이다(마스킹은 응답 DTO 에서 일어난다). */
+    private static boolean matchesKeyword(UserAccount account, String normalizedKeyword) {
+        if (normalizedKeyword == null) {
+            return true;
+        }
+        return containsIgnoreCase(account.employeeId(), normalizedKeyword)
+                || containsIgnoreCase(account.userName(), normalizedKeyword);
+    }
+
+    private static boolean containsIgnoreCase(String value, String normalizedKeyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedKeyword);
     }
 
     private static AdminUserDetail toDetail(UserAccount account, List<AssignedWindFarm> assignments) {

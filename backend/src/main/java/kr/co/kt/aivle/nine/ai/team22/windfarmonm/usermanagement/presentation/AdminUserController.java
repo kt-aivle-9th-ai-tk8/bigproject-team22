@@ -34,11 +34,17 @@ public class AdminUserController {
 
     private final AdminUserManagementService adminUserManagementService;
 
-    /** 사용자 목록 조회: GET /api/admin/users (role 로 필터링 가능) */
+    /**
+     * 사용자 목록 조회: GET /api/admin/users (role 로 필터링, q 로 사번·이름 검색)
+     * <p>
+     * 응답의 사번·이름은 마스킹되므로 검색은 반드시 이 파라미터로 해야 한다 — FE 가 받은 값으로
+     * 거르면 가려진 문자 때문에 매칭되지 않는다.
+     */
     @GetMapping
     public ResponseEntity<ApiResponse<AdminUsersResponse>> getUsers(
-            @RequestParam(name = "role", required = false) Role role) {
-        List<AdminUserDetail> users = adminUserManagementService.getUsers(role);
+            @RequestParam(name = "role", required = false) Role role,
+            @RequestParam(name = "q", required = false) String keyword) {
+        List<AdminUserDetail> users = adminUserManagementService.getUsers(role, keyword);
         return ResponseEntity.ok(ApiResponse.success(AdminUsersResponse.from(users)));
     }
 
