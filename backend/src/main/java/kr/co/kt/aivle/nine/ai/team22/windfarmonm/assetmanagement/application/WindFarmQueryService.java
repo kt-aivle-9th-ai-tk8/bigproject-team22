@@ -142,17 +142,6 @@ public class WindFarmQueryService {
     }
 
     /**
-     * 단지명을 조회한다. <b>인가를 하지 않는</b> 내부 조회이므로 호출측 인가 선행을 전제한다
-     * (예: 생성된 보고서의 대상 표시·제목 조립).
-     *
-     * @return 단지명, 없으면 null
-     */
-    @Transactional(readOnly = true)
-    public String getWindFarmName(Long windFarmId) {
-        return windFarmRepository.findById(windFarmId).map(WindFarm::getName).orElse(null);
-    }
-
-    /**
      * 풍력단지 발전량 시계열 조회(단지 소속 터빈 합산).
      */
     @Transactional(readOnly = true)
