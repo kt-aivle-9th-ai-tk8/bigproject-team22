@@ -154,16 +154,17 @@ def _check_column(name: str, col: str):
         raise ValueError(f"'{name}' 에 없는 컬럼으로 필터할 수 없다: {col}")
 
 
-def query(name: str, *, eq=None, isin=None, range=None) -> pd.DataFrame:
+def query(name: str, *, eq=None, isin=None, span=None) -> pd.DataFrame:
     """테이블 1개를 조건으로 조회한다. 값은 전부 바인드 파라미터로 넘어간다.
 
         query("scada_record",
               eq={"turbine_id": 11},
-              range={"recorded_at": (start, end_excl)})   # start <= x < end_excl
+              span={"recorded_at": (start, end_excl)})   # start <= x < end_excl
 
-    eq    : {컬럼: 값}          동등 비교
-    isin  : {컬럼: [값, ...]}   IN. 빈 리스트면 빈 결과를 즉시 돌려준다(WHERE IN () 는 문법 오류)
-    range : {컬럼: (하한, 상한)} 하한 이상 ~ 상한 미만. None 이면 그 방향 무제한
+    eq   : {컬럼: 값}          동등 비교
+    isin : {컬럼: [값, ...]}   IN. 빈 리스트면 빈 결과를 즉시 돌려준다(WHERE IN () 는 문법 오류)
+    span : {컬럼: (하한, 상한)} 하한 이상 ~ 상한 미만. None 이면 그 방향 무제한
+           내장 range 를 가리지 않으려고 span 으로 뒀다(BETWEEN 은 양끝 포함이라 이름이 안 맞는다).
 
     조건을 하나도 안 주면 전체 조회다. 큰 테이블에 그렇게 부르지 말 것.
     """
@@ -187,7 +188,7 @@ def query(name: str, *, eq=None, isin=None, range=None) -> pd.DataFrame:
             keys.append(f":in_{col}_{i}")
         where.append(f"`{col}` IN ({', '.join(keys)})")
 
-    for col, (lo, hi) in (range or {}).items():
+    for col, (lo, hi) in (span or {}).items():
         _check_column(name, col)
         if lo is not None:
             params[f"lo_{col}"] = lo

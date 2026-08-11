@@ -23,14 +23,14 @@ def _scada_of(turbine_ids, start=None, end_excl=None):
     """단지 소속 터빈들의 scada — 기간이 주어지면 그 범위만."""
     return query("scada_record",
                  isin={"turbine_id": [int(t) for t in turbine_ids]},
-                 range={"recorded_at": (start, end_excl)} if (start or end_excl) else None)
+                 span={"recorded_at": (start, end_excl)} if (start or end_excl) else None)
 
 
 def _events_of(turbine_ids, start=None, end_excl=None):
     """단지 소속 터빈들의 이상 이벤트 — start_time 기준 기간 필터."""
     return query("anomaly_event",
                  isin={"turbine_id": [int(t) for t in turbine_ids]},
-                 range={"start_time": (start, end_excl)} if (start or end_excl) else None)
+                 span={"start_time": (start, end_excl)} if (start or end_excl) else None)
 
 
 def get_farm_info(wind_farm_id: int) -> dict:
@@ -174,7 +174,7 @@ def get_farm_defect(turbine_ids, start, end_excl) -> dict:
 
     insp = query("inspection",
                  isin={"turbine_id": [int(t) for t in turbine_ids]},
-                 range={"inspection_start": (start, end_excl)})
+                 span={"inspection_start": (start, end_excl)})
     d = query("defect", isin={"inspection_id": insp["inspection_id"].tolist()})
     high = int((d["severity"] >= HIGH_SEVERITY).sum()) if "severity" in d.columns else 0
     types = d["defect_type"].value_counts().to_dict() if "defect_type" in d.columns else {}

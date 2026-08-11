@@ -42,14 +42,14 @@ def _events_of(turbine_id, event_type, lo, hi) -> pd.DataFrame:
     """같은 터빈·같은 유형의 과거 이벤트(기간 [lo, hi))."""
     return query("anomaly_event",
                  eq={"turbine_id": int(turbine_id), "event_type": event_type},
-                 range={"start_time": (lo, hi)})
+                 span={"start_time": (lo, hi)})
 
 
 def _scada_window(turbine_ids, win_start, win_end) -> pd.DataFrame:
     """관측창 안의 scada — 터빈 1대든 단지 전체든 turbine_id 목록으로 좁힌다."""
     return _with_code(query("scada_record",
                             isin={"turbine_id": [int(t) for t in turbine_ids]},
-                            range={"recorded_at": (win_start, win_end)}))
+                            span={"recorded_at": (win_start, win_end)}))
 
 
 def _aws_at(station_id, ts) -> pd.DataFrame:

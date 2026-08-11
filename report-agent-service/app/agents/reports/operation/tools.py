@@ -27,14 +27,14 @@ def _scada_of(turbine_id, start=None, end_excl=None):
     """터빈 1대의 scada — 기간이 주어지면 그 범위만."""
     return query("scada_record",
                  eq={"turbine_id": int(turbine_id)},
-                 range={"recorded_at": (start, end_excl)} if (start or end_excl) else None)
+                 span={"recorded_at": (start, end_excl)} if (start or end_excl) else None)
 
 
 def _events_of(turbine_id, start=None, end_excl=None):
     """터빈 1대의 이상 이벤트 — start_time 기준 기간 필터."""
     return query("anomaly_event",
                  eq={"turbine_id": int(turbine_id)},
-                 range={"start_time": (start, end_excl)} if (start or end_excl) else None)
+                 span={"start_time": (start, end_excl)} if (start or end_excl) else None)
 
 
 def _turbine():
@@ -51,7 +51,7 @@ def _inspection_of(turbine_id, start, end_excl):
         return None
     return query("inspection",
                  eq={"turbine_id": int(turbine_id)},
-                 range={"inspection_start": (start, end_excl)})
+                 span={"inspection_start": (start, end_excl)})
 
 
 def _defect_of(inspection_ids):
