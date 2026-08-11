@@ -1,6 +1,8 @@
 import { memo, useState } from "react";
 
 import Map from "./Map/Map";
+import LoadingOverlay from "../common/LoadingOverlay";
+
 import "./MapMainBar.css";
 import plantIcon from "../../assets/icon/plant.png";
 
@@ -24,7 +26,10 @@ function MapMainBar({
   if (isLoading) {
     return (
       <div className="map-main-bar">
-        발전소 데이터를 불러오는 중입니다.
+        <LoadingOverlay
+          message="발전소 데이터를 불러오는 중..."
+          fullScreen={false}
+        />
       </div>
     );
   }

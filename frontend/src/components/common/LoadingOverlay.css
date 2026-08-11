@@ -1,7 +1,5 @@
 .loading-overlay {
-  position: fixed;
   inset: 0;
-  z-index: 2000;
 
   display: flex;
   align-items: center;
@@ -11,12 +9,28 @@
   backdrop-filter: blur(2px);
 }
 
+
+/* 전체 화면 로딩 */
+.loading-overlay-fullscreen {
+  position: fixed;
+  z-index: 2000;
+}
+
+
+/* 특정 컴포넌트 영역 로딩 */
+.loading-overlay-local {
+  position: absolute;
+  z-index: 100;
+}
+
+
 .loading-turbine {
   position: relative;
 
   width: 120px;
   height: 120px;
 }
+
 
 .loading-stick {
   position: absolute;
@@ -31,6 +45,7 @@
   transform: translate(-50%, -30%);
 }
 
+
 .loading-blade {
   position: absolute;
   left: 40%;
@@ -42,8 +57,9 @@
   object-fit: contain;
 
   transform-origin: center center;
-  animation: loading-blade-spin 2.0s linear infinite;
+  animation: loading-blade-spin 2s linear infinite;
 }
+
 
 .loading-message {
   margin-top: 70px;
@@ -52,6 +68,7 @@
   font-weight: 700;
   color: var(--color-dark-gray);
 }
+
 
 @keyframes loading-blade-spin {
   from {
@@ -62,6 +79,7 @@
     transform: translate(-50%, -50%) rotate(360deg);
   }
 }
+
 
 .loading-message-dots {
   display: inline-block;
