@@ -267,6 +267,45 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("결함 이미지 조회: 이미지 단위 그룹핑 + presigned 썸네일, 비담당은 404(존재 은닉)")
+    void defectImages() {
+        // 점검·결함 픽스처(결과 소비까지 끝난 상태를 직접 시드)
+        jdbc.update("""
+                INSERT INTO inspection (turbine_id, user_id, report_id, inspection_start, inspection_end, status, created_at)
+                VALUES (?, NULL, NULL, '2026-08-01', '2026-08-02', 'INSPECTED', NOW(6))
+                """, turbineId);
+        long inspectionId = jdbc.queryForObject("SELECT inspection_id FROM inspection", Long.class);
+        jdbc.update("""
+                INSERT INTO defect (inspection_id, blade_id, defect_type, severity, part_side,
+                                    bbox_x, bbox_y, bbox_w, bbox_h, confidence, image_path, created_at)
+                VALUES (?, ?, 'Crack', 2, 'LE', 1, 2, 3, 4, 0.9, 'content/inspections/1/1/LE/1.jpg', NOW(6)),
+                       (?, ?, 'Erosion', 4, 'LE', 5, 6, 7, 8, 0.8, 'content/inspections/1/1/LE/1.jpg', NOW(6))
+                """, inspectionId, bladeA, inspectionId, bladeA);
+        when(storagePort.presignImageView("content/inspections/1/1/LE/1.jpg")).thenReturn("https://thumb.example");
+
+        ResponseEntity<String> response = client.method(HttpMethod.GET)
+                .uri(baseUrl() + "/blades/" + bladeA + "/defect-images")
+                .header(HttpHeaders.COOKIE, loginCookie("MGR1"))
+                .exchange((request, res) -> ResponseEntity.status(res.getStatusCode()).body(res.bodyTo(String.class)));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .contains("\"image_path\":\"content/inspections/1/1/LE/1.jpg\"")
+                .contains("\"thumbnail_url\":\"https://thumb.example\"")
+                .contains("\"max_severity\":4") // 그룹 내 최댓값
+                .contains("\"id\":\""); // 결함 id 는 문자열 계약
+        // 이미지 1장으로 그룹핑(결함 2건이 한 항목에)
+        assertThat(response.getBody().split("\"thumbnail_url\"", -1)).hasSize(2);
+
+        // 비담당(MGR2)은 404 은닉
+        ResponseEntity<String> hidden = client.method(HttpMethod.GET)
+                .uri(baseUrl() + "/blades/" + bladeA + "/defect-images")
+                .header(HttpHeaders.COOKIE, loginCookie("MGR2"))
+                .exchange((request, res) -> ResponseEntity.status(res.getStatusCode()).body(res.bodyTo(String.class)));
+        assertThat(hidden.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
     @DisplayName("업로드 완료: 비담당 타인은 물론, 같은 단지의 다른 담당자도 404(소유자 전용·존재 은닉)")
     void imagesUploaded_hidden() {
         String cookie = loginCookie("MGR1");

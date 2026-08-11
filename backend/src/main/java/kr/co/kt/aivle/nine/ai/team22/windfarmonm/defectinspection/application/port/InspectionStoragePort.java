@@ -20,6 +20,9 @@ public interface InspectionStoragePort {
     /** 이미지 키의 전체 S3 URI({@code s3://bucket/key}). SageMaker Async 의 InputLocation 으로 쓴다. */
     String imageS3Uri(String imageKey);
 
+    /** 이미지 조회용 presigned GET URL(썸네일 링크). 인가는 호출측(담당 기반) 책임이다. */
+    String presignImageView(String imageKey);
+
     /** S3 URI 가 가리키는 JSON 객체를 읽는다(추론 결과 outputLocation). */
     String readJson(String s3Uri);
 

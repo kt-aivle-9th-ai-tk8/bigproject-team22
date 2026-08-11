@@ -54,6 +54,11 @@ public class InspectionStorageAdapter implements InspectionStoragePort {
     }
 
     @Override
+    public String presignImageView(String imageKey) {
+        return storage.presignGet(imageKey);
+    }
+
+    @Override
     public String imageS3Uri(String imageKey) {
         return "s3://%s/%s".formatted(properties.s3().bucket(), imageKey);
     }
