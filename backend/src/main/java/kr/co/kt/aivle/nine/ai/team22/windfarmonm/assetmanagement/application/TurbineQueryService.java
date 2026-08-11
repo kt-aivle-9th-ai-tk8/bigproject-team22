@@ -63,17 +63,6 @@ public class TurbineQueryService {
     }
 
     /**
-     * 터빈 코드를 조회한다(예: {@code U2}). <b>인가를 하지 않는</b> 내부 조회이므로,
-     * 호출측이 담당 인가를 이미 통과한 맥락에서만 쓸 것(예: 생성된 보고서의 대상 표시·제목 조립).
-     *
-     * @return 터빈 코드, 없으면 null
-     */
-    @Transactional(readOnly = true)
-    public String getTurbineCode(Long turbineId) {
-        return turbineRepository.findById(turbineId).map(Turbine::getCode).orElse(null);
-    }
-
-    /**
      * 터빈 발전량 시계열 조회.
      */
     @Transactional(readOnly = true)
