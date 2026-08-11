@@ -1,0 +1,54 @@
+package kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.infrastructure;
+
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.PartSide;
+
+import java.util.Optional;
+
+/**
+ * 점검 이미지 S3 키 규약의 <b>단일 지점</b>: {@code {prefix}/inspections/{inspectionId}/{bladeId}/{partSide}/{seq}.jpg}.
+ * 발급(조립)과 목록 해석(파싱)이 반드시 같은 규약을 쓰도록 이 클래스만이 형식을 안다.
+ */
+public final class InspectionObjectKeys {
+
+    private static final String SEGMENT = "inspections";
+
+    private InspectionObjectKeys() {
+    }
+
+    /** 이미지 객체 키를 만든다. */
+    public static String imageKey(String prefix, long inspectionId, long bladeId, PartSide partSide, int seq) {
+        return "%s/%s/%d/%d/%s/%d.jpg".formatted(prefix, SEGMENT, inspectionId, bladeId, partSide.name(), seq);
+    }
+
+    /** 점검 1건의 모든 이미지가 놓이는 프리픽스(S3 LIST 용). 끝의 '/' 로 다른 점검 id 와의 접두 충돌을 막는다. */
+    public static String inspectionPrefix(String prefix, long inspectionId) {
+        return "%s/%s/%d/".formatted(prefix, SEGMENT, inspectionId);
+    }
+
+    /**
+     * 키에서 (bladeId, partSide) 를 해석한다. 규약을 벗어난 키(수동 업로드 등)는 {@code empty} —
+     * 호출측이 건너뛰고 로그로 남긴다.
+     */
+    public static Optional<ParsedImage> parse(String key) {
+        int at = key.indexOf("/" + SEGMENT + "/");
+        if (at < 0) {
+            return Optional.empty();
+        }
+        // {inspectionId}/{bladeId}/{partSide}/{seq}.jpg
+        String[] rest = key.substring(at + SEGMENT.length() + 2).split("/");
+        if (rest.length != 4) {
+            return Optional.empty();
+        }
+        try {
+            long bladeId = Long.parseLong(rest[1]);
+            PartSide partSide = PartSide.valueOf(rest[2]);
+            return Optional.of(new ParsedImage(bladeId, partSide));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    /** 키에서 해석된 이미지 속성. */
+    public record ParsedImage(long bladeId, PartSide partSide) {
+    }
+}

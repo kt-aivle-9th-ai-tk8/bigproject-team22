@@ -74,6 +74,17 @@ public class TurbineQueryService {
     }
 
     /**
+     * 터빈의 소속 단지 id 를 조회한다. <b>인가를 하지 않는</b> 내부 조회이므로 호출측 인가 선행을 전제한다
+     * (예: 점검 생성 시 결함 보고서의 wind_farm_id 채움).
+     *
+     * @return 소속 단지 id, 터빈이 없으면 null
+     */
+    @Transactional(readOnly = true)
+    public Long getWindFarmId(Long turbineId) {
+        return turbineRepository.findById(turbineId).map(Turbine::getWindFarmId).orElse(null);
+    }
+
+    /**
      * 터빈 발전량 시계열 조회.
      */
     @Transactional(readOnly = true)
