@@ -67,6 +67,9 @@ function UnderBar({
         maxVisibleTickCount={30}
         isLoading={isLoading}
         onRangeDrag={handleRangeDrag}
+        mode={mode}
+        selectedPlant={selectedPlant}
+        selectedTurbine={selectedTurbine}
       />
     </section>
   );

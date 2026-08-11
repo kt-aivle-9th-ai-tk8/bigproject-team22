@@ -74,6 +74,10 @@ function PowerChartDrag({
   minVisibleTickCount = DEFAULT_MIN_VISIBLE_TICK_COUNT,
   maxVisibleTickCount = DEFAULT_MAX_VISIBLE_TICK_COUNT,
 
+  mode,
+  selectedPlant,
+  selectedTurbine,
+
   isLoading = false,
   onRangeDrag,
 }) {
@@ -405,7 +409,11 @@ function PowerChartDrag({
     <div className="power-chart-box">
       <div className="power-chart-header">
         <div className="power-chart-title">
-          <strong>시간별 발전량</strong>
+          <strong>
+            {mode === "turbine"
+              ? `${selectedTurbine?.name || ""} 터빈 시간별 발전량`
+              : `${selectedPlant?.name || ""} 발전소 시간별 발전량`}
+          </strong>
 
           <span>
             {isEmptyAxis
