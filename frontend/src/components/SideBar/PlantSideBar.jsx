@@ -19,6 +19,7 @@ function PlantSideBar({
   windFarmDetail,
   onSelectTurbine,
   onCreateInspectionReport,
+  onCreateOperationReport,
 }) {
   const [isWeatherHelpOpen, setIsWeatherHelpOpen] = useState(false);
   const [reportMode, setReportMode] = useState("operation");
@@ -94,13 +95,7 @@ function PlantSideBar({
             reportMode={reportMode}
             startDate={today}
             endDate={today}
-            onCreateReport={(reportData) => {
-              console.log("발전소 운영 보고서 생성 데이터:", {
-                ...reportData,
-                plantId: selectedPlant?.id,
-                plantName,
-              });
-            }}
+            onCreateReport={onCreateOperationReport}
           />
         )}
 

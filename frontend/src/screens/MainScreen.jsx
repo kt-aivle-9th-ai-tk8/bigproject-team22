@@ -12,6 +12,7 @@ import { useWindFarms } from "../hooks/useWindFarms";
 import { useNotifications } from "../hooks/useNotifications";
 import { usePowerGeneration } from "../hooks/usePowerGeneration";
 import { useTurbineDetail } from "../hooks/useTurbineDetail";
+import { useReportStatusPolling } from "../hooks/useReportStatusPolling";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -70,6 +71,18 @@ function MainScreen() {
     notifications
   } = useNotifications({
     refreshInterval: 600000,
+  });
+
+  const {
+    createOperationReport,
+  } = useReportStatusPolling({
+    refreshInterval: 5000,
+
+    onGenerated: (report) => {
+      alert(
+        `${report?.title || "보고서"} 생성이 완료되었습니다.`
+      );
+    },
   });
 
   useEffect(() => {
@@ -252,11 +265,46 @@ function MainScreen() {
       formData.append("file", reportData.file);
     }
   };
+  const handleCreateOperationReport = async ({
+    startDate,
+    endDate,
+  }) => {
+    if (!selectedPlant?.id) {
+      alert("발전소 정보가 없습니다.");
+      return;
+    }
 
-  const handleCreateRepairReport = (repairReportData) => {
-    console.log("MainScreen에서 받은 수리 보고서 JSON:", repairReportData);
+    if (
+      screenMode === "turbine" &&
+      !selectedTurbine?.id
+    ) {
+      alert("터빈 정보가 없습니다.");
+      return;
+    }
+
+    const reportType =
+      screenMode === "turbine"
+        ? "TURBINE_OPERATION"
+        : "WIND_FARM_OPERATION";
+
+    try {
+      await createOperationReport({
+        windFarmId: selectedPlant.id,
+
+        turbineId:
+          screenMode === "turbine"
+            ? selectedTurbine.id
+            : undefined,
+
+        periodStart: `${startDate}T00:00:00`,
+        periodEnd: `${endDate}T23:59:59`,
+
+        reportType,
+      });
+    } catch (error) {
+      alert(error.message);
+    }
   };
-
   const handleNavigateUser = () => {
     navigate("/user");
   };
@@ -296,7 +344,7 @@ function MainScreen() {
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
           onCreateInspectionReport={handleCreateInspectionReport}
-          onCreateRepairReport={handleCreateRepairReport}
+          onCreateOperationReport={handleCreateOperationReport}
         />
 
         <UnderBar
