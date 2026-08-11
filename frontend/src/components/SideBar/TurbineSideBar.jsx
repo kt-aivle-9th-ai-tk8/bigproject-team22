@@ -12,6 +12,7 @@ import "./TurbineSideBar.css";
 function TurbineSideBar({
   selectedPlant,
   selectedTurbine,
+  turbineDetail,
   onCreateInspectionReport,
 }) {
   const [reportMode, setReportMode] = useState("operation");
@@ -24,29 +25,32 @@ function TurbineSideBar({
     {
       id: 1,
       label: "현재 출력",
-      value: 18.4,
-      unit: "MWh",
+      value:
+        (turbineDetail?.power?.current_power ?? 0),
+      unit: "kW",
       minValue: 0,
-      maxValue: 60,
-      subArcLimits: [15, 24, 60],
+      maxValue: 2000,
+      subArcLimits: [800, 900, 2000],
     },
     {
       id: 2,
       label: "금일 출력",
-      value: 412.0,
+      value:
+        (turbineDetail?.power?.today_power ?? 0) / 1000,
       unit: "MWh",
       minValue: 0,
-      maxValue: 600,
-      subArcLimits: [150, 240, 600],
+      maxValue: 48,
+      subArcLimits: [19.2, 21.6, 48],
     },
     {
       id: 3,
       label: "금월 출력",
-      value: 2.8,
-      unit: "GWh",
+      value:
+        (turbineDetail?.power?.month_power ?? 0) / 1000,
+      unit: "MWh",
       minValue: 0,
-      maxValue: 5,
-      subArcLimits: [1.25, 2, 5],
+      maxValue: 1200,
+      subArcLimits: [400, 480, 1000],
     },
   ];
 

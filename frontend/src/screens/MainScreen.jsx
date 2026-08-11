@@ -11,6 +11,7 @@ import { useWindFarmDetail } from "../hooks/useWindFarmDetail";
 import { useWindFarms } from "../hooks/useWindFarms";
 import { useNotifications } from "../hooks/useNotifications";
 import { usePowerGeneration } from "../hooks/usePowerGeneration";
+import { useTurbineDetail } from "../hooks/useTurbineDetail";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -50,6 +51,17 @@ function MainScreen() {
   } = useWindFarmDetail({
     mode: screenMode,
     windFarmId: selectedPlant?.id,
+    refreshInterval: 10000,
+  });
+
+  // 터빈 상세 페이지 api
+  const {
+    turbineDetail,
+    isTurbineDetailLoading,
+    turbineDetailError,
+  } = useTurbineDetail({
+    mode: screenMode,
+    turbineId: selectedTurbine?.id,
     refreshInterval: 10000,
   });
 
@@ -279,6 +291,7 @@ function MainScreen() {
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
           windFarmDetail={windFarmDetail}
+          turbineDetail={turbineDetail}
           notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}

@@ -8,6 +8,7 @@ function SideBar({
   selectedPlant,
   selectedTurbine,
   windFarmDetail,
+  turbineDetail,
   notifications,
   onSelectPlant,
   onSelectTurbine,
@@ -37,6 +38,7 @@ function SideBar({
         <TurbineSideBar
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
+          turbineDetail={turbineDetail}
           onCreateInspectionReport={onCreateInspectionReport}
         />
       )}
