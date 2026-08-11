@@ -17,19 +17,24 @@ event_id를 'turbine_id'로 해석한다: event_id=2 → turbine_id 2 (turbine.t
 """
 import pandas as pd
 
-from app.core.datasource import load_table, table_available
+from app.core.datasource import load_table, query, table_available
 
 
-# ── 데이터 접근 (호출 시점 로드; datasource 가 CSV/RDS 분기 + 캐시) ──────────────
-# 모듈 로드 시점이 아니라 호출 시점에 읽는다. registry 가 4개 tools 를 전부 import 하므로
-# 전역 로드로 두면 anomaly 보고서 1건에도 운영용 테이블까지 다 읽고, RDS 에선 그 스냅샷이
-# 프로세스 내내 고정돼 새 데이터가 영원히 안 보인다. 함수로 두면 datasource 의 TTL 로 갱신된다.
-def _events():
-    return load_table("anomaly_event")
+# ── 데이터 접근 ────────────────────────────────────────────────────────────────
+# 큰 테이블(scada_record·anomaly_event)은 통째로 읽지 않고 대상 터빈·기간으로 좁혀 조회한다.
+# 보고서 1건이 읽는 여러 테이블의 시점 일관성은 service 의 snapshot() 트랜잭션이 보장한다.
+def _scada_of(turbine_id, start=None, end_excl=None):
+    """터빈 1대의 scada — 기간이 주어지면 그 범위만."""
+    return query("scada_record",
+                 eq={"turbine_id": int(turbine_id)},
+                 span={"recorded_at": (start, end_excl)} if (start or end_excl) else None)
 
 
-def _scada():
-    return load_table("scada_record")
+def _events_of(turbine_id, start=None, end_excl=None):
+    """터빈 1대의 이상 이벤트 — start_time 기준 기간 필터."""
+    return query("anomaly_event",
+                 eq={"turbine_id": int(turbine_id)},
+                 span={"start_time": (start, end_excl)} if (start or end_excl) else None)
 
 
 def _turbine():
@@ -40,19 +45,29 @@ def _farm():
     return load_table("wind_farm")
 
 
-def _inspection():
-    """점검 테이블 — 소스가 없으면 None(미가용)."""
-    return load_table("inspection") if table_available("inspection") else None
+def _inspection_of(turbine_id, start, end_excl):
+    """기간 내 그 터빈의 점검 — 소스가 없으면 None(미가용)."""
+    if not table_available("inspection"):
+        return None
+    return query("inspection",
+                 eq={"turbine_id": int(turbine_id)},
+                 span={"inspection_start": (start, end_excl)})
 
 
-def _defect():
-    """결함 테이블 — 소스가 없으면 None(미가용)."""
-    return load_table("defect") if table_available("defect") else None
+def _defect_of(inspection_ids):
+    """해당 점검들의 결함 — 소스가 없으면 None(미가용)."""
+    if not table_available("defect"):
+        return None
+    return query("defect", isin={"inspection_id": list(inspection_ids)})
 
 
 def known_turbine_ids() -> list:
-    """scada 에 실적이 있는 turbine_id 목록."""
-    return sorted(_scada()["turbine_id"].dropna().unique().tolist())
+    """scada 에 실적이 있는 turbine_id 목록.
+
+    존재 확인용이라 turbine 참조표를 쓴다 — scada 를 통째로 읽어 unique() 하면
+    보고서 1건에 14만 행을 읽게 된다(그 터빈에 실적이 있는지는 _scada_of 가 비었는지로 판정).
+    """
+    return sorted(_turbine()["turbine_id"].dropna().unique().tolist())
 
 
 # 심각도 임계 — severity가 이 값 이상이면 '고위험'으로 집계 (ERD: 1~4 CNN 분류)
@@ -98,12 +113,7 @@ def get_turbine_info(turbine_id: int) -> dict:
 
 def get_anomaly_summary(turbine_id, start, end_excl) -> dict:
     """기간 내 이상 이벤트 집계 — 상태별/유형별."""
-    ev = _events()
-    df = ev[
-        (ev["turbine_id"] == int(turbine_id))
-        & (ev["start_time"] >= start)
-        & (ev["start_time"] < end_excl)
-    ]
+    df = _events_of(turbine_id, start, end_excl)
     cats = df["event_type"].map(EVENT_CATEGORY).fillna("other").value_counts().to_dict()
     return {
         "total": int(len(df)),
@@ -119,29 +129,32 @@ def get_anomaly_summary(turbine_id, start, end_excl) -> dict:
     }
 
 
-def _period_bounds(df, period_start=None, period_end=None):
-    """(start, end_exclusive) 반환. 미지정이면 df의 관측 전 구간.
+def _period_args(period_start=None, period_end=None):
+    """요청 기간 → (SQL 하한, SQL 상한). 미지정이면 그 방향 무제한(None).
 
     period_end는 그 날짜 '끝까지' 포함(해당 일 23:59:59.999…)하도록 다음 날 00:00을 exclusive 상한으로 쓴다.
+    예전에는 df 에서 min/max 를 구했는데, 그러려면 테이블을 먼저 통째로 읽어야 했다.
+    지금은 명시된 값만 SQL 로 내리고, 실제 관측 구간은 조회 결과에서 읽는다.
     """
-    start = (pd.to_datetime(period_start).normalize()
-             if period_start else df["recorded_at"].min())
+    start = pd.to_datetime(period_start).normalize() if period_start else None
     end_excl = (pd.to_datetime(period_end).normalize() + pd.Timedelta(days=1)
-                if period_end else df["recorded_at"].max() + pd.Timedelta(seconds=1))
+                if period_end else None)
     return start, end_excl
 
 
 def get_scada_summary(turbine_id, period_start=None, period_end=None) -> dict:
     """터빈 scada 집계 + 운영 진단 지표 + 월별 시계열. 기간 미지정 시 관측 전 구간."""
-    sc = _scada()
-    df = sc[sc["turbine_id"] == int(turbine_id)].copy()
+    start, end_excl = _period_args(period_start, period_end)
+    df = _scada_of(turbine_id, start, end_excl)
     if df.empty:
-        return {"found": False, "n_rows": 0}
+        reason = "해당 기간 관측 데이터 없음" if (start or end_excl) else "관측 데이터 없음"
+        return {"found": False, "n_rows": 0, "reason": reason}
 
-    start, end_excl = _period_bounds(df, period_start, period_end)
-    df = df[(df["recorded_at"] >= start) & (df["recorded_at"] < end_excl)]
-    if df.empty:
-        return {"found": False, "n_rows": 0, "reason": "해당 기간 관측 데이터 없음"}
+    # 집계 경계로 쓸 값 — 기간을 안 줬으면 실제 관측 구간이 곧 요청 구간이다.
+    if start is None:
+        start = df["recorded_at"].min()
+    if end_excl is None:
+        end_excl = df["recorded_at"].max() + pd.Timedelta(seconds=1)
 
     # 유효 행(expected/actual 모두 존재)만 사용 — 리포트의 모든 발전 지표가 같은 모집단을 쓰도록.
     #   expected에 NaN이 있으면 sum()은 무시(0 취급)하지만 gap(뺄셈)은 NaN이 되어
@@ -203,17 +216,13 @@ def get_defect_summary(turbine_id, start, end_excl) -> dict:
     RDS: SELECT ... FROM defect d JOIN inspection i ON d.inspection_id = i.inspection_id
          WHERE i.turbine_id = :tid AND i.inspection_start >= :start AND < :end
     """
-    insp_df = _inspection()
-    defect_df = _defect()
-    if insp_df is None or defect_df is None:
+    insp = _inspection_of(turbine_id, start, end_excl)
+    if insp is None:
         return {"available": False, "n_inspections": 0, "count": 0, "high_severity": 0}
 
-    insp = insp_df[
-        (insp_df["turbine_id"] == int(turbine_id))
-        & (insp_df["inspection_start"] >= start)
-        & (insp_df["inspection_start"] < end_excl)
-    ]
-    d = defect_df[defect_df["inspection_id"].isin(insp["inspection_id"])]
+    d = _defect_of(insp["inspection_id"])
+    if d is None:
+        return {"available": False, "n_inspections": 0, "count": 0, "high_severity": 0}
     high = int((d["severity"] >= HIGH_SEVERITY).sum()) if "severity" in d.columns else 0
     types = d["defect_type"].value_counts().to_dict() if "defect_type" in d.columns else {}
     return {

@@ -14,6 +14,7 @@ function TurbineSideBar({
   selectedTurbine,
   turbineDetail,
   onCreateInspectionReport,
+  onCreateOperationReport,
 }) {
   const [reportMode, setReportMode] = useState("operation");
 
@@ -131,15 +132,7 @@ function TurbineSideBar({
             reportMode={reportMode}
             startDate={today}
             endDate={today}
-            onCreateReport={(reportData) => {
-              console.log("터빈 운영 보고서 생성 데이터:", {
-                ...reportData,
-                plantId: selectedPlant?.id,
-                plantName,
-                turbineId: selectedTurbine?.id,
-                turbineName,
-              });
-            }}
+            onCreateReport={onCreateOperationReport}
           />
         )}
 

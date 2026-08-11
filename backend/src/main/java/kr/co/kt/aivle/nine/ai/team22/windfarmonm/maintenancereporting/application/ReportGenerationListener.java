@@ -1,6 +1,7 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.dto.ReportGenerationResult;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.dto.ReportGenerationTarget;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.event.ReportGenerationRequested;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.port.ReportGenerationPort;
 import lombok.RequiredArgsConstructor;
@@ -44,14 +45,14 @@ public class ReportGenerationListener {
         // markProcessing/applyGenerated(DB 등) 예외가 @Async 핸들러로 새지 않도록 전체를 감싼다.
         // 각 조각은 @Transactional 이라 개별 롤백되고, 실패해도 보고서는 회수 가능한 상태로 남는다.
         try {
-            ReportGenerationService.Dispatch dispatch = generationService.markProcessing(reportId); // tx
-            if (dispatch == null) {
+            ReportGenerationTarget target = generationService.markProcessing(reportId); // tx
+            if (target == null) {
                 return; // 경쟁 삭제 등
             }
 
             ReportGenerationResult result;
             try {
-                result = generationPort.generate(dispatch.target()); // 긴 외부 동기 호출 — 트랜잭션 밖
+                result = generationPort.generate(target); // 긴 외부 동기 호출 — 트랜잭션 밖
             } catch (RuntimeException e) {
                 // 어댑터가 이미 삼키지만 방어적으로 한 번 더 — 실패해도 보고서는 PROCESSING 으로 남고 회수 가능.
                 // throwable 을 넘겨 stack trace 를 보존한다(@Async 라 호출 스택이 끊기기 쉬움).
@@ -59,8 +60,9 @@ public class ReportGenerationListener {
                 return;
             }
 
-            if (result.found() && StringUtils.hasText(result.draft())) {
-                generationService.applyGenerated(reportId, dispatch.title(), result.draft()); // tx
+            // 제목·본문 모두 에이전트가 준다. 채택은 상태코드가 아니라 found + context 유무로 판단한다.
+            if (result.found() && StringUtils.hasText(result.context())) {
+                generationService.applyGenerated(reportId, result.title(), result.context()); // tx
                 log.info("보고서 {} 생성 완료(verdict={}).", reportId, result.verdict());
             } else {
                 // 대상없음/본문없음 — FAILED 상태를 두지 않으므로 PROCESSING 으로 남긴다(PATCH/재요청으로 회수).

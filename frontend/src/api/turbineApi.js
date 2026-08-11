@@ -1,3 +1,5 @@
+import { apiFetch } from "./apiClient";
+
 export const fetchTurbineById = async (turbineId) => {
   if (turbineId === undefined || turbineId === null) {
     throw new Error("터빈 ID가 필요합니다.");
@@ -5,7 +7,7 @@ export const fetchTurbineById = async (turbineId) => {
 
   const requestUrl = `/api/turbines/${turbineId}`;
 
-  const response = await fetch(requestUrl, {
+  const response = await apiFetch(requestUrl, {
     method: "GET",
     credentials: "include",
     headers: {

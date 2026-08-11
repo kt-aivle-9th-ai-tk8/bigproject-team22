@@ -404,6 +404,29 @@ function PowerChartDrag({
   };
 
   const isEmptyAxis = xAxisTicks.length === 0;
+  const yAxisMax =
+    mode === "turbine"
+      ? 1000
+      : 4000;
+
+  const yAxisMin =
+    mode === "turbine"
+      ? -10
+      : -100;
+
+  const formatYAxisValue = (value) => {
+    const numberValue = Number(value);
+
+    if (numberValue >= 1000) {
+      return `${(numberValue / 1000)
+        .toFixed(2)
+        .replace(/\.?0+$/, "")} MWh`;
+    }
+
+    return `${numberValue
+      .toFixed(2)
+      .replace(/\.?0+$/, "")} kWh`;
+  };
 
   return (
     <div className="power-chart-box">
@@ -464,6 +487,8 @@ function PowerChartDrag({
                 />
 
                 <YAxis
+                  domain={[-100, yAxisMax]}
+                  tickFormatter={formatYAxisValue}
                   tick={{
                     fontSize: 10,
                   }}

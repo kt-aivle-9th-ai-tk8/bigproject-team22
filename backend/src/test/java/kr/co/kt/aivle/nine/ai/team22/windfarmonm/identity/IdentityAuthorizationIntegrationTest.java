@@ -130,7 +130,11 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
         ResponseEntity<String> response = getAdminUsers(cookie);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains("ADMIN1");
+        // 사번은 마스킹되어 나간다("ADMIN1" → "AD**N1"). 마스킹 규칙 자체는 PiiMaskerTest 가 고정하므로
+        // 여기서는 기대값을 리터럴로 박아 "이 API 응답에 원문이 실리지 않는다"만 못 박는다.
+        assertThat(response.getBody())
+                .contains("AD**N1")
+                .doesNotContain("ADMIN1");
     }
 
     @Test

@@ -45,7 +45,7 @@ public enum ReportType {
         return userRequestable;
     }
 
-    /** report-agent 계약의 유형 문자열(소문자). {@code POST /api/v1/reports} 의 {@code report_type}. */
+    /** report-agent 계약의 유형 문자열(소문자). {@code POST /api-internal/reports} 의 {@code report_type}. */
     public String agentType() {
         return agentType;
     }
