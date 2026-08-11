@@ -8,29 +8,21 @@ function LoginScreen() {
 
   const [employee_id, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
-
-  // 보안 및 오류 관련 상태 관리
-  const [errorCount, setErrorCount] = useState(0);
-  const [isLocked, setIsLocked] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 커스텀 알림/모달 상태 관리
   const [modalType, setModalType] = useState(null); // 'success' 또는 'fail'
   const [modalMessage, setModalMessage] = useState("");
 
-  // 1. 모달 닫기 / 엔터키 확정을 처리하는 공통 함수
   const handleCloseModal = () => {
     const currentType = modalType;
     setModalType(null);
     setModalMessage("");
 
-    // 성공 모달인 경우 '확인' 클릭 혹은 '엔터키' 누름 시 바로 메인 화면으로 이동
     if (currentType === "success") {
       navigate("/main");
     }
   };
 
-  // 2. 글로벌 엔터키 감지 이벤트 (모달이 떠 있을 때 엔터를 누르면 handleCloseModal 실행)
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if (e.key === "Enter" && modalType) {
@@ -45,28 +37,17 @@ function LoginScreen() {
     };
   }, [modalType]);
 
-  // 3. 로그인 제출 이벤트
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
 
-    if (isLocked) {
-      setModalType("fail");
-      setModalMessage(
-        "비밀번호 5회 오류로 인해 계정이 잠겼습니다. 관리자에게 문의하세요."
-      );
-      return;
-    }
-
-    // 아이디나 비밀번호 중 하나만 비어있는 경우
     if (!employee_id.trim() || !password.trim()) {
       setModalType("fail");
       setModalMessage("사번과 비밀번호를 모두 입력해주세요.");
       return;
     }
 
-    // ⚡ [테스트 계정 우회 처리] (123 / 123!)
+    // 테스트용 하드코딩 계정
     if (employee_id === "123" && password === "123!") {
-      setErrorCount(0);
       setModalType("success");
       setModalMessage("로그인에 성공했습니다!");
       return;
@@ -89,32 +70,24 @@ function LoginScreen() {
       localStorage.removeItem("selectedPlant");
       localStorage.removeItem("selectedTurbine");
 
-      setErrorCount(0);
       setModalType("success");
       setModalMessage(responseBody.message || "로그인에 성공했습니다!");
     } catch (err) {
-      const nextErrorCount = errorCount + 1;
-      setErrorCount(nextErrorCount);
-
+      console.error("로그인 실패:", err);
       setModalType("fail");
 
-      if (nextErrorCount >= 5) {
-        setIsLocked(true);
-        setModalMessage(
-          "비밀번호 5회 오류로 인해 계정이 잠겼습니다. 관리자에게 문의하세요."
-        );
-      } else {
-        setModalMessage(
-          `${err.message || "로그인에 실패했습니다."}\n다시 시도해 주세요. (오류 횟수: ${nextErrorCount}/5)`
-        );
-      }
+      // 백엔드에서 전달된 에러 메시지를 모달에 출력
+      // (게스트 로그인 거부, 계정 잠금, 비밀번호 불일치 등 BE 메시지 그대로 노출)
+      const serverMessage =
+        err.response?.data?.message || err.message || "로그인 정보가 올바르지 않습니다.";
+      
+      setModalMessage(serverMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleKeyDown = (e) => {
-    // 모달이 닫혀 있을 때 폼 입력창에서 엔터를 누르면 로그인 진행
     if (e.key === "Enter" && !modalType) {
       handleLogin(e);
     }
@@ -136,7 +109,7 @@ function LoginScreen() {
               value={employee_id}
               onChange={(e) => setEmployeeId(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isLocked || loading}
+              disabled={loading}
             />
           </div>
           <div className="input-group">
@@ -146,14 +119,14 @@ function LoginScreen() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={isLocked || loading}
+              disabled={loading}
             />
           </div>
 
           <button
             type="submit"
             className="login-button"
-            disabled={isLocked || loading}
+            disabled={loading}
           >
             {loading ? "로그인 중..." : "로그인"}
           </button>
