@@ -9,17 +9,20 @@ from app.agents.registry import REGISTRY
 TITLE_MAX = 200
 
 
-def _title_from_draft(draft: str) -> str | None:
-    """draft 첫 줄(H1)에서 보고서 제목을 뽑는다.
+def _split_title_context(draft: str):
+    """draft(전체 마크다운) → (title, context). Report.title / Report.context 에 그대로 저장 가능.
 
-    4종 builder 모두 본문을 '# {제목}'(H1)으로 시작한다 — 그 H1이 제목의 단일 출처다.
-    별도 title 함수를 두면 포맷이 render 인라인과 이중화되므로, 여기서 그 H1을 그대로 읽는다.
-    Report.title(VARCHAR(200)) 저장용으로 TITLE_MAX 로 자른다.
+    4종 builder 모두 본문을 '# {제목}'(H1)으로 시작한다 — 그 H1 이 제목의 단일 출처다.
+    별도 title 함수를 두면 포맷이 render 인라인과 이중화되므로, 여기서 그 H1 을 그대로 읽는다.
+      title   : 첫 줄 H1 에서 '#' 를 뗀 제목. Report.title(VARCHAR(200)) 저장용으로 TITLE_MAX 컷.
+      context : 제목 H1 을 뺀 본문. title 과 중복되지 않아 두 컬럼에 바로 넣을 수 있다.
     """
     if not draft:
-        return None
-    first = draft.split("\n", 1)[0].strip()
-    return first.lstrip("#").strip()[:TITLE_MAX] or None
+        return None, None
+    head, _, rest = draft.partition("\n")
+    title = head.strip().lstrip("#").strip()[:TITLE_MAX] or None
+    context = rest.lstrip("\n") or None
+    return title, context
 
 
 def _init_state(report_type: str, event_id: int, params: dict = None) -> dict:
@@ -45,8 +48,8 @@ def _error_result(report_type: str, event_id: int, error: str) -> dict:
         "report_type": report_type,
         "event_id": event_id,
         "found": False,
-        "draft": None,
         "title": None,
+        "context": None,
         "verdict": None,
         "retry_count": 0,
         "issues": [],
@@ -63,7 +66,8 @@ def generate_report(report_type: str, event_id: int, params: dict = None) -> dic
         (미지정 시 대상의 관측 전 구간)
       - anomaly/defect: 사용하지 않음(이벤트 자체가 기간을 규정)
 
-    반환: {report_type, event_id, params, found, draft, verdict, retry_count, issues, warnings, error}
+    반환: {report_type, event_id, params, found, title, context, verdict, retry_count, issues, warnings, error}
+      title/context 는 draft(전체 마크다운)를 제목 H1 기준으로 쪼갠 것 — Report.title/Report.context 대응.
     error 는 정상 시 None, LLM 호출이 재시도 소진 후에도 실패하면 사유 문자열.
     warnings 는 재시도 소진 후 soft 이슈만 남아 '적합'으로 강등된 경우의 지적(사람 확인용).
     """
@@ -87,13 +91,14 @@ def generate_report(report_type: str, event_id: int, params: dict = None) -> dic
 
     event = (final.get("tool_outputs") or {}).get("event", {})
     critic = final.get("critic_result") or {}
+    title, context = _split_title_context(final.get("draft"))
     return {
         "report_type": report_type,
         "event_id": event_id,
         "params": params or None,
         "found": event.get("found", False),
-        "draft": final.get("draft"),
-        "title": _title_from_draft(final.get("draft")),
+        "title": title,
+        "context": context,
         "verdict": critic.get("verdict"),
         "retry_count": final.get("retry_count", 0),
         "issues": critic.get("issues", []),
