@@ -1,5 +1,6 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application;
 
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.dto.ReportGenerationTarget;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.Report;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.ReportRepository;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.ReportStatus;
@@ -16,9 +17,9 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 보고서 생성 파이프라인의 <b>트랜잭션 조각</b>을 실제 DB 로 검증한다: PROCESSING 전이 + 대상/제목 계산
- * ({@link ReportGenerationService#markProcessing})과 회신 본문 적재({@link ReportGenerationService#applyGenerated}).
- * 대상 표시정보(터빈코드/단지명)를 실제 자산 조회로 얻어 event_id·제목이 맞게 만들어지는지 함께 본다.
+ * 보고서 생성 파이프라인의 <b>트랜잭션 조각</b>을 실제 DB 로 검증한다: PROCESSING 전이 + 에이전트 호출 대상
+ * ({@link ReportGenerationService#markProcessing})과 회신 제목·본문 적재({@link ReportGenerationService#applyGenerated}).
+ * event_id 는 대상의 PK(operation=turbine_id, farm_operation=wind_farm_id)이고, 제목은 에이전트가 준다(BE 조립 없음).
  */
 class ReportGenerationServiceTest extends IntegrationTestSupport {
 
@@ -55,60 +56,43 @@ class ReportGenerationServiceTest extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("터빈 보고서: PROCESSING 전이 + event_id=터빈번호(U2→2) + 제목에 코드·유형")
+    @DisplayName("터빈 보고서: PROCESSING 전이 + event_id=turbine_id(PK) + 기간(YYYY-MM-DD) 전달")
     void markProcessing_turbineReport() {
         Long reportId = saveReport(ReportType.TURBINE_OPERATION, turbineId);
 
-        ReportGenerationService.Dispatch dispatch = generationService.markProcessing(reportId);
+        ReportGenerationTarget target = generationService.markProcessing(reportId);
 
-        assertThat(dispatch.target().agentType()).isEqualTo("operation");
-        assertThat(dispatch.target().eventId()).isEqualTo(2); // U2 → 2
-        assertThat(dispatch.title()).contains("U2").contains("터빈 운영");
+        assertThat(target.agentType()).isEqualTo("operation");
+        assertThat(target.eventId()).isEqualTo(turbineId); // 터빈 번호가 아니라 turbine_id(PK)
+        assertThat(target.periodStart()).isEqualTo("2026-07-01");
+        assertThat(target.periodEnd()).isEqualTo("2026-07-31");
         assertThat(reportRepository.findById(reportId).orElseThrow().getStatus())
                 .isEqualTo(ReportStatus.PROCESSING);
     }
 
     @Test
-    @DisplayName("단지 보고서: event_id=단지 id + 제목에 단지명·유형")
+    @DisplayName("단지 보고서: event_id=wind_farm_id")
     void markProcessing_windFarmReport() {
         Long reportId = saveReport(ReportType.WIND_FARM_OPERATION, null);
 
-        ReportGenerationService.Dispatch dispatch = generationService.markProcessing(reportId);
+        ReportGenerationTarget target = generationService.markProcessing(reportId);
 
-        assertThat(dispatch.target().agentType()).isEqualTo("farm_operation");
-        assertThat(dispatch.target().eventId()).isEqualTo((int) farmId);
-        assertThat(dispatch.title()).contains("한빛풍력").contains("단지 운영");
+        assertThat(target.agentType()).isEqualTo("farm_operation");
+        assertThat(target.eventId()).isEqualTo(farmId);
     }
 
     @Test
-    @DisplayName("완료 적재: 본문·제목이 RDS 에 써지고 GENERATED 로 전이한다(BE 가 직접 쓴다)")
+    @DisplayName("완료 적재: 에이전트가 준 제목·본문이 RDS 에 써지고 GENERATED 로 전이한다(BE 가 직접 쓴다)")
     void applyGenerated_writesBodyToRds() {
         Long reportId = saveReport(ReportType.TURBINE_OPERATION, turbineId);
         generationService.markProcessing(reportId);
 
-        generationService.applyGenerated(reportId, "제목X", "# 생성된 본문");
+        generationService.applyGenerated(reportId, "제목X", "## 생성된 본문");
 
         Report saved = reportRepository.findById(reportId).orElseThrow();
         assertThat(saved.getStatus()).isEqualTo(ReportStatus.GENERATED);
         assertThat(saved.getTitle()).isEqualTo("제목X");
-        assertThat(saved.getContext()).isEqualTo("# 생성된 본문");
-    }
-
-    @Test
-    @DisplayName("터빈 코드 숫자가 int 범위를 넘으면 event_id 는 0 으로 폴백한다(예외 전파 방지)")
-    void markProcessing_turbineCodeOverflow_fallsBackToZero() {
-        long modelId = jdbc.queryForObject(
-                "SELECT turbine_model_id FROM turbine WHERE turbine_id = ?", Long.class, turbineId);
-        jdbc.update("""
-                INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
-                VALUES (?, ?, 'U99999999999999999', 34.7, 126.8)
-                """, farmId, modelId);
-        long bigTurbine = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        Long reportId = saveReport(ReportType.TURBINE_OPERATION, bigTurbine);
-
-        ReportGenerationService.Dispatch dispatch = generationService.markProcessing(reportId);
-
-        assertThat(dispatch.target().eventId()).isZero();
+        assertThat(saved.getContext()).isEqualTo("## 생성된 본문");
     }
 
     @Test
