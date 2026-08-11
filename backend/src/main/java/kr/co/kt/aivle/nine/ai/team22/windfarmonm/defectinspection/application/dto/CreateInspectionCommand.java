@@ -24,8 +24,9 @@ public record CreateInspectionCommand(Long windFarmId,
     public record BladeSpec(Long bladeId, int leadingEdgeCount, int pressureSideCount,
                             int suctionSideCount, int trailingEdgeCount) {
 
-        public int total() {
-            return leadingEdgeCount + pressureSideCount + suctionSideCount + trailingEdgeCount;
+        /** 합계는 long — int 합산은 큰 입력에서 오버플로우해 상한 검사를 우회할 수 있다. */
+        public long total() {
+            return (long) leadingEdgeCount + pressureSideCount + suctionSideCount + trailingEdgeCount;
         }
     }
 }

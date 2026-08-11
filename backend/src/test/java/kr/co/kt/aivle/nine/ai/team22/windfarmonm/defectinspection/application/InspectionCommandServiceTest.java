@@ -171,7 +171,13 @@ class InspectionCommandServiceTest {
                         new CreateInspectionCommand.TurbineSpec(TURBINE_ID, List.of(blade(31L, 0, 0, 0, 0)))), null),
                 new CreateInspectionCommand(FARM_ID, START, END, List.of(
                         new CreateInspectionCommand.TurbineSpec(TURBINE_ID, List.of(
-                                blade(31L, InspectionCommandService.MAX_TOTAL_IMAGES + 1, 0, 0, 0)))), null));
+                                blade(31L, InspectionCommandService.MAX_IMAGES_PER_SIDE + 1, 0, 0, 0)))), null), // 부위별 상한(20) 초과
+                new CreateInspectionCommand(FARM_ID, START, END, List.of(
+                        new CreateInspectionCommand.TurbineSpec(TURBINE_ID, List.of(
+                                blade(31L, 20, 20, 20, 20),
+                                blade(32L, 20, 20, 20, 20),
+                                blade(33L, 20, 20, 20, 20))))
+                        , null)); // 부위별은 통과해도 총합(240>200) 초과
 
         for (CreateInspectionCommand command : invalids) {
             assertThatThrownBy(() -> service.create(USER_ID, false, command))
@@ -185,7 +191,7 @@ class InspectionCommandServiceTest {
     @DisplayName("완료: 업로드된 이미지마다 아웃박스 행을 기록한다(payload 는 snake_case 계약)")
     void completeUpload_recordsOutboxPerImage() {
         Inspection inspection = Inspection.request(TURBINE_ID, USER_ID, 90L, START, END);
-        when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
         when(storagePort.listUploadedImages(5L)).thenReturn(List.of(
                 new InspectionStoragePort.UploadedImage("content/inspections/5/31/LE/1.jpg", 31L, PartSide.LE),
                 new InspectionStoragePort.UploadedImage("content/inspections/5/31/LE/2.jpg", 31L, PartSide.LE)));
@@ -211,14 +217,14 @@ class InspectionCommandServiceTest {
     @Test
     @DisplayName("완료: 미존재/타인(비담당) 점검은 모두 404 D001(존재 은닉)")
     void completeUpload_hiddenAs404() {
-        when(inspectionRepository.findById(404L)).thenReturn(Optional.empty());
+        when(inspectionRepository.findByIdForUpdate(404L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 404L))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND);
 
         Inspection inspection = Inspection.request(TURBINE_ID, 99L, 90L, START, END);
-        when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
         doThrow(new BusinessException(ErrorCode.TURBINE_NOT_FOUND))
                 .when(assetPort).checkTurbineAccess(USER_ID, false, TURBINE_ID);
         assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 5L))
@@ -232,14 +238,14 @@ class InspectionCommandServiceTest {
     void completeUpload_conflictAndEmpty() {
         Inspection inspection = Inspection.request(TURBINE_ID, USER_ID, 90L, START, END);
         inspection.markInspecting(); // 이미 완료 통보됨
-        when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
         assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 5L))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_STATE_CONFLICT);
 
         Inspection fresh = Inspection.request(TURBINE_ID, USER_ID, 90L, START, END);
-        when(inspectionRepository.findById(6L)).thenReturn(Optional.of(fresh));
+        when(inspectionRepository.findByIdForUpdate(6L)).thenReturn(Optional.of(fresh));
         when(storagePort.listUploadedImages(6L)).thenReturn(List.of());
         assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 6L))
                 .isInstanceOf(BusinessException.class)

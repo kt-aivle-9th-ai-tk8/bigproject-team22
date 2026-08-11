@@ -44,5 +44,10 @@ class InspectionObjectKeysTest {
         assertThat(InspectionObjectKeys.parse("content/inspections/12/notANumber/LE/1.jpg")).isEmpty();
         assertThat(InspectionObjectKeys.parse("content/inspections/12/34/XX/1.jpg")).isEmpty();
         assertThat(InspectionObjectKeys.parse("content/inspections/12/34/LE/1/extra.jpg")).isEmpty();
+        // 확장자·시퀀스·양수 id 까지 전체 형식을 검증한다(규약 밖 객체의 추론 유입 방지)
+        assertThat(InspectionObjectKeys.parse("content/inspections/12/34/LE/1.png")).isEmpty();
+        assertThat(InspectionObjectKeys.parse("content/inspections/12/34/LE/abc.jpg")).isEmpty();
+        assertThat(InspectionObjectKeys.parse("content/inspections/0/34/LE/1.jpg")).isEmpty();
+        assertThat(InspectionObjectKeys.parse("content/inspections/12/0/LE/1.jpg")).isEmpty();
     }
 }

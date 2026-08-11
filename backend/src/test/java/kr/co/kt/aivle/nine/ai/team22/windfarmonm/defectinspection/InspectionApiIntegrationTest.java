@@ -171,6 +171,20 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
         ResponseEntity<String> response = post("/inspections", wrongBlade, cookie);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).contains("D003");
+
+        // 담당 단지의 세션에 '타 단지 소속 터빈'을 끼워 넣으면 404(소속 불일치 — 존재 은닉과 동일 코드)
+        jdbc.update("INSERT INTO wind_farm (wind_farm_name, wind_farm_latitude, wind_farm_longitude) VALUES ('장흥', 34.7, 126.9)");
+        long otherFarmId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        long modelId = jdbc.queryForObject("SELECT turbine_model_id FROM turbine WHERE turbine_id=?", Long.class, turbineId);
+        jdbc.update("""
+                INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
+                VALUES (?, ?, '1', 34.7, 126.9)
+                """, otherFarmId, modelId);
+        long otherTurbineId = jdbc.queryForObject("SELECT MAX(turbine_id) FROM turbine", Long.class);
+        String otherFarmsTurbine = createBody().replace(
+                "\"turbine_id\":\"%d\"".formatted(turbineId), "\"turbine_id\":\"%d\"".formatted(otherTurbineId));
+        assertThat(post("/inspections", otherFarmsTurbine, cookie).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

@@ -41,6 +41,9 @@ public class InspectionCommandService {
     /** 요청 1건당 presigned URL 발급 상한(폭주 방지). FE 업로더의 현실 사용량보다 넉넉히 잡는다. */
     static final int MAX_TOTAL_IMAGES = 200;
 
+    /** 부위별 이미지 상한. 운영 가정(통상 10장, 최대 20장)을 코드로 강제한다. */
+    static final int MAX_IMAGES_PER_SIDE = 20;
+
     static final String AGGREGATE_TYPE = "Inspection";
     static final String EVENT_IMAGE_UPLOADED = "InspectionImageUploaded";
 
@@ -119,7 +122,10 @@ public class InspectionCommandService {
      */
     @Transactional
     public int completeUpload(Long userId, boolean admin, Long inspectionId) {
-        Inspection inspection = inspectionRepository.findById(inspectionId)
+        // 쓰기 잠금으로 동시 완료 통보를 직렬화한다 — 잠금 없이는 두 요청이 모두 UPLOADING 을 읽고
+        // markInspecting 을 통과해 아웃박스(추론 요청)가 중복 기록된다. 후속 요청은 잠금 해제 후
+        // INSPECTING 을 보고 D002 로 거부된다.
+        Inspection inspection = inspectionRepository.findByIdForUpdate(inspectionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INSPECTION_NOT_FOUND));
         try {
             assetPort.checkTurbineAccess(userId, admin, inspection.getTurbineId());
@@ -127,7 +133,7 @@ public class InspectionCommandService {
             throw new BusinessException(ErrorCode.INSPECTION_NOT_FOUND); // 타인 점검은 존재 자체를 은닉(404)
         }
 
-        inspection.markInspecting(); // UPLOADING 이 아니면 409
+        inspection.markInspecting(); // UPLOADING 이 아니면 D002(명세상 400)
 
         List<InspectionStoragePort.UploadedImage> images = storagePort.listUploadedImages(inspectionId);
         if (images.isEmpty()) {
@@ -158,21 +164,31 @@ public class InspectionCommandService {
         if (distinctTurbines != command.turbines().size()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT); // 중복 터빈 = 점검 중복 생성 요청
         }
-        int total = 0;
+        long total = 0; // int 합산은 큰 입력에서 오버플로우해 상한 검사를 우회할 수 있다 — long + 즉시 거부
         for (CreateInspectionCommand.TurbineSpec turbine : command.turbines()) {
             if (turbine.blades() == null || turbine.blades().isEmpty()) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT);
             }
             for (CreateInspectionCommand.BladeSpec blade : turbine.blades()) {
-                if (blade.leadingEdgeCount() < 0 || blade.pressureSideCount() < 0
-                        || blade.suctionSideCount() < 0 || blade.trailingEdgeCount() < 0) {
-                    throw new BusinessException(ErrorCode.INVALID_INPUT);
-                }
+                // 운영 가정(부위당 최대 20장)을 코드로 강제한다 — 가정만 믿으면 폭주 입력이 그대로 통과한다.
+                requireCountInRange(blade.leadingEdgeCount());
+                requireCountInRange(blade.pressureSideCount());
+                requireCountInRange(blade.suctionSideCount());
+                requireCountInRange(blade.trailingEdgeCount());
                 total += blade.total();
+                if (total > MAX_TOTAL_IMAGES) {
+                    throw new BusinessException(ErrorCode.INVALID_INPUT); // 초과 즉시 거부(불필요한 순회 방지)
+                }
             }
         }
-        if (total < 1 || total > MAX_TOTAL_IMAGES) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT); // 이미지 0장 세션/폭주 방지
+        if (total < 1) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT); // 이미지 0장 세션은 성립하지 않는다
+        }
+    }
+
+    private static void requireCountInRange(int count) {
+        if (count < 0 || count > MAX_IMAGES_PER_SIDE) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
     }
 

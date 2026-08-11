@@ -22,4 +22,9 @@ public class InspectionRepositoryImpl implements InspectionRepository {
     public Optional<Inspection> findById(Long id) {
         return jpaRepository.findById(id);
     }
+
+    @Override
+    public Optional<Inspection> findByIdForUpdate(Long id) {
+        return jpaRepository.findWithLockById(id);
+    }
 }

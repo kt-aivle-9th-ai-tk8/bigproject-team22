@@ -34,14 +34,19 @@ public final class InspectionObjectKeys {
         if (at < 0) {
             return Optional.empty();
         }
-        // {inspectionId}/{bladeId}/{partSide}/{seq}.jpg
+        // {inspectionId}/{bladeId}/{partSide}/{seq}.jpg — 세그먼트 수만이 아니라 전체 형식을 검증한다.
+        // 느슨하면 규약 밖 객체(수동 업로드 등)가 추론 대상(아웃박스)으로 흘러든다.
         String[] rest = key.substring(at + SEGMENT.length() + 2).split("/");
-        if (rest.length != 4) {
+        if (rest.length != 4 || !rest[3].matches("\\d+\\.jpg")) {
             return Optional.empty();
         }
         try {
+            long inspectionId = Long.parseLong(rest[0]);
             long bladeId = Long.parseLong(rest[1]);
             PartSide partSide = PartSide.valueOf(rest[2]);
+            if (inspectionId <= 0 || bladeId <= 0) {
+                return Optional.empty();
+            }
             return Optional.of(new ParsedImage(bladeId, partSide));
         } catch (IllegalArgumentException e) {
             return Optional.empty();
