@@ -412,7 +412,7 @@ function PowerChartDrag({
           <strong>
             {mode === "turbine"
               ? `${selectedTurbine?.name || ""} 터빈 시간별 발전량`
-              : `${selectedPlant?.name || ""} 발전소 시간별 발전량`}
+              : `${selectedPlant?.name || ""} 시간별 발전량`}
           </strong>
 
           <span>
