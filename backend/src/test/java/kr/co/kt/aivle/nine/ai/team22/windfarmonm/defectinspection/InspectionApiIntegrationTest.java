@@ -58,14 +58,15 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
     void setUp() {
         truncateAll(jdbc);
         jdbc.update("INSERT INTO turbine_model (model) VALUES ('U93')");
-        long modelId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        long modelId = jdbc.queryForObject("SELECT turbine_model_id FROM turbine_model WHERE model='U93'", Long.class);
         jdbc.update("INSERT INTO wind_farm (wind_farm_name, wind_farm_latitude, wind_farm_longitude) VALUES ('화순', 35.1, 127.0)");
-        farmId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        farmId = jdbc.queryForObject("SELECT wind_farm_id FROM wind_farm WHERE wind_farm_name='화순'", Long.class);
         jdbc.update("""
                 INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
                 VALUES (?, ?, 'U1', 35.1, 127.0)
                 """, farmId, modelId);
-        turbineId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        turbineId = jdbc.queryForObject(
+                "SELECT turbine_id FROM turbine WHERE wind_farm_id=? AND turbine_code='U1'", Long.class, farmId);
         for (String tag : List.of("A", "B", "C")) {
             jdbc.update("INSERT INTO blade (turbine_id, blade_tag) VALUES (?, ?)", turbineId, tag);
         }
@@ -174,13 +175,14 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
 
         // 담당 단지의 세션에 '타 단지 소속 터빈'을 끼워 넣으면 404(소속 불일치 — 존재 은닉과 동일 코드)
         jdbc.update("INSERT INTO wind_farm (wind_farm_name, wind_farm_latitude, wind_farm_longitude) VALUES ('장흥', 34.7, 126.9)");
-        long otherFarmId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        long otherFarmId = jdbc.queryForObject("SELECT wind_farm_id FROM wind_farm WHERE wind_farm_name='장흥'", Long.class);
         long modelId = jdbc.queryForObject("SELECT turbine_model_id FROM turbine WHERE turbine_id=?", Long.class, turbineId);
         jdbc.update("""
                 INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
                 VALUES (?, ?, '1', 34.7, 126.9)
                 """, otherFarmId, modelId);
-        long otherTurbineId = jdbc.queryForObject("SELECT MAX(turbine_id) FROM turbine", Long.class);
+        long otherTurbineId = jdbc.queryForObject(
+                "SELECT turbine_id FROM turbine WHERE wind_farm_id=? AND turbine_code='1'", Long.class, otherFarmId);
         String otherFarmsTurbine = createBody().replace(
                 "\"turbine_id\":\"%d\"".formatted(turbineId), "\"turbine_id\":\"%d\"".formatted(otherTurbineId));
         assertThat(post("/inspections", otherFarmsTurbine, cookie).getStatusCode())
@@ -196,9 +198,11 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
                 INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
                 VALUES (?, ?, 'U2', 35.1, 127.0)
                 """, farmId, modelId);
-        long turbine2 = jdbc.queryForObject("SELECT MAX(turbine_id) FROM turbine", Long.class);
+        long turbine2 = jdbc.queryForObject(
+                "SELECT turbine_id FROM turbine WHERE wind_farm_id=? AND turbine_code='U2'", Long.class, farmId);
         jdbc.update("INSERT INTO blade (turbine_id, blade_tag) VALUES (?, 'A')", turbine2);
-        long blade2 = jdbc.queryForObject("SELECT MAX(blade_id) FROM blade", Long.class);
+        long blade2 = jdbc.queryForObject(
+                "SELECT blade_id FROM blade WHERE turbine_id=? AND blade_tag='A'", Long.class, turbine2);
 
         String body = """
                 {"wind_farm_id":"%d",
