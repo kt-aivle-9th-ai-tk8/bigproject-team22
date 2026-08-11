@@ -87,6 +87,8 @@ def generate_report(report_type: str, event_id: int, params: dict = None) -> dic
         "metadata": {"report_type": report_type, "event_id": event_id, "params": params or {}},
     }
     try:
+        # 스냅샷 트랜잭션은 graph 의 fetch 노드가 연다 — DB 조회가 거기서만 일어나고,
+        # invoke 전체를 감싸면 LLM 호출·재시도 동안 커넥션이 잡혀 있게 된다(#89 리뷰).
         final = app.invoke(_init_state(report_type, event_id, params), config=run_config)
     except Exception as e:
         # llm.py의 재시도가 소진된 뒤의 최종 실패(쿼터/네트워크/타임아웃 등).
