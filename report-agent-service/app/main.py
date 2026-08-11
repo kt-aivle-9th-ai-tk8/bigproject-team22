@@ -46,8 +46,8 @@ def health_check():
     }
 
 # 📌 API 라우터 등록
-# endpoints: /api/v1/reports/...
-app.include_router(report_router, prefix="/api/v1/reports", tags=["Reports"])
+# endpoints: /api-internal/reports  (BE 전용 내부 경로 — /api/... 는 BE 게이트웨이용이라 분리)
+app.include_router(report_router, prefix="/api-internal/reports", tags=["Reports"])
 
 if __name__ == "__main__":
     import uvicorn
