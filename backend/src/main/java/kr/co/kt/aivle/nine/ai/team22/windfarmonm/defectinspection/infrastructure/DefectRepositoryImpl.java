@@ -17,4 +17,9 @@ public class DefectRepositoryImpl implements DefectRepository {
     public List<Defect> saveAll(List<Defect> defects) {
         return jpaRepository.saveAll(defects);
     }
+
+    @Override
+    public List<Defect> findByBladeId(Long bladeId) {
+        return jpaRepository.findByBladeIdOrderByIdDesc(bladeId);
+    }
 }

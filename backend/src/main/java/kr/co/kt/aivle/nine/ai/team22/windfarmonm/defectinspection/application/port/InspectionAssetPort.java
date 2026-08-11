@@ -29,6 +29,15 @@ public interface InspectionAssetPort {
     /** 터빈의 블레이드 목록(태그→id 해석용). <b>인가 없는</b> 내부 조회(호출측 인가 선행). */
     List<BladeRef> bladesOf(Long turbineId);
 
+    /**
+     * 블레이드 접근 권한 검사. 미담당/미존재 모두 비-ADMIN 에게는 동일하게 404 로 응답한다(존재 은닉 —
+     * {@code AssetAccessGuard.checkBladeAccessById} 규약 그대로).
+     */
+    void checkBladeAccess(Long userId, boolean admin, Long bladeId);
+
+    /** 블레이드 존재 여부. ADMIN 은 가드를 통과하므로 미존재 404 판정에 따로 쓴다. */
+    boolean bladeExists(Long bladeId);
+
     /** 블레이드 참조(id + 태그 A/B/C). */
     record BladeRef(Long id, String tag) {
     }
