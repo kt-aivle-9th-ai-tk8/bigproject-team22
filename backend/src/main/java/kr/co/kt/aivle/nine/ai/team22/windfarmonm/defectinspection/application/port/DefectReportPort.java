@@ -17,4 +17,10 @@ public interface DefectReportPort {
      */
     Long createDefectReport(Long windFarmId, LocalDateTime periodStart, LocalDateTime periodEnd,
                             Long createdBy, String context);
+
+    /**
+     * 결함 적재가 끝난 보고서의 본문 생성을 요청한다(생성 파이프라인 이벤트 발행).
+     * 호출측 트랜잭션이 커밋된 뒤 파이프라인이 돈다(AFTER_COMMIT) — 커밋 전 데이터로 생성하지 않는다.
+     */
+    void requestGeneration(Long reportId);
 }
