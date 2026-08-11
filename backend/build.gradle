@@ -43,6 +43,10 @@ dependencies {
 		exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
 		exclude group: 'software.amazon.awssdk', module: 'apache-client'
 	}
+	implementation('software.amazon.awssdk:sqs') {
+		exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
+		exclude group: 'software.amazon.awssdk', module: 'apache-client'
+	}
 	implementation('software.amazon.awssdk:sagemakerruntime') {
 		exclude group: 'software.amazon.awssdk', module: 'netty-nio-client'
 		exclude group: 'software.amazon.awssdk', module: 'apache-client'

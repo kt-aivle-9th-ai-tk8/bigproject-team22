@@ -17,6 +17,12 @@ public interface InspectionStoragePort {
     /** 점검 프리픽스 아래에 <b>실제로 업로드된</b> 이미지들을 나열한다(S3 LIST — FE 신고가 아니라 원천 기준). */
     List<UploadedImage> listUploadedImages(long inspectionId);
 
+    /** 이미지 키의 전체 S3 URI({@code s3://bucket/key}). SageMaker Async 의 InputLocation 으로 쓴다. */
+    String imageS3Uri(String imageKey);
+
+    /** S3 URI 가 가리키는 JSON 객체를 읽는다(추론 결과 outputLocation). */
+    String readJson(String s3Uri);
+
     /** 발급된 업로드 대상(객체 키 + presigned URL). */
     record UploadTarget(String key, String url) {
     }
