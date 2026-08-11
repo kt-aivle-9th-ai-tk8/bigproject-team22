@@ -188,6 +188,48 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("다중 터빈 세션: 터빈마다 점검 행이 생기고 세션 전체가 보고서 1건을 공유하며, 부위별 URL 이 요청 수량과 슬롯에 맞게 발급된다")
+    void createInspection_multiTurbineSession() {
+        // 같은 단지에 두 번째 터빈 + 블레이드 A 추가
+        long modelId = jdbc.queryForObject("SELECT turbine_model_id FROM turbine WHERE turbine_id=?", Long.class, turbineId);
+        jdbc.update("""
+                INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
+                VALUES (?, ?, 'U2', 35.1, 127.0)
+                """, farmId, modelId);
+        long turbine2 = jdbc.queryForObject("SELECT MAX(turbine_id) FROM turbine", Long.class);
+        jdbc.update("INSERT INTO blade (turbine_id, blade_tag) VALUES (?, 'A')", turbine2);
+        long blade2 = jdbc.queryForObject("SELECT MAX(blade_id) FROM blade", Long.class);
+
+        String body = """
+                {"wind_farm_id":"%d",
+                 "inspection_start":"2026-08-01T00:00:00","inspection_end":"2026-08-02T00:00:00",
+                 "turbines":[
+                   {"turbine_id":"%d","blades":[{"blade_id":"%d","leading_edge_count":1,"pressure_side_count":0,"suction_side_count":0,"trailing_edge_count":0}]},
+                   {"turbine_id":"%d","blades":[{"blade_id":"%d","leading_edge_count":0,"pressure_side_count":0,"suction_side_count":0,"trailing_edge_count":2}]}],
+                 "context":null}
+                """.formatted(farmId, turbineId, bladeA, turbine2, blade2);
+
+        ResponseEntity<String> response = post("/inspections", body, loginCookie("MGR1"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // 터빈마다 점검 1행 + 세션 공유 보고서 1건
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inspection", Long.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT report_id) FROM inspection", Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM report WHERE report_type='DEFECT_DIAGNOSIS'", Long.class)).isEqualTo(1);
+        // 슬롯 매핑: 목 presign 이 키를 URL 로 돌려주진 않지만, 키 규약대로 (inspectionId, bladeId, side, seq) 로
+        // 호출됐는지 응답의 부위별 수량으로 검증한다 — 터빈1/블레이드A 는 LE 1건, 터빈2/블레이드2 는 TE 2건.
+        long inspection2 = jdbc.queryForObject("SELECT inspection_id FROM inspection WHERE turbine_id=?", Long.class, turbine2);
+        assertThat(response.getBody())
+                .contains("\"inspection_id\":\"%d\"".formatted(inspection2))
+                .contains("\"trailing_edge_upload_urls\":[\"https://s3.presigned.example/upload\",\"https://s3.presigned.example/upload\"]");
+        org.mockito.Mockito.verify(storagePort).presignImageUpload(inspection2, blade2, PartSide.TE, 1);
+        org.mockito.Mockito.verify(storagePort).presignImageUpload(inspection2, blade2, PartSide.TE, 2);
+        org.mockito.Mockito.verify(storagePort, org.mockito.Mockito.never())
+                .presignImageUpload(org.mockito.ArgumentMatchers.eq(inspection2), org.mockito.ArgumentMatchers.eq(blade2),
+                        org.mockito.ArgumentMatchers.eq(PartSide.LE), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
     @DisplayName("업로드 완료: 200(data null) + 상태 INSPECTING + 이미지당 아웃박스 행, 중복 통보는 400(D002)")
     void imagesUploaded() {
         String cookie = loginCookie("MGR1");
@@ -221,7 +263,7 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("업로드 완료: 타인(비담당) 점검은 404(존재 은닉)")
+    @DisplayName("업로드 완료: 비담당 타인은 물론, 같은 단지의 다른 담당자도 404(소유자 전용·존재 은닉)")
     void imagesUploaded_hidden() {
         String cookie = loginCookie("MGR1");
         post("/inspections", createBody(), cookie);
@@ -229,5 +271,14 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
 
         assertThat(post("/inspections/" + inspectionId + "/images-uploaded", null, loginCookie("MGR2")).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
+
+        // 같은 단지에 배정된 동료(MGR3)도 소유자가 아니면 완료 통보 불가 — 부분 업로드 상태의 조기 종료 방지
+        long coworkerId = seedUser("MGR3");
+        jdbc.update("INSERT INTO assignment (user_id, wind_farm_id, created_at) VALUES (?, ?, NOW(6))", coworkerId, farmId);
+        assertThat(post("/inspections/" + inspectionId + "/images-uploaded", null, loginCookie("MGR3")).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        // 상태는 여전히 UPLOADING(소유자의 완료 통보만 유효)
+        assertThat(jdbc.queryForObject("SELECT status FROM inspection WHERE inspection_id=?", String.class, inspectionId))
+                .isEqualTo("UPLOADING");
     }
 }

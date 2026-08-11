@@ -171,6 +171,9 @@ class InspectionCommandServiceTest {
                         new CreateInspectionCommand.TurbineSpec(TURBINE_ID, List.of(blade(31L, 0, 0, 0, 0)))), null),
                 new CreateInspectionCommand(FARM_ID, START, END, List.of(
                         new CreateInspectionCommand.TurbineSpec(TURBINE_ID, List.of(
+                                blade(31L, 1, 0, 0, 0), blade(31L, 2, 0, 0, 0)))), null), // 중복 블레이드 = 키 충돌 → 거부
+                new CreateInspectionCommand(FARM_ID, START, END, List.of(
+                        new CreateInspectionCommand.TurbineSpec(TURBINE_ID, List.of(
                                 blade(31L, InspectionCommandService.MAX_IMAGES_PER_SIDE + 1, 0, 0, 0)))), null), // 부위별 상한(20) 초과
                 new CreateInspectionCommand(FARM_ID, START, END, List.of(
                         new CreateInspectionCommand.TurbineSpec(TURBINE_ID, List.of(
@@ -215,7 +218,7 @@ class InspectionCommandServiceTest {
     }
 
     @Test
-    @DisplayName("완료: 미존재/타인(비담당) 점검은 모두 404 D001(존재 은닉)")
+    @DisplayName("완료: 미존재/비소유자 점검은 모두 404 D001(존재 은닉) — 완료 통보는 소유자 전용, ADMIN 도 예외 없음")
     void completeUpload_hiddenAs404() {
         when(inspectionRepository.findByIdForUpdate(404L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 404L))
@@ -223,11 +226,24 @@ class InspectionCommandServiceTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND);
 
-        Inspection inspection = Inspection.request(TURBINE_ID, 99L, 90L, START, END);
-        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
+        // 비소유자는 접근(담당) 검사 이전에 소유자 검사에서 은닉된다 — 동일 단지 담당자여도 마찬가지
+        Inspection othersInspection = Inspection.request(TURBINE_ID, 99L, 90L, START, END);
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(othersInspection));
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 5L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND);
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, true, 5L)) // ADMIN 도 예외 없음
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND);
+
+        // 소유자라도 배정이 해제됐으면(담당 아님) 동일하게 은닉된다
+        Inspection ownButRevoked = Inspection.request(TURBINE_ID, USER_ID, 90L, START, END);
+        when(inspectionRepository.findByIdForUpdate(6L)).thenReturn(Optional.of(ownButRevoked));
         doThrow(new BusinessException(ErrorCode.TURBINE_NOT_FOUND))
                 .when(assetPort).checkTurbineAccess(USER_ID, false, TURBINE_ID);
-        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 5L))
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 6L))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND); // M003 이 아니라 D001 로 은닉

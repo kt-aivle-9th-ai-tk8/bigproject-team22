@@ -127,10 +127,17 @@ public class InspectionCommandService {
         // INSPECTING 을 보고 D002 로 거부된다.
         Inspection inspection = inspectionRepository.findByIdForUpdate(inspectionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INSPECTION_NOT_FOUND));
+        // 완료 통보는 '소유자(세션 생성자)'만 할 수 있다 — FE 의 "업로드 끝" 안내일 뿐 검증 주체는 BE 이며,
+        // 동일 단지 담당자라도 타인의 진행 중 세션을 부분 업로드 상태로 조기 종료(비가역 전이)시킬 수 없어야 한다.
+        // ADMIN 도 예외를 두지 않는다(업로더 클라이언트 흐름에 결속된 상태 변경). 비소유자에게는 존재를 은닉한다.
+        if (inspection.getUserId() == null || !inspection.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.INSPECTION_NOT_FOUND);
+        }
         try {
+            // 배정이 해제된 소유자의 잔여 조작도 막는다(담당 기반 접근 모델과 정합).
             assetPort.checkTurbineAccess(userId, admin, inspection.getTurbineId());
         } catch (BusinessException e) {
-            throw new BusinessException(ErrorCode.INSPECTION_NOT_FOUND); // 타인 점검은 존재 자체를 은닉(404)
+            throw new BusinessException(ErrorCode.INSPECTION_NOT_FOUND); // 동일하게 은닉(404)
         }
 
         inspection.markInspecting(); // UPLOADING 이 아니면 D002(명세상 400)
@@ -167,6 +174,13 @@ public class InspectionCommandService {
         long total = 0; // int 합산은 큰 입력에서 오버플로우해 상한 검사를 우회할 수 있다 — long + 즉시 거부
         for (CreateInspectionCommand.TurbineSpec turbine : command.turbines()) {
             if (turbine.blades() == null || turbine.blades().isEmpty()) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT);
+            }
+            // 한 터빈 안의 중복 블레이드는 같은 S3 키에 URL 을 중복 발급시켜 업로드가 조용히 덮어써진다
+            // (이미지 유실 → 추론 누락). 중복 터빈 규칙과 동일하게 거부한다.
+            long distinctBlades = turbine.blades().stream()
+                    .map(CreateInspectionCommand.BladeSpec::bladeId).distinct().count();
+            if (distinctBlades != turbine.blades().size()) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT);
             }
             for (CreateInspectionCommand.BladeSpec blade : turbine.blades()) {

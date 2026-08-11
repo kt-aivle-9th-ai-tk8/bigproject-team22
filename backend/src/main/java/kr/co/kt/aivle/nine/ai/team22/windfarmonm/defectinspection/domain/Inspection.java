@@ -80,7 +80,7 @@ public class Inspection {
 
     /**
      * 업로드 완료 → 추론 진행으로 전이한다. UPLOADING 에서만 허용된다 —
-     * 중복 완료 통보(INSPECTING)나 종료된 점검(INSPECTED)이면 {@link ErrorCode#INSPECTION_STATE_CONFLICT}(409).
+     * 중복 완료 통보(INSPECTING)나 종료된 점검(INSPECTED)이면 {@link ErrorCode#INSPECTION_STATE_CONFLICT}(400 — 명세).
      */
     public void markInspecting() {
         if (status != InspectionStatus.UPLOADING) {
