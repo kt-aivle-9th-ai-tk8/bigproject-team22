@@ -74,6 +74,10 @@ function PowerChartDrag({
   minVisibleTickCount = DEFAULT_MIN_VISIBLE_TICK_COUNT,
   maxVisibleTickCount = DEFAULT_MAX_VISIBLE_TICK_COUNT,
 
+  mode,
+  selectedPlant,
+  selectedTurbine,
+
   isLoading = false,
   onRangeDrag,
 }) {
@@ -405,7 +409,11 @@ function PowerChartDrag({
     <div className="power-chart-box">
       <div className="power-chart-header">
         <div className="power-chart-title">
-          <strong>시간별 발전량</strong>
+          <strong>
+            {mode === "turbine"
+              ? `${selectedTurbine?.name || ""} 터빈 시간별 발전량`
+              : `${selectedPlant?.name || ""} 시간별 발전량`}
+          </strong>
 
           <span>
             {isEmptyAxis
@@ -462,7 +470,16 @@ function PowerChartDrag({
                 />
 
                 <Tooltip
-                  formatter={(value) => [`${value} kWh`, "발전량"]}
+                  formatter={(value) => {
+                    const numberValue = Number(value);
+
+                    const formattedValue =
+                      numberValue >= 100
+                        ? `${(numberValue / 1000).toFixed(2).replace(/\.?0+$/, "")} MWh`
+                        : `${numberValue.toFixed(2).replace(/\.?0+$/, "")} kWh`;
+
+                    return [formattedValue, "발전량"];
+                  }}
                   labelFormatter={(label) => `시간: ${formatTickLabel(label)}`}
                   contentStyle={{
                     padding: "4px 6px",

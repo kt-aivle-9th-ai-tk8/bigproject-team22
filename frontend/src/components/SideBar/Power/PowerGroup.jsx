@@ -14,7 +14,6 @@ function PowerGroup({ items, onSelectPlant }) {
           currentOutput={item.currentOutput}
           currentPower={item.currentPower}
           monthPower={item.monthPower}
-          yearPower={item.yearPower}
           onClick={() => onSelectPlant(item)}
         />
       ))}

@@ -6,6 +6,16 @@ function PlantSummaryGroup({
   weatherInfo,
   powerInfo,
 }) {
+  const formatPower = (value) => {
+    const numberValue = Number(value) || 0;
+
+    if (numberValue >= 1000) {
+      return `${(numberValue / 1000).toFixed(2)} MWh`;
+    }
+
+    return `${numberValue.toFixed(2)} kWh`;
+  };
+
   return (
     <div className="plant-summary-group">
       <div className="plant-summary-item">
@@ -33,7 +43,7 @@ function PlantSummaryGroup({
           <PowerGauge value={powerInfo.currentOutput} />
 
           <div className="plant-summary-power-output-value">
-            {powerInfo.currentOutput.toFixed(1)} MWh
+            {formatPower(powerInfo.currentOutput)}
           </div>
         </div>
       </div>
@@ -52,7 +62,7 @@ function PlantSummaryGroup({
                 금일 발전량
               </div>
               <div className="plant-summary-power-value">
-                {powerInfo.currentPower} MWh
+                {formatPower(powerInfo.currentPower)}
               </div>
             </div>
 
@@ -61,16 +71,7 @@ function PlantSummaryGroup({
                 이번 달 발전량
               </div>
               <div className="plant-summary-power-value">
-                {powerInfo.monthPower.toFixed(1)} GWh
-              </div>
-            </div>
-
-            <div className="plant-summary-power-data">
-              <div className="plant-summary-power-label">
-                올해 발전량
-              </div>
-              <div className="plant-summary-power-value">
-                {powerInfo.yearPower.toFixed(1)} GWh
+                {formatPower(powerInfo.monthPower)}
               </div>
             </div>
           </div>

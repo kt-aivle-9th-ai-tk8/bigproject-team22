@@ -70,7 +70,8 @@ def main():
     suffix = f"_{args.start}_{args.end}" if (args.start or args.end) else ""
     out_path = os.path.join(OUTPUT_DIR, f"report_{args.report_type}_{args.event_id}{suffix}.md")
     with open(out_path, "w", encoding="utf-8") as f:
-        f.write(res["draft"] or "")
+        # 응답은 title/context 로 분리돼 온다 — 파일엔 사람이 읽을 전체 문서로 재조합한다.
+        f.write(f"# {res['title']}\n\n{res['context']}" if res.get("title") else (res.get("context") or ""))
 
     print(f"[run] verdict={res['verdict']} retry={res['retry_count']}")
     if res["issues"]:

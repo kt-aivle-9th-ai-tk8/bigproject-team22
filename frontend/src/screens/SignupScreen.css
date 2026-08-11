@@ -1,211 +1,238 @@
-.signup-container {
-  display: flex;
+/* 전체 화면 옅은 연두빛 배경 */
+.signup-page-container {
   min-height: 100vh;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #FFFFFF;
-  position: relative;
-}
-
-/* 왼쪽 폼 영역 */
-.signup-form-section {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 40px 60px;
+  background-color: #ebf7ed;
+  padding: 40px 20px;
   box-sizing: border-box;
 }
 
-.signup-wrapper {
+/* 중앙 하얀색 둥근 카드 */
+.signup-card {
   width: 100%;
-  max-width: 440px;
-  display: flex;
-  flex-direction: column;
+  max-width: 480px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  padding: 40px 32px;
+  box-sizing: border-box;
 }
 
-.signup-wrapper h2 {
-  font-size: 32px;
+.signup-header h2 {
+  font-size: 26px;
   font-weight: 700;
-  margin-bottom: 32px;
-  color: #000000;
+  color: #111111;
+  margin: 0 0 6px 0;
+  text-align: left;
+}
+
+.signup-subtitle {
+  font-size: 14px;
+  color: #888888;
+  margin-bottom: 24px;
+  text-align: left;
 }
 
 .signup-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-.signup-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.signup-input-group label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #000000;
+  gap: 12px;
 }
 
 .signup-input-group input {
   width: 100%;
-  height: 44px;
-  border: 1px solid #AEAEB2;
-  border-radius: 8px;
+  height: 48px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
   padding: 0 14px;
   font-size: 14px;
   box-sizing: border-box;
   outline: none;
-  background-color: #FFFFFF;
+  transition: border-color 0.2s;
 }
 
 .signup-input-group input:focus {
-  border-color: #0066FF;
+  border-color: #12a54d;
 }
 
-/* 실시간 벨리데이션 텍스트 스타일 */
 .validation-msg {
-  font-size: 12px;
-  margin-top: 2px;
-  font-weight: 500;
+  font-size: 11px;
+  margin-top: 4px;
 }
+
 .validation-msg.valid {
-  color: #34C759; /* 그린 */
+  color: #27ae60;
 }
+
 .validation-msg.invalid {
-  color: #FF3B30; /* 레드 */
+  color: #e74c3c;
 }
 
-/* 체크박스 커스텀 */
-.terms-group {
-  margin-top: 10px;
-}
-
-.checkbox-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #000000;
-  cursor: pointer;
-}
-
-/* 가입 완료 버튼 */
+/* 가입 버튼 */
 .signup-button {
   width: 100%;
   height: 48px;
-  background-color: #2D4A22; 
-  color: #FFFFFF;
+  background-color: #1b4831;
+  color: #ffffff;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 8px;
   transition: background-color 0.2s;
 }
 
 .signup-button:hover {
-  background-color: #203518;
+  background-color: #0052cc;
 }
 
-/* 헤더 정렬 (양 끝 배치) */
-.signup-header {
+/* 이용약관 영역 */
+.terms-accordion-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.terms-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333333;
+  font-weight: 500;
 }
 
-.signup-header h2 {
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0;
-  color: #000000;
+.terms-content {
+  border-top: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  padding: 10px;
 }
 
-/* 상단 희미한(은은한) 로그인 버튼 */
-.header-login-btn {
+.terms-scroll-box {
+  height: 100px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  padding: 8px;
+  font-size: 11px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.terms-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.terms-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 10px;
+}
+
+.terms-table th, .terms-table td {
+  border: 1px solid #ddd;
+  padding: 4px;
+  text-align: left;
+}
+
+.terms-table th {
+  background-color: #f1f5f9;
+}
+
+.terms-scroll-notice {
+  font-size: 11px;
+  color: #e74c3c;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.terms-checkbox-wrapper {
+  padding: 10px 12px;
+  background-color: #ffffff;
+}
+
+.checkbox-container {
+  font-size: 12px;
+  color: #444;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox-container.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 로그인 이동 하단 링크 */
+.signup-footer-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #666666;
+}
+
+.link-btn {
   background: none;
   border: none;
-  color: #8E8E93; /* 희미한 쿨그레이 색상 */
-  font-size: 15px;
-  font-weight: 500;
+  color: #0066ff;
+  font-weight: 600;
   cursor: pointer;
-  padding: 4px 8px;
-  transition: color 0.2s;
+  padding: 0;
 }
 
-.header-login-btn:hover {
-  color: #0066FF; /* 마우스 호버 시 블루 포인트 */
-  text-decoration: underline;
-}
-
-/* 오른쪽 이미지 영역 스타일 */
-.signup-image-section {
-  flex: 1;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-/* 화면 크기가 작아지면 이미지를 숨기고 폼을 넓게 조절 */
-@media (max-width: 900px) {
-  .signup-image-section {
-    display: none;
-  }
-}
-
-/* 모달 레이아웃 */
+/* 모달 */
 .signup-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.4);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2000;
+  z-index: 999;
 }
 
 .signup-modal-window {
-  background-color: #FFFFFF;
-  width: 300px;
-  border-radius: 12px;
-  padding: 24px;
+  background: #ffffff;
+  padding: 24px 32px;
+  border-radius: 10px;
   text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
 .signup-modal-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #34C759;
-  margin-bottom: 12px;
+  font-weight: bold;
+  color: #27ae60;
+  margin-bottom: 8px;
 }
 
 .signup-modal-window p {
-  font-size: 15px;
-  color: #333333;
-  margin-bottom: 20px;
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 16px;
 }
 
 .signup-modal-window button {
-  width: 100%;
-  height: 38px;
-  background-color: #0066FF;
-  color: #FFFFFF;
+  padding: 8px 16px;
+  background-color: #0066ff;
+  color: white;
   border: none;
   border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
 }

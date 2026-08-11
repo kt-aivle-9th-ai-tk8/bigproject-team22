@@ -97,15 +97,16 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("GUEST 는 로그인은 되지만 보호 경로 접근은 403(승인 대기)")
-    void adminApi_guest_403Pending() {
+    @DisplayName("GUEST 는 로그인 자체가 차단된다(A004 승인 대기) — 세션을 발급하지 않는다")
+    void guest_loginBlocked() {
         seed("GUEST1", Role.GUEST);
-        String cookie = sessionCookie(login("GUEST1"));
 
-        ResponseEntity<String> response = getAdminUsers(cookie);
+        ResponseEntity<String> response = login("GUEST1"); // 올바른 비밀번호라도 승인 전이면 차단
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(response.getBody()).contains("승인 대기");
+        // 세션 쿠키가 발급되지 않아야 한다(로그인 실패)
+        assertThat(response.getHeaders().get(HttpHeaders.SET_COOKIE)).isNull();
     }
 
     @Test
@@ -129,7 +130,11 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
         ResponseEntity<String> response = getAdminUsers(cookie);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains("ADMIN1");
+        // 사번은 마스킹되어 나간다("ADMIN1" → "AD**N1"). 마스킹 규칙 자체는 PiiMaskerTest 가 고정하므로
+        // 여기서는 기대값을 리터럴로 박아 "이 API 응답에 원문이 실리지 않는다"만 못 박는다.
+        assertThat(response.getBody())
+                .contains("AD**N1")
+                .doesNotContain("ADMIN1");
     }
 
     @Test

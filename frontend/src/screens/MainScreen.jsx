@@ -10,6 +10,8 @@ import SideBar from "../components/SideBar";
 import { useWindFarmDetail } from "../hooks/useWindFarmDetail";
 import { useWindFarms } from "../hooks/useWindFarms";
 import { useNotifications } from "../hooks/useNotifications";
+import { usePowerGeneration } from "../hooks/usePowerGeneration";
+import { useTurbineDetail } from "../hooks/useTurbineDetail";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -49,6 +51,17 @@ function MainScreen() {
   } = useWindFarmDetail({
     mode: screenMode,
     windFarmId: selectedPlant?.id,
+    refreshInterval: 10000,
+  });
+
+  // 터빈 상세 페이지 api
+  const {
+    turbineDetail,
+    isTurbineDetailLoading,
+    turbineDetailError,
+  } = useTurbineDetail({
+    mode: screenMode,
+    turbineId: selectedTurbine?.id,
     refreshInterval: 10000,
   });
 
@@ -115,6 +128,49 @@ function MainScreen() {
   }, []);
 
   const turbines = windFarmDetail?.turbines || [];
+
+  const underBarPlant =
+    screenMode === "map"
+      ? plants[0] || null
+      : selectedPlant;
+  
+  const {
+    powerData,
+    isPowerLoading,
+    powerError,
+    fetchPowerGeneration,
+  } = usePowerGeneration({
+    mode: screenMode,
+    selectedPlant: underBarPlant,
+    selectedTurbine,
+  });
+
+  useEffect(() => {
+    if (screenMode === "turbine") {
+      if (!selectedTurbine?.id) {
+        return;
+      }
+    } else {
+      if (!underBarPlant?.id) {
+        return;
+      }
+    }
+
+    const nextEndAt = new Date();
+
+    const nextStartAt = new Date(
+      nextEndAt.getTime() - 18 * 60 * 60 * 1000
+    );
+
+    fetchPowerGeneration({
+      nextStartAt,
+      nextEndAt,
+    });
+  }, [
+    screenMode,
+    underBarPlant?.id,
+    selectedTurbine?.id,
+  ]);
 
   useEffect(() => {
     localStorage.setItem("screenMode", screenMode);
@@ -235,6 +291,7 @@ function MainScreen() {
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
           windFarmDetail={windFarmDetail}
+          turbineDetail={turbineDetail}
           notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
@@ -244,8 +301,12 @@ function MainScreen() {
 
         <UnderBar
           mode={screenMode}
-          selectedPlant={selectedPlant}
+          selectedPlant={underBarPlant}
           selectedTurbine={selectedTurbine}
+          powerData={powerData}
+          isLoading={isPowerLoading}
+          powerError={powerError}
+          onFetchPowerGeneration={fetchPowerGeneration}
         />
       </div>
     </div>

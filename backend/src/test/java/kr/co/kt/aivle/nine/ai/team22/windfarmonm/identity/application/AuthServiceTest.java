@@ -94,6 +94,36 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("가입 승인 대기(GUEST)는 비밀번호 확인 '후' A004 로 차단된다")
+    void login_pendingGuest_correctPassword() {
+        User guest = User.create("E1001", "hashed", "홍길동", "010-1234-5678", Role.GUEST);
+        when(userRepository.findByEmployeeId("E1001")).thenReturn(Optional.of(guest));
+        when(passwordEncoder.matches("pw", "hashed")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login(new LoginCommand("E1001", "pw")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.ACCOUNT_PENDING);
+        // 비밀번호를 실제로 검증한 뒤 승인 여부를 판정한다(신원 확인 후 인가)
+        verify(passwordEncoder).matches("pw", "hashed");
+    }
+
+    @Test
+    @DisplayName("승인 대기(GUEST) 라도 비밀번호가 틀리면 A004 가 아니라 INVALID_CREDENTIALS(계정 상태 은닉)")
+    void login_pendingGuest_wrongPassword() {
+        User guest = User.create("E1001", "hashed", "홍길동", "010-1234-5678", Role.GUEST);
+        when(userRepository.findByEmployeeId("E1001")).thenReturn(Optional.of(guest));
+        when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
+
+        // 비밀번호가 틀리면 승인 대기 상태를 노출하지 않고 일반 인증 실패로 응답한다(계정 열거 방지)
+        assertThatThrownBy(() -> authService.login(new LoginCommand("E1001", "wrong")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+        assertThat(guest.getLoginFailCount()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("비밀번호 불일치 시 실패 카운트를 누적하고 INVALID_CREDENTIALS 를 던진다")
     void login_wrongPassword() {
         User user = user();

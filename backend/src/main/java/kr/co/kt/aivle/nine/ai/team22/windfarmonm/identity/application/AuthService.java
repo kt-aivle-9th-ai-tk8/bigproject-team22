@@ -3,6 +3,7 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.LoginCommand;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.LoginResult;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.port.SessionManager;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserRepository;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
@@ -48,6 +49,16 @@ public class AuthService {
         }
 
         user.resetLoginFailCount();
+
+        // 인증(비밀번호) 성공 '후'에 승인 여부(role==GUEST)를 확인한다. 순서가 중요하다:
+        //  ① 비밀번호를 먼저 검증해야 '승인 대기' 상태가 비밀번호를 모르는 제3자에게 노출되지 않는다(계정 열거 방지).
+        //     비밀번호가 틀린 GUEST 는 A004 가 아니라 INVALID_CREDENTIALS 로 응답되어 미존재/일반 계정과 구분되지 않는다.
+        //  ② 그래야 A004(403)가 '신원은 확인됐으나 아직 미승인'이라는 의미로 정확해진다.
+        // 승인되면 changeRole 로 MANAGER/ADMIN 으로 승격된다(status 축과 별개).
+        if (user.getRole() == Role.GUEST) {
+            throw new BusinessException(ErrorCode.ACCOUNT_PENDING);
+        }
+
         return LoginResult.from(user);
     }
 

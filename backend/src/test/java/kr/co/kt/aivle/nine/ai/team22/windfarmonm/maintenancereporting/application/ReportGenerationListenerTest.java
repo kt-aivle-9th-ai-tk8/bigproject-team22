@@ -37,8 +37,8 @@ class ReportGenerationListenerTest {
         when(generationPort.isEnabled()).thenReturn(true);
     }
 
-    private ReportGenerationService.Dispatch dispatch() {
-        return new ReportGenerationService.Dispatch(new ReportGenerationTarget("operation", 2), "제목");
+    private ReportGenerationTarget target() {
+        return new ReportGenerationTarget("operation", 7L, "2026-07-01", "2026-07-31");
     }
 
     @Test
@@ -53,22 +53,23 @@ class ReportGenerationListenerTest {
     }
 
     @Test
-    @DisplayName("본문이 생성되면 적재한다(GENERATED)")
+    @DisplayName("본문이 생성되면 에이전트가 준 제목·본문으로 적재한다(GENERATED)")
     void generated_applies() {
         enabled();
-        when(generationService.markProcessing(7L)).thenReturn(dispatch());
-        when(generationPort.generate(any())).thenReturn(new ReportGenerationResult(true, "# 본문", "적합"));
+        when(generationService.markProcessing(7L)).thenReturn(target());
+        when(generationPort.generate(any()))
+                .thenReturn(new ReportGenerationResult(true, "제목", "## 본문", "적합"));
 
         listener.onReportGenerationRequested(EVENT);
 
-        verify(generationService).applyGenerated(7L, "제목", "# 본문");
+        verify(generationService).applyGenerated(7L, "제목", "## 본문");
     }
 
     @Test
     @DisplayName("대상없음/본문없음이면 적재하지 않는다(PROCESSING 유지)")
     void notGenerated_keepsProcessing() {
         enabled();
-        when(generationService.markProcessing(7L)).thenReturn(dispatch());
+        when(generationService.markProcessing(7L)).thenReturn(target());
         when(generationPort.generate(any())).thenReturn(ReportGenerationResult.notGenerated());
 
         listener.onReportGenerationRequested(EVENT);
@@ -77,11 +78,12 @@ class ReportGenerationListenerTest {
     }
 
     @Test
-    @DisplayName("found=true 여도 draft 가 비면 적재하지 않는다")
-    void blankDraft_notApplied() {
+    @DisplayName("found=true 여도 context 가 비면 적재하지 않는다")
+    void blankContext_notApplied() {
         enabled();
-        when(generationService.markProcessing(7L)).thenReturn(dispatch());
-        when(generationPort.generate(any())).thenReturn(new ReportGenerationResult(true, "  ", "적합"));
+        when(generationService.markProcessing(7L)).thenReturn(target());
+        when(generationPort.generate(any()))
+                .thenReturn(new ReportGenerationResult(true, "제목", "  ", "적합"));
 
         listener.onReportGenerationRequested(EVENT);
 
@@ -116,7 +118,7 @@ class ReportGenerationListenerTest {
     @DisplayName("에이전트 호출이 예외를 던져도 삼키고 적재하지 않는다(PROCESSING 유지)")
     void agentThrows_swallowed() {
         enabled();
-        when(generationService.markProcessing(7L)).thenReturn(dispatch());
+        when(generationService.markProcessing(7L)).thenReturn(target());
         when(generationPort.generate(any())).thenThrow(new RuntimeException("timeout"));
 
         listener.onReportGenerationRequested(EVENT);
