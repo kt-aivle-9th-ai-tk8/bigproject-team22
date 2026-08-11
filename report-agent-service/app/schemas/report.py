@@ -49,3 +49,4 @@ class ReportResponse(BaseModel):
     warnings: List[str] = []
     error: Optional[str] = None
     draft: Optional[str] = None   # 마크다운 보고서 본문
+    title: Optional[str] = None   # 보고서 제목 (draft H1 = Report.title 저장용, 200자 이내)

@@ -5,6 +5,22 @@
 from app.agents.graph import build_app, REPORT_TYPES
 from app.agents.registry import REGISTRY
 
+# Report.title 컬럼 상한(VARCHAR(200)). 제목 규격이 짧아 실제로 잘릴 일은 거의 없지만 BE 저장 보장용.
+TITLE_MAX = 200
+
+
+def _title_from_draft(draft: str) -> str | None:
+    """draft 첫 줄(H1)에서 보고서 제목을 뽑는다.
+
+    4종 builder 모두 본문을 '# {제목}'(H1)으로 시작한다 — 그 H1이 제목의 단일 출처다.
+    별도 title 함수를 두면 포맷이 render 인라인과 이중화되므로, 여기서 그 H1을 그대로 읽는다.
+    Report.title(VARCHAR(200)) 저장용으로 TITLE_MAX 로 자른다.
+    """
+    if not draft:
+        return None
+    first = draft.split("\n", 1)[0].strip()
+    return first.lstrip("#").strip()[:TITLE_MAX] or None
+
 
 def _init_state(report_type: str, event_id: int, params: dict = None) -> dict:
     return {
@@ -30,6 +46,7 @@ def _error_result(report_type: str, event_id: int, error: str) -> dict:
         "event_id": event_id,
         "found": False,
         "draft": None,
+        "title": None,
         "verdict": None,
         "retry_count": 0,
         "issues": [],
@@ -76,6 +93,7 @@ def generate_report(report_type: str, event_id: int, params: dict = None) -> dic
         "params": params or None,
         "found": event.get("found", False),
         "draft": final.get("draft"),
+        "title": _title_from_draft(final.get("draft")),
         "verdict": critic.get("verdict"),
         "retry_count": final.get("retry_count", 0),
         "issues": critic.get("issues", []),
