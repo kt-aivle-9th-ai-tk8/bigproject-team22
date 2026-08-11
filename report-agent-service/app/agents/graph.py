@@ -12,6 +12,7 @@ from app.agents.state import ReportState
 from app.agents.supervisor_agent import supervisor_node
 from app.agents.critic_agent import critic_node
 from app.agents.registry import REGISTRY, REPORT_TYPES
+from app.core.datasource import snapshot
 
 
 def fetch_node(state):
@@ -19,6 +20,10 @@ def fetch_node(state):
 
     계약: fetch(event_id) 필수. params(기간 등)를 쓰는 유형은 fetch(event_id, params)로
     선언하면 함께 전달된다 — 선언하지 않은 fetch는 기존대로 호출되므로 하위호환.
+
+    DB 조회는 이 노드에서만 일어난다(이후 agent/critic 은 tool_outputs 만 본다).
+    그래서 스냅샷 트랜잭션도 여기서만 연다 — invoke 전체를 감싸면 LLM 호출·재시도 동안
+    커넥션과 읽기 뷰가 수십 초씩 잡혀 풀 고갈·undo 누적을 부른다(#89 리뷰).
     """
     import inspect
 
@@ -29,9 +34,10 @@ def fetch_node(state):
     except (TypeError, ValueError):   # 시그니처 조회 불가(C 확장 등) → 기본 호출
         accepts_params = False
 
-    if accepts_params:
-        return {"tool_outputs": fetch(state["event_id"], state.get("params"))}
-    return {"tool_outputs": fetch(state["event_id"])}
+    with snapshot():
+        if accepts_params:
+            return {"tool_outputs": fetch(state["event_id"], state.get("params"))}
+        return {"tool_outputs": fetch(state["event_id"])}
 
 
 _app = None
