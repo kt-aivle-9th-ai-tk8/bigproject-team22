@@ -8,15 +8,29 @@
   anomaly    : 단지 전체 이상 이벤트(상태별/유형별) + 터빈별 분포
   inspection/defect : 드론 점검 횟수, 신규 결함 수, 고위험 결함 수
 
-소스 선택(CSV/RDS)은 app.core.datasource 가 테이블 단위로 한다 — operation.tools 의 접근 함수를
-그대로 재사용한다(같은 테이블은 datasource 가 1회 캐시).
+조회는 app.core.datasource 의 범위 조회(query)를 쓴다 — 단지 소속 터빈·기간으로 좁혀 읽는다.
+operation.tools 의 공용 상수·헬퍼는 그대로 재사용한다.
 """
 import pandas as pd
 
 from app.agents.reports.operation.tools import (
-    _events, _scada, _turbine, _farm, _inspection, _defect,
-    EVENT_CATEGORY, HIGH_SEVERITY, _num, _period_bounds,
+    _turbine, _farm, EVENT_CATEGORY, HIGH_SEVERITY, _num, _period_args,
 )
+from app.core.datasource import query, table_available
+
+
+def _scada_of(turbine_ids, start=None, end_excl=None):
+    """단지 소속 터빈들의 scada — 기간이 주어지면 그 범위만."""
+    return query("scada_record",
+                 isin={"turbine_id": [int(t) for t in turbine_ids]},
+                 range={"recorded_at": (start, end_excl)} if (start or end_excl) else None)
+
+
+def _events_of(turbine_ids, start=None, end_excl=None):
+    """단지 소속 터빈들의 이상 이벤트 — start_time 기준 기간 필터."""
+    return query("anomaly_event",
+                 isin={"turbine_id": [int(t) for t in turbine_ids]},
+                 range={"start_time": (start, end_excl)} if (start or end_excl) else None)
 
 
 def get_farm_info(wind_farm_id: int) -> dict:
@@ -40,15 +54,17 @@ def get_farm_info(wind_farm_id: int) -> dict:
 
 def get_farm_scada(turbine_ids, code_map, period_start=None, period_end=None) -> dict:
     """단지 전체 scada 집계 + 터빈별 실적 + 월별 총량. 기간 미지정 시 관측 전 구간."""
-    sc = _scada()
-    df = sc[sc["turbine_id"].isin(turbine_ids)].copy()
+    start, end_excl = _period_args(period_start, period_end)
+    df = _scada_of(turbine_ids, start, end_excl)
     if df.empty:
-        return {"found": False}
+        reason = "해당 기간 관측 데이터 없음" if (start or end_excl) else "관측 데이터 없음"
+        return {"found": False, "reason": reason}
 
-    start, end_excl = _period_bounds(df, period_start, period_end)
-    df = df[(df["recorded_at"] >= start) & (df["recorded_at"] < end_excl)]
-    if df.empty:
-        return {"found": False, "reason": "해당 기간 관측 데이터 없음"}
+    # 집계 경계 — 기간을 안 줬으면 실제 관측 구간이 곧 요청 구간이다.
+    if start is None:
+        start = df["recorded_at"].min()
+    if end_excl is None:
+        end_excl = df["recorded_at"].max() + pd.Timedelta(seconds=1)
 
     # 유효 행(expected/actual 모두 존재)만 사용 — 모든 발전 지표가 같은 모집단을 쓰도록.
     valid = df[["expected_power_unit", "power_output"]].notna().all(axis=1)
@@ -117,12 +133,7 @@ def get_farm_scada(turbine_ids, code_map, period_start=None, period_end=None) ->
 
 def get_farm_anomaly(turbine_ids, code_map, start, end_excl) -> dict:
     """단지 전체 이상 이벤트 집계 + 터빈별 분포."""
-    ev = _events()
-    df = ev[
-        ev["turbine_id"].isin(turbine_ids)
-        & (ev["start_time"] >= start)
-        & (ev["start_time"] < end_excl)
-    ].copy()
+    df = _events_of(turbine_ids, start, end_excl).copy()
     cats = df["event_type"].map(EVENT_CATEGORY).fillna("other")
     cat_counts = cats.value_counts().to_dict()
 
@@ -158,17 +169,13 @@ def get_farm_anomaly(turbine_ids, code_map, start, end_excl) -> dict:
 
 def get_farm_defect(turbine_ids, start, end_excl) -> dict:
     """단지 전체 드론 점검 횟수·신규 결함 수·고위험 결함 수."""
-    insp_df = _inspection()
-    defect_df = _defect()
-    if insp_df is None or defect_df is None:
+    if not (table_available("inspection") and table_available("defect")):
         return {"available": False, "n_inspections": 0, "count": 0, "high_severity": 0}
 
-    insp = insp_df[
-        insp_df["turbine_id"].isin(turbine_ids)
-        & (insp_df["inspection_start"] >= start)
-        & (insp_df["inspection_start"] < end_excl)
-    ]
-    d = defect_df[defect_df["inspection_id"].isin(insp["inspection_id"])]
+    insp = query("inspection",
+                 isin={"turbine_id": [int(t) for t in turbine_ids]},
+                 range={"inspection_start": (start, end_excl)})
+    d = query("defect", isin={"inspection_id": insp["inspection_id"].tolist()})
     high = int((d["severity"] >= HIGH_SEVERITY).sum()) if "severity" in d.columns else 0
     types = d["defect_type"].value_counts().to_dict() if "defect_type" in d.columns else {}
     return {

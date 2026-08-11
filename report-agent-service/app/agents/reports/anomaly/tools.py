@@ -14,37 +14,50 @@ tool_outputs = builder(표·차트) + facts(종합분석 인용 수치) 양쪽�
 import pandas as pd
 
 from app.core.config import RECENT_HISTORY_MONTHS
-from app.core.datasource import load_table, turbine_index, cached
+from app.core.datasource import load_table, query, turbine_index
 
 WINDOW_HOURS = {"prolonged_stop": 24, "data_missing": 6, "chronic_screening": 720, "chronic_confirmed": 720}
 _CHRONIC = ("chronic_screening", "chronic_confirmed")
 _SNOW_MISSING = -9   # 기상청 ASOS 결측/미관측 센티넬
 
 
-# ── 데이터 접근 (datasource 가 1회 캐시. 조인 파생 프레임도 cached() 로 함께 만료) ──────────
+# ── 데이터 접근 ────────────────────────────────────────────────────────────────
+# 대상 터빈·관측창으로 좁혀 조회한다(테이블 전체를 올리지 않는다).
+# 여러 테이블의 시점 일관성은 service 의 snapshot() 트랜잭션이 보장한다.
 def _tcode_map() -> pd.DataFrame:
     """turbine_id → turbine_code 만 뽑은 참조표(조인용)."""
     return turbine_index()[["turbine_id", "turbine_code"]]
 
 
-def _events() -> pd.DataFrame:
-    """anomaly_event + turbine_code (이벤트 테이블엔 code 컬럼이 없어 조인으로 부여)."""
-    return cached("anomaly:events",
-                  lambda: load_table("anomaly_event").merge(_tcode_map(), on="turbine_id", how="left"))
+def _with_code(df: pd.DataFrame) -> pd.DataFrame:
+    """turbine_code 부여 — scada/anomaly_event 엔 code 컬럼이 없어 참조표로 조인한다."""
+    return df.merge(_tcode_map(), on="turbine_id", how="left")
 
 
-def _scada() -> pd.DataFrame:
-    """scada_record + turbine_code (scada 엔 code 컬럼이 없어 조인으로 부여)."""
-    return cached("anomaly:scada",
-                  lambda: load_table("scada_record").merge(_tcode_map(), on="turbine_id", how="left"))
+def _event_by_id(event_id: int) -> pd.DataFrame:
+    return _with_code(query("anomaly_event", eq={"event_id": int(event_id)}))
 
 
-def _aws() -> pd.DataFrame:
-    return load_table("aws_record")
+def _events_of(turbine_id, event_type, lo, hi) -> pd.DataFrame:
+    """같은 터빈·같은 유형의 과거 이벤트(기간 [lo, hi))."""
+    return query("anomaly_event",
+                 eq={"turbine_id": int(turbine_id), "event_type": event_type},
+                 range={"start_time": (lo, hi)})
 
 
-def _asos() -> pd.DataFrame:
-    return load_table("asos_record")
+def _scada_window(turbine_ids, win_start, win_end) -> pd.DataFrame:
+    """관측창 안의 scada — 터빈 1대든 단지 전체든 turbine_id 목록으로 좁힌다."""
+    return _with_code(query("scada_record",
+                            isin={"turbine_id": [int(t) for t in turbine_ids]},
+                            range={"recorded_at": (win_start, win_end)}))
+
+
+def _aws_at(station_id, ts) -> pd.DataFrame:
+    return query("aws_record", eq={"aws_station_id": station_id, "recorded_at": ts})
+
+
+def _asos_at(station_id, ts) -> pd.DataFrame:
+    return query("asos_record", eq={"asos_station_id": station_id, "recorded_at": ts})
 
 
 def _farm_turbine_ids(wind_farm_id) -> set:
@@ -97,8 +110,7 @@ def _observation_window(start, event_type):
 
 
 def get_anomaly_event(event_id: int) -> dict:
-    ev = _events()
-    row = ev[ev["event_id"] == event_id]
+    row = _event_by_id(event_id)
     if row.empty:
         return {"found": False}
     r = row.iloc[0]
@@ -131,9 +143,7 @@ def get_scada_during_event(turbine_id, start_time, event_type) -> dict:
     turbine_id 로 필터한다 — turbine_code(U1~U8)는 단지 간 중복이라 멀티팜에서 타 단지가 섞인다."""
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    sc = _scada()
-    df = sc[(sc["turbine_id"] == turbine_id) & (sc["recorded_at"] >= win_start)
-            & (sc["recorded_at"] < win_end)]
+    df = _scada_window([turbine_id], win_start, win_end)
     if df.empty:
         return {"found": False, "n_rows": 0}
     return {
@@ -151,10 +161,8 @@ def get_other_turbines(turbine_id, wind_farm_id, start_time, event_type) -> dict
     반드시 단지로 좁힌다 — turbine_code 로 '!= 대상' 만 걸면 멀티팜에서 타 단지 호기까지 '타 호기'로 샌다."""
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    sc = _scada()
-    farm_ids = _farm_turbine_ids(wind_farm_id)
-    df = sc[sc["turbine_id"].isin(farm_ids) & (sc["turbine_id"] != turbine_id)
-            & (sc["recorded_at"] >= win_start) & (sc["recorded_at"] < win_end)]
+    others = _farm_turbine_ids(wind_farm_id) - {turbine_id}
+    df = _scada_window(others, win_start, win_end)
     if df.empty:
         return {"n": 0, "lo": None, "hi": None}
     means = df.groupby("turbine_id")["power_output"].mean()
@@ -167,9 +175,7 @@ def get_scada_series(turbine_id, start_time, event_type) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    sc = _scada()
-    df = sc[(sc["turbine_id"] == turbine_id) & (sc["recorded_at"] >= win_start)
-            & (sc["recorded_at"] < win_end)]
+    df = _scada_window([turbine_id], win_start, win_end)
     return [{"t": r["recorded_at"].strftime("%H:%M"), "expected": _num(r["expected_power_pooled"]),
              "actual": _num(r["power_output"])} for _, r in df.iterrows()]
 
@@ -180,9 +186,8 @@ def get_powercurve_bins(turbine_id, start_time, event_type, bin_w=2) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    sc = _scada()
-    df = sc[(sc["turbine_id"] == turbine_id) & (sc["recorded_at"] >= win_start)
-            & (sc["recorded_at"] < win_end) & (sc["wind_speed"] > 0)].copy()
+    df = _scada_window([turbine_id], win_start, win_end)
+    df = df[df["wind_speed"] > 0].copy()
     if df.empty:
         return []
     df["wbin"] = (df["wind_speed"] // bin_w * bin_w).astype(int)
@@ -198,9 +203,7 @@ def get_farm_presence(wind_farm_id, start_time, event_type) -> list:
         return []
     start = pd.to_datetime(start_time)
     win_start, win_end = _observation_window(start, event_type)
-    sc = _scada()
-    farm_ids = _farm_turbine_ids(wind_farm_id)
-    df = sc[sc["turbine_id"].isin(farm_ids) & (sc["recorded_at"] >= win_start) & (sc["recorded_at"] < win_end)]
+    df = _scada_window(_farm_turbine_ids(wind_farm_id), win_start, win_end)
     counts = df.groupby("turbine_code").size().to_dict()   # 단지 내에선 turbine_code 가 유일
     return [{"turbine": t, "rows": int(counts.get(t, 0))} for t in _farm_turbines(wind_farm_id)]
 
@@ -213,9 +216,7 @@ def get_recent_events(turbine_id, event_type, before_time, months=RECENT_HISTORY
     """
     before = pd.to_datetime(before_time)
     lo = before - pd.DateOffset(months=months)
-    ev = _events()
-    df = ev[(ev["turbine_id"] == turbine_id) & (ev["event_type"] == event_type)
-            & (ev["start_time"] >= lo) & (ev["start_time"] < before)]
+    df = _events_of(turbine_id, event_type, lo, before)
     df = df.sort_values("start_time", ascending=False)
     return [{"start_time": _num(r["start_time"]), "tier": r["tier"],
              "estimated_loss_kwh": _num(r["estimated_loss_kwh"])} for _, r in df.iterrows()]
@@ -228,8 +229,7 @@ def get_weather(aws_station_id, asos_station_id, start_time) -> dict:
     적설 3종(3시간 신적설·일 신적설·적설)은 asos 가 있을 때만 채운다(결측 -9 → None).
     """
     ts = pd.to_datetime(start_time).floor("h")
-    aws = _aws()
-    row = aws[(aws["aws_station_id"] == aws_station_id) & (aws["recorded_at"] == ts)]
+    row = _aws_at(aws_station_id, ts)
     if row.empty:
         return {"found": False}
     r = row.iloc[0]
@@ -237,8 +237,7 @@ def get_weather(aws_station_id, asos_station_id, start_time) -> dict:
            "pressure": _num(r["pressure"]), "humidity": _num(r["humidity"]),
            "wind_direction": _num(r["wind_direction"]),
            "snow_hr3": None, "snow_day": None, "snow_tot": None}
-    asos = _asos()
-    srow = asos[(asos["asos_station_id"] == asos_station_id) & (asos["recorded_at"] == ts)]
+    srow = _asos_at(asos_station_id, ts)
     if not srow.empty:
         s = srow.iloc[0]
         out["snow_hr3"] = _snow(s["sd_hr3"])   # 3시간 신적설 cm

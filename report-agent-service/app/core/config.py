@@ -47,8 +47,8 @@ MAX_CONCURRENT_REPORTS = int(os.getenv("REPORT_MAX_CONCURRENCY", "2"))
 #   off면 완전 결정론(수치·차트만, LLM/critic 미사용). 콘솔/배치는 off로 비용 0.
 WITH_ANALYSIS = os.getenv("REPORT_WITH_ANALYSIS", "true").lower() == "true"
 
-# 데이터 소스: "csv"(로컬) | "rds"(배포). tools.py 가 이 값으로 구현 분기.
-DATA_SOURCE = os.getenv("DATA_SOURCE", "csv")
+# 데이터 소스는 RDS 뿐이다(CSV 조회 경로는 제거됨 — data/*.csv 는 seed_rds.py 의 적재 원본으로만 쓴다).
+# 로컬 검증은 scripts/local-rds.ps1 이 띄우는 MySQL 컨테이너를 DB_URL 로 가리켜 쓴다.
 DB_URL = os.getenv("DB_URL", "")
 
 # 결함(defect) 이미지 베이스 URL. defect.image_path 앞에 붙여 보고서에 이미지를 넣는다.

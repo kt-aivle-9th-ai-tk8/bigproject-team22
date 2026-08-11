@@ -4,6 +4,7 @@
 """
 from app.agents.graph import build_app, REPORT_TYPES
 from app.agents.registry import REGISTRY
+from app.core.datasource import snapshot
 
 # Report.title 컬럼 상한(VARCHAR(200)). 제목 규격이 짧아 실제로 잘릴 일은 거의 없지만 BE 저장 보장용.
 TITLE_MAX = 200
@@ -87,7 +88,11 @@ def generate_report(report_type: str, event_id: int, params: dict = None) -> dic
         "metadata": {"report_type": report_type, "event_id": event_id, "params": params or {}},
     }
     try:
-        final = app.invoke(_init_state(report_type, event_id, params), config=run_config)
+        # 보고서 1건이 읽는 모든 테이블을 한 트랜잭션에서 읽는다(#89).
+        # 표와 종합분석이 서로 다른 시점의 데이터를 인용하면 critic 검증이 흔들리고,
+        # 적재 배치가 도는 중이면 실제로 어긋난 조합(예: 옛 report + 새 defect)이 나온다.
+        with snapshot():
+            final = app.invoke(_init_state(report_type, event_id, params), config=run_config)
     except Exception as e:
         # llm.py의 재시도가 소진된 뒤의 최종 실패(쿼터/네트워크/타임아웃 등).
         # 호출자(CLI/API)에 트레이스백 대신 처리 가능한 결과를 돌려준다.
