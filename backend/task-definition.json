@@ -30,7 +30,7 @@
                 },
                 {
                     "name": "DB_USERNAME",
-                    "value":"team22"
+                    "value":"windfarmonm_app"
                 },
 
                 {
@@ -50,7 +50,7 @@
             "secrets": [
                 {
                     "name": "DB_PASSWORD",
-                    "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:rds!db-56327afb-90de-465f-89f7-57a66d75ce1b-VuWe1K:password::"
+                    "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarmonm/prod/db-app-credentials-ozQAsD:password::"
                 },
                 {
                     "name": "REDIS_PASSWORD",
