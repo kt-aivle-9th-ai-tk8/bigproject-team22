@@ -409,6 +409,11 @@ function PowerChartDrag({
       ? 1000
       : 4000;
 
+  const yAxisMin =
+    mode === "turbine"
+      ? -10
+      : -100;
+
   const formatYAxisValue = (value) => {
     const numberValue = Number(value);
 
@@ -482,7 +487,7 @@ function PowerChartDrag({
                 />
 
                 <YAxis
-                  domain={[0, yAxisMax]}
+                  domain={[-100, yAxisMax]}
                   tickFormatter={formatYAxisValue}
                   tick={{
                     fontSize: 10,
