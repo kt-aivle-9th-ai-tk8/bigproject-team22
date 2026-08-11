@@ -20,9 +20,13 @@ def _split_title_context(draft: str):
     if not draft:
         return None, None
     head, _, rest = draft.partition("\n")
-    title = head.strip().lstrip("#").strip()[:TITLE_MAX] or None
-    context = rest.lstrip("\n") or None
-    return title, context
+    head = head.strip()
+    # 첫 줄이 H1('# ...' 또는 '#')일 때만 제목으로 분리한다 — '#' 하나만 떼어 '## 소제목'·일반
+    # 텍스트를 제목으로 오인하지 않게 한다. H1 이 아니면 제목 없음 + 전체를 본문으로(방어적).
+    if head.startswith("# ") or head == "#":
+        title = head[1:].strip()[:TITLE_MAX] or None
+        return title, (rest.lstrip("\n") or None)
+    return None, draft
 
 
 def _init_state(report_type: str, event_id: int, params: dict = None) -> dict:
