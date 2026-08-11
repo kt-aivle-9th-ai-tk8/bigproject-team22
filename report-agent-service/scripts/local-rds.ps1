@@ -225,7 +225,7 @@ if ($Report -gt 0) {
     if ($NoAnalysis) { $env:REPORT_WITH_ANALYSIS = 'false' }
 
     Push-Location $SvcRoot
-    python -c "from app.service import generate_report; r=generate_report('$Type', $Report); print(r['draft'] or ('생성 실패: ' + str(r.get('error') or '대상 없음')))"
+    python -c "from app.service import generate_report; r=generate_report('$Type', $Report); print(('# ' + r['title'] + '\n\n' + (r['context'] or '')) if r.get('found') else ('생성 실패: ' + str(r.get('error') or '대상 없음')))"
     if ($LASTEXITCODE -ne 0) { $exit = $LASTEXITCODE }
     Pop-Location
 }
