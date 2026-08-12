@@ -88,6 +88,10 @@ function PowerChartDrag({
     startVisibleIndex: 0,
   });
 
+  useEffect(() => {
+    console.log("PowerChartDrag API 발전량 데이터:", data);
+  }, [data]);
+
   const hasInitialRangeEmittedRef = useRef(false);
 
   const normalizedInitialVisibleTickCount = clamp(
