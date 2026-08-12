@@ -3,10 +3,20 @@ let isHandlingSessionExpired = false;
 export const apiFetch = async (url, options = {}) => {
   const response = await fetch(url, options);
 
-  if (
+  let responseBody = null;
+
+  try {
+    responseBody = await response.clone().json();
+  } catch {
+    responseBody = null;
+  }
+
+  const isSessionExpired =
     response.status === 403 ||
-    response.status === 404
-  ) {
+    response.status === 404 ||
+    responseBody?.code === "A001";
+
+  if (isSessionExpired) {
     if (!isHandlingSessionExpired) {
       isHandlingSessionExpired = true;
 
@@ -20,7 +30,8 @@ export const apiFetch = async (url, options = {}) => {
     }
 
     throw new Error(
-      "로그인 세션이 만료 되었습니다."
+      responseBody?.message ||
+        "로그인 세션이 만료 되었습니다."
     );
   }
 
