@@ -78,3 +78,7 @@
   font-weight: 700;
   color: var(--color-dark-gray);
 }
+
+.power-chart-box .recharts-tooltip-item-name {
+  color: #000;
+}
