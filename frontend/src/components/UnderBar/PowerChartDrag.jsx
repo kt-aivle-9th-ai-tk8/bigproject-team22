@@ -120,15 +120,11 @@ function PowerChartDrag({
   }, [normalizedInitialVisibleTickCount]);
 
   const chartData = useMemo(() => {
-    return data.map((item) => {
-      const timestamp = new Date(item.measuredAt).getTime();
-
-      return {
-        ...item,
-        timestamp,
-        powerGeneration: Number(item.powerGeneration || 0),
-      };
-    });
+    return data.map((item) => ({
+      ...item,
+      timestamp: new Date(item.measuredAt).getTime(),
+      powerGeneration: Number(item.powerGeneration),
+    }));
   }, [data]);
 
   /*
@@ -495,15 +491,36 @@ function PowerChartDrag({
                 />
 
                 <Tooltip
-                  formatter={(value) => {
-                    const numberValue = Number(value);
+                  formatter={(value, name, props) => {
+                    const isNull = props?.payload?.isPowerGenerationNull;
 
-                    const formattedValue =
-                      numberValue >= 100
-                        ? `${(numberValue / 1000).toFixed(2).replace(/\.?0+$/, "")} MWh`
-                        : `${numberValue.toFixed(2).replace(/\.?0+$/, "")} kWh`;
+                    let formattedValue = null;
 
-                    return [formattedValue, "발전량"];
+                    if (!isNull) {
+                      const numberValue = Number(value);
+
+                      formattedValue =
+                        numberValue >= 1000
+                          ? `${(numberValue / 1000)
+                              .toFixed(2)
+                              .replace(/\.?0+$/, "")} MWh`
+                          : `${numberValue
+                              .toFixed(2)
+                              .replace(/\.?0+$/, "")} kWh`;
+                    }
+
+                    return [
+                      <span
+                        style={{
+                          color: isNull
+                            ? "#f5c518"
+                            : "var(--color-text-point-dark)",
+                        }}
+                      >
+                        {formattedValue ?? "null"}
+                      </span>,
+                      "발전량",
+                    ];
                   }}
                   labelFormatter={(label) => `시간: ${formatTickLabel(label)}`}
                   contentStyle={{
@@ -518,7 +535,6 @@ function PowerChartDrag({
                   itemStyle={{
                     fontSize: "12px",
                     padding: "0",
-                    color: "var(--color-text-point-dark)",
                   }}
                 />
 
