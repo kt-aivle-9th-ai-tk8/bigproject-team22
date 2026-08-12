@@ -80,12 +80,6 @@ function TurbineSideBar({
       time: "14:00",
       status: REPORT_TYPE.WARNING,
     },
-    {
-      id: 5,
-      date: "2026-06-24",
-      time: "10:20",
-      status: REPORT_TYPE.REPAIR,
-    },
   ];
 
   return (
