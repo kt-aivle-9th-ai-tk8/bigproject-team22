@@ -1,15 +1,26 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+
+import { useReportList } from "../hooks/useReportList";
+
 import "./ReportListScreen.css";
+
+const REPORT_TYPE_LABEL = {
+  wind_farm_operation: "단지 운영 리포트",
+  turbine_operation: "터빈 운영 리포트",
+  defect_diagnosis: "결함 진단 리포트",
+  anomaly_event: "이상 감지 리포트",
+};
 
 function ReportListScreen() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // API 수신 보고서 데이터 및 로딩 상태
-  const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    reports,
+    loading,
+    error,
+  } = useReportList();
 
   // 로그인 유저 담당 발전소 목록 상태
   const [userPlants, setUserPlants] = useState([]);
@@ -47,26 +58,6 @@ function ReportListScreen() {
     } catch (err) {
       console.error("유저 담당 발전소 로드 에러:", err);
     }
-  }, []);
-
-  // 2. 백엔드 API로부터 보고서 목록 불러오기
-  useEffect(() => {
-    const fetchReports = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get("/api/reports");
-        if (response.status === 200) {
-          const data = Array.isArray(response.data) ? response.data : response.data.data || [];
-          setReports(data);
-        }
-      } catch (error) {
-        console.error("보고서 목록 조회 에러:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReports();
   }, []);
 
   // [더미 제거 1] 전체 보고서 데이터에서 존재하는 발전소 목록만 동적 추출
@@ -163,8 +154,8 @@ function ReportListScreen() {
       })
       .sort((a, b) => {
         let comparison = 0;
-        const dateA = a.date || a.created_at || "";
-        const dateB = b.date || b.created_at || "";
+        const dateA = a.generated_at || "";
+        const dateB = b.generated_at || "";
         const plantA = a.plant || a.wind_farm_name || "";
         const plantB = b.plant || b.wind_farm_name || "";
         const turbineA = a.turbine || a.turbine_name || "";
@@ -202,11 +193,16 @@ function ReportListScreen() {
       <div className="controls-row">
         <div className="filter-controls">
           {/* 1. 유형 필터 */}
-          <select value={selectedType} onChange={handleTypeChange} className="select-box">
+          <select
+            value={selectedType}
+            onChange={handleTypeChange}
+            className="select-box"
+          >
             <option value="전체">유형: 전체</option>
-            <option value="이상보고서">이상보고서</option>
-            <option value="운영보고서">운영보고서</option>
-            <option value="결함보고서">결함보고서</option>
+            <option value="wind_farm_operation">단지 운영 리포트</option>
+            <option value="turbine_operation">터빈 운영 리포트</option>
+            <option value="defect_diagnosis">결함 진단 리포트</option>
+            <option value="anomaly_event">이상 감지 리포트</option>
           </select>
 
           {/* 2. 발전소 필터 (더미 객체 없이 백엔드 수신/사용자 담당 발전소로 동적 렌더링) */}
@@ -261,8 +257,19 @@ function ReportListScreen() {
             const reportId = report.id || report.report_id;
             const plantName = report.plant || report.wind_farm_name || "발전소";
             const turbineName = report.turbine || report.turbine_name || "터빈";
-            const typeName = report.type || report.report_type || "보고서";
-            const dateStr = report.date || report.created_at || "";
+            const reportType =
+              String(
+                report.report_type ||
+                report.type ||
+                ""
+              ).toLowerCase();
+
+            const typeName =
+              REPORT_TYPE_LABEL[reportType] ||
+              report.report_type ||
+              report.type ||
+              "보고서";
+            const dateStr = report.generated_at || "";
 
             return (
               <div 
@@ -276,7 +283,7 @@ function ReportListScreen() {
                     <h3 className="plant-name">
                       {plantName} <span className="turbine-tag">[{turbineName}]</span>
                     </h3>
-                    <span className={`type-badge ${typeName}`}>{typeName}</span>
+                    <span className={`type-badge ${reportType}`}>{typeName}</span>
                     <span className="report-date">{dateStr}</span>
                   </div>
                 </div>

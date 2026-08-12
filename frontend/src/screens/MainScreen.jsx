@@ -87,6 +87,8 @@ function MainScreen() {
 
   const {
     createOperationReport,
+    reportDetail,
+    isReportCreating,
   } = useReportStatusPolling({
     refreshInterval: 5000,
 
@@ -97,8 +99,18 @@ function MainScreen() {
     },
   });
 
+  const currentReportStatus = String(
+    reportDetail?.status || ""
+  ).toLowerCase();
+
+  const isOperationReportPending =
+    isReportCreating ||
+    currentReportStatus === "pending" ||
+    currentReportStatus === "processing";
+
   const {
     createInspectionReport,
+    reportId: inspectionReportId,
     isInspectionCreating,
     inspectionError,
   } = useInspectionReport({
@@ -110,6 +122,10 @@ function MainScreen() {
       );
     },
   });
+
+  const isInspectionReportCreating =
+    isInspectionCreating ||
+    Boolean(inspectionReportId);
 
   useEffect(() => {
     if (!selectedPlant) {
@@ -347,12 +363,13 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           windFarmDetail={windFarmDetail}
           turbineDetail={turbineDetail}
-          turbineReportItems={turbineReportItems}
           notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
           onCreateInspectionReport={handleCreateInspectionReport}
           onCreateOperationReport={handleCreateOperationReport}
+          isOperationReportPending={isOperationReportPending}
+          isInspectionReportCreating={isInspectionReportCreating}
         />
 
         <UnderBar

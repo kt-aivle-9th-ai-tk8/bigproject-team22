@@ -15,6 +15,8 @@ function SideBar({
   onSelectTurbine,
   onCreateInspectionReport,
   onCreateOperationReport,
+  isOperationReportPending,
+  isInspectionReportCreating,
 }) {
   return (
     <aside className="side-bar">
@@ -32,6 +34,8 @@ function SideBar({
           windFarmDetail={windFarmDetail}
           onSelectTurbine={onSelectTurbine}
           onCreateOperationReport={onCreateOperationReport}
+          isOperationReportPending={isOperationReportPending}
+          isInspectionReportCreating={isInspectionReportCreating}
         />
       )}
 
@@ -43,6 +47,8 @@ function SideBar({
           reportItems={turbineReportItems}
           onCreateInspectionReport={onCreateInspectionReport}
           onCreateOperationReport={onCreateOperationReport}
+          isOperationReportPending={isOperationReportPending}
+          isInspectionReportCreating={isInspectionReportCreating}
         />
       )}
     </aside>

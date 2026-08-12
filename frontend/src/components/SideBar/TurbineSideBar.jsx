@@ -17,6 +17,8 @@ function TurbineSideBar({
   reportItems = [],
   onCreateInspectionReport,
   onCreateOperationReport,
+  isOperationReportPending,
+  isInspectionReportCreating,
 }) {
   const navigate = useNavigate();
 
@@ -116,6 +118,7 @@ function TurbineSideBar({
             startDate={today}
             endDate={today}
             onCreateReport={onCreateOperationReport}
+            isCreating={isOperationReportPending}
           />
         )}
 
@@ -129,6 +132,7 @@ function TurbineSideBar({
               turbines: [turbineName],
               fixedTurbine: true,
             }}
+            isCreating={isInspectionReportCreating}
             onCreateReport={(reportData) => {
               onCreateInspectionReport?.({
                 ...reportData,

@@ -99,3 +99,11 @@
 
   cursor: pointer;
 }
+
+.inspection-report-box .report-create-button:disabled {
+  background-color: #c8c8c8;
+  border-color: #c8c8c8;
+  color: #666666;
+
+  cursor: default;
+}

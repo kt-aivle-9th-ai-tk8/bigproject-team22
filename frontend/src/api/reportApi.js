@@ -95,11 +95,14 @@ export const fetchReportById = async (reportId) => {
   return responseBody;
 };
 
+import { apiFetch } from "./apiClient";
+
+
 export const fetchReports = async ({
   windFarmId,
   turbineId,
   reportType,
-}) => {
+} = {}) => {
   const params = new URLSearchParams();
 
   if (windFarmId !== undefined && windFarmId !== null) {
@@ -114,16 +117,22 @@ export const fetchReports = async ({
     params.append("report_type", reportType);
   }
 
-  const response = await apiFetch(
-    `/api/reports?${params.toString()}`,
-    {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        Accept: "application/json",
-      },
-    }
-  );
+
+  const queryString = params.toString();
+
+  const url = queryString
+    ? `/api/reports?${queryString}`
+    : "/api/reports";
+
+
+  const response = await apiFetch(url, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
 
   const responseText = await response.text();
 
@@ -137,12 +146,14 @@ export const fetchReports = async ({
     }
   }
 
+
   if (!response.ok) {
     throw new Error(
       responseBody?.message ||
       "보고서 목록을 불러오는데 실패했습니다."
     );
   }
+
 
   return responseBody;
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import InspectionReportPopup from "./Popup/InspectionReportPopup";
 import "./InspectionReportBox.css";
@@ -20,6 +20,7 @@ function InspectionReportBox({
   turbineName = "-",
   turbineOptions = [],
   initialData = {},
+  isCreating = false,
   onCreateReport,
 }) {
   const navigate = useNavigate();
@@ -29,6 +30,25 @@ function InspectionReportBox({
     ...EMPTY_INSPECTION_INFO,
     ...initialData,
   });
+
+  const [loadingDotCount, setLoadingDotCount] = useState(1);
+
+  useEffect(() => {
+    if (!isCreating) {
+      setLoadingDotCount(1);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setLoadingDotCount((prev) =>
+        prev >= 3 ? 1 : prev + 1
+      );
+    }, 500);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isCreating]);
 
   const handleInfoClick = () => {
     setIsPopupOpen(true);
@@ -164,8 +184,11 @@ function InspectionReportBox({
           className="report-create-button"
           type="button"
           onClick={handleCreateReport}
+          disabled={isCreating}
         >
-          보고서 생성
+          {isCreating
+            ? `보고서 생성${".".repeat(loadingDotCount)}`
+            : "보고서 생성"}
         </button>
 
         <button
