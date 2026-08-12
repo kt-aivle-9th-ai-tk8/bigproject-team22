@@ -185,7 +185,6 @@ function ReportListScreen() {
           <span className="current-date">{todayString}</span>
         </div>
         <div className="header-btn-group">
-          <button className="logout-btn" onClick={() => navigate("/login")}>로그아웃</button>
           <button className="back-btn" onClick={() => navigate(-1)}>뒤로가기</button>
         </div>
       </header>

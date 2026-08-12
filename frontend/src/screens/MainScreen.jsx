@@ -7,6 +7,8 @@ import MainBar from "../components/MainBar";
 import UnderBar from "../components/UnderBar";
 import SideBar from "../components/SideBar";
 
+import { logout } from "../api/authApi";
+
 import { useWindFarmDetail } from "../hooks/useWindFarmDetail";
 import { useWindFarms } from "../hooks/useWindFarms";
 import { useNotifications } from "../hooks/useNotifications";
@@ -249,12 +251,23 @@ function MainScreen() {
     [moveMode]
   );
 
-  const handleLogout = () => {
-    localStorage.removeItem("screenMode");
-    localStorage.removeItem("selectedPlant");
-    localStorage.removeItem("selectedTurbine");
+  const handleLogout = async () => {
+    try {
+      await logout();
 
-    navigate("/login");
+      localStorage.removeItem("screenMode");
+      localStorage.removeItem("selectedPlant");
+      localStorage.removeItem("selectedTurbine");
+
+      navigate("/login");
+    } catch (error) {
+      console.error(
+        "로그아웃 API 에러:",
+        error
+      );
+
+      alert(error.message);
+    }
   };
 
   const handleSelectTurbine = (turbine) => {
