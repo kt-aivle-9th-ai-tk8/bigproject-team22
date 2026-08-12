@@ -180,8 +180,8 @@
 }
 
 .report-create-button:disabled {
-  background-color: #c8c8c8;
-  border-color: #c8c8c8;
+  background-color: var(--color-divider);
+  border-color: var(--color-dark-gray);
   color: #666666;
 
   cursor: default;

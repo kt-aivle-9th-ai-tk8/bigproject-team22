@@ -187,7 +187,7 @@ function InspectionReportBox({
           disabled={isCreating}
         >
           {isCreating
-            ? `보고서 생성${".".repeat(loadingDotCount)}`
+            ? `보고서 생성 중${".".repeat(loadingDotCount)}`
             : "보고서 생성"}
         </button>
 
