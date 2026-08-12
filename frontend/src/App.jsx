@@ -36,7 +36,7 @@ function App() {
 
           {/* 보고서 관련 라우트 */}
           <Route path="/reportlist" element={<ReportListScreen />} />
-          <Route path="/report-edit" element={<ReportEditScreen />} />
+          <Route path="/reports/:reportId/edit" element={<ReportEditScreen />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
