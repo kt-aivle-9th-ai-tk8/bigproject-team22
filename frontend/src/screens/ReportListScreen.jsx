@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { useReportList } from "../hooks/useReportList";
 import { useReportWindFarms } from "../hooks/useReportWindFarms";
+import { useReportWindFarmDetail } from "../hooks/useReportWindFarmDetail";
 
 import "./ReportListScreen.css";
 
@@ -27,6 +28,15 @@ function ReportListScreen() {
   const [selectedTurbine, setSelectedTurbine] = useState("전체");
   const [sortKey, setSortKey] = useState("date");
   const [isAscending, setIsAscending] = useState(false);
+
+  const {
+    windFarmDetail: selectedWindFarmDetail,
+  } = useReportWindFarmDetail({
+    windFarmId:
+      selectedPlant !== "전체"
+        ? selectedPlant
+        : undefined,
+  });
 
   const {
     reports,
@@ -80,37 +90,25 @@ function ReportListScreen() {
       );
   }, [windFarms]);
 
-  // [요구사항 3] 터빈 드롭다운 선택 가능 여부 (유형 또는 발전소 중 하나라도 지정되어야 함)
-  const isTurbineSelectable = useMemo(() => {
-    return selectedType !== "전체" || selectedPlant !== "전체";
-  }, [selectedType, selectedPlant]);
-
-  // [더미 제거 2] 백엔드 데이터 기반으로 해당 발전소/유형에 존재하는 실제 터빈 목록만 추출
+  // 백엔드 데이터 기반으로 해당 발전소/유형에 존재하는 실제 터빈 목록만 추출
   const availableTurbineOptions = useMemo(() => {
-    if (!isTurbineSelectable) return [];
+    const turbines =
+      selectedWindFarmDetail?.turbines || [];
 
-    let filtered = reports;
-
-    // 특정 발전소가 선택된 경우
-    if (selectedPlant !== "전체") {
-      filtered = filtered.filter(
-        (r) => (r.plant || r.wind_farm_name) === selectedPlant
+    return turbines
+      .map((turbine) => ({
+        id: turbine.id,
+        name:
+          turbine.name ||
+          turbine.code ||
+          `터빈 ${turbine.id}`,
+      }))
+      .filter(
+        (turbine) =>
+          turbine.id !== undefined &&
+          turbine.id !== null
       );
-    }
-
-    // 특정 유형이 선택된 경우
-    if (selectedType !== "전체") {
-      filtered = filtered.filter(
-        (r) => (r.type || r.report_type) === selectedType
-      );
-    }
-
-    // 조건에 맞는 실제 터빈 이름 추출 및 중복 제거
-    const turbineSet = new Set(
-      filtered.map((r) => r.turbine || r.turbine_name).filter(Boolean)
-    );
-    return Array.from(turbineSet);
-  }, [reports, selectedPlant, selectedType, isTurbineSelectable]);
+  }, [selectedWindFarmDetail]);
 
   // 발전소 변경 시 터빈 초기화
   const handlePlantChange = (e) => {
@@ -241,24 +239,28 @@ function ReportListScreen() {
             ))}
           </select>
           {/* 3. 터빈 필터 (유형이나 발전소가 지정되어야 활성화 및 백엔드 실제 터빈만 동적 렌더링) */}
-          <select 
-            value={selectedTurbine} 
-            onChange={(e) => setSelectedTurbine(e.target.value)} 
-            className="select-box"
-            disabled={!isTurbineSelectable}
-            style={{
-              cursor: isTurbineSelectable ? "pointer" : "not-allowed",
-              backgroundColor: isTurbineSelectable ? "#ffffff" : "#edf2f7",
-              color: isTurbineSelectable ? "#2d3748" : "#a0aec0"
-            }}
-          >
-            <option value="전체">
-              {!isTurbineSelectable ? "터빈: 유형 또는 발전소를 지정하세요" : "터빈: 전체"}
-            </option>
-            {availableTurbineOptions.map((turbineName) => (
-              <option key={turbineName} value={turbineName}>{turbineName}</option>
-            ))}
-          </select>
+          {selectedPlant !== "전체" && (
+            <select
+              value={selectedTurbine}
+              onChange={(e) =>
+                setSelectedTurbine(e.target.value)
+              }
+              className="select-box"
+            >
+              <option value="전체">
+                터빈: 전체
+              </option>
+
+              {availableTurbineOptions.map((turbine) => (
+                <option
+                  key={turbine.id}
+                  value={String(turbine.id)}
+                >
+                  {turbine.name}
+                </option>
+              ))}
+            </select>
+          )}
 
           {isFiltered && (
             <button className="reset-btn" onClick={handleResetFilters}>초기화</button>
