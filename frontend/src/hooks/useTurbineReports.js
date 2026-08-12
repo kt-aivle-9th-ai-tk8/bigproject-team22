@@ -66,8 +66,13 @@ export const useTurbineReports = ({
               report?.report_type || ""
             ).toLowerCase();
 
-            return AVAILABLE_REPORT_TYPES.includes(
-              reportType
+            const reportStatus = String(
+              report?.status || ""
+            ).toLowerCase();
+
+            return (
+              AVAILABLE_REPORT_TYPES.includes(reportType) &&
+              reportStatus === "generated"
             );
           })
           .sort((a, b) => {
