@@ -95,9 +95,6 @@ export const fetchReportById = async (reportId) => {
   return responseBody;
 };
 
-import { apiFetch } from "./apiClient";
-
-
 export const fetchReports = async ({
   windFarmId,
   turbineId,
