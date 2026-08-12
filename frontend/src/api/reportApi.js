@@ -154,3 +154,72 @@ export const fetchReports = async ({
 
   return responseBody;
 };
+
+export const updateReportContext = async ({
+  reportId,
+  context,
+}) => {
+  if (
+    reportId === undefined ||
+    reportId === null
+  ) {
+    throw new Error(
+      "보고서 ID가 필요합니다."
+    );
+  }
+
+  if (
+    context === undefined ||
+    context === null
+  ) {
+    throw new Error(
+      "보고서 본문이 필요합니다."
+    );
+  }
+
+
+  const response = await apiFetch(
+    `/api/reports/${reportId}`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        context,
+      }),
+    }
+  );
+
+
+  const responseText =
+    await response.text();
+
+
+  let responseBody = null;
+
+
+  if (responseText) {
+    try {
+      responseBody =
+        JSON.parse(responseText);
+    } catch {
+      responseBody =
+        responseText;
+    }
+  }
+
+
+  if (!response.ok) {
+    throw new Error(
+      responseBody?.message ||
+      responseBody?.error ||
+      "보고서 수정에 실패했습니다."
+    );
+  }
+
+
+  return responseBody;
+};

@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
+
+import ReactMarkdown from "react-markdown";
+
 import "./ReportEditScreen.css";
+
+import { useReportDetail } from "../hooks/useReportDetail";
+import { useReportList } from "../hooks/useReportList";
+import { useUpdateReport } from "../hooks/useUpdateReport";
 
 function ReportEditScreen() {
   const { reportId } = useParams(); // URL 파라미터에서 reportId 추출 (/reports/:reportId/edit)
@@ -10,11 +16,12 @@ function ReportEditScreen() {
 
   // 상단 메인 보고서 상세 데이터
   const [activeReport, setActiveReport] = useState(null);
-  // 하단 보고서 목록 데이터
-  const [allReports, setAllReports] = useState([]);
 
-  const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  const {
+    reports: allReports,
+  } = useReportList();
   
   const [formData, setFormData] = useState({
     title: "",
@@ -23,61 +30,77 @@ function ReportEditScreen() {
     context: "",
   });
 
-  // 1. 단건 상세 보고서 조회 함수 (GET /api/reports/{report_id})
-  const fetchReportDetail = async (id) => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`/api/reports/${id}`);
-      if (response.status === 200) {
-        const data = response.data.data || response.data;
-        setActiveReport(data);
+  const targetReportId =
+    reportId ||
+    location.state?.report?.id ||
+    location.state?.report?.report_id;
 
-        const plantStr = data.plant || data.wind_farm_name || "발전소";
-        const turbineStr = data.turbine || data.turbine_name || "터빈";
-        const typeStr = data.type || data.report_type || "보고서";
+  const {
+    reportDetail,
+    loading,
+    refetch: refetchReportDetail,
+  } = useReportDetail({
+    reportId: targetReportId,
+  });
 
-        setFormData({
-          title: data.title || `${plantStr} [${turbineStr}] ${typeStr}`,
-          summary: data.summary || data.context || "",
-          aiDiagnostic: data.aiDiagnostic || data.ai_diagnostic || "특이사항 없음.",
-          context: data.context || "",
-        });
-      }
-    } catch (error) {
-      console.error("보고서 상세 조회 에러:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    updateReport,
+    isUpdating,
+  } = useUpdateReport();
 
-  // 2. 하단 전체 목록 불러오기 함수 (GET /api/reports)
-  const fetchAllReports = async () => {
-    try {
-      const response = await axios.get("/api/reports");
-      if (response.status === 200) {
-        const list = Array.isArray(response.data) ? response.data : response.data.data || [];
-        setAllReports(list);
-      }
-    } catch (error) {
-      console.error("하단 보고서 목록 조회 에러:", error);
-    }
-  };
+  const handleCancelEdit = () => {
+    setFormData((prev) => ({
+      ...prev,
+      summary:
+        reportDetail?.context || "",
+      context:
+        reportDetail?.context || "",
+    }));
 
-  // URL의 reportId가 변경되거나 컴포넌트 마운트 시 데이터 로드
-  useEffect(() => {
-    // URL에 reportId가 존재하면 단건 API 호출, 없으면 state 전달값 체크
-    if (reportId) {
-      fetchReportDetail(reportId);
-    } else if (location.state && location.state.report) {
-      const rep = location.state.report;
-      setActiveReport(rep);
-      const currentId = rep.id || rep.report_id;
-      if (currentId) fetchReportDetail(currentId);
-    }
-    
-    fetchAllReports();
     setIsEditing(false);
-  }, [reportId, location.state]);
+  };
+
+  useEffect(() => {
+    if (!reportDetail) {
+      return;
+    }
+    setActiveReport(reportDetail);
+
+    const plantStr =
+      reportDetail.plant ||
+      reportDetail.wind_farm_name ||
+      "발전소";
+
+    const turbineStr =
+      reportDetail.turbine ||
+      reportDetail.turbine_name ||
+      "터빈";
+
+    const typeStr =
+      reportDetail.type ||
+      reportDetail.report_type ||
+      "보고서";
+
+    setFormData({
+      title:
+        reportDetail.title ||
+        `${plantStr} [${turbineStr}] ${typeStr}`,
+      summary:
+        reportDetail.context ||
+        "",
+      aiDiagnostic:
+        reportDetail.aiDiagnostic ||
+        reportDetail.ai_diagnostic ||
+        "특이사항 없음.",
+      context:
+        reportDetail.context ||
+        "",
+    });
+  }, [reportDetail]);
+
+  useEffect(() => {
+    setIsEditing(false);
+  }, [reportId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -86,26 +109,83 @@ function ReportEditScreen() {
 
   // 3. 보고서 수정 저장 처리 (PATCH /api/reports/{report_id})
   const handleSave = async () => {
-    const currentId = reportId || (activeReport && (activeReport.id || activeReport.report_id));
-    if (!currentId) return;
+    const currentId =
+      reportId ||
+      (
+        activeReport &&
+        (
+          activeReport.id ||
+          activeReport.report_id
+        )
+      );
+
+
+    if (!currentId) {
+      return;
+    }
+
 
     try {
-      const payload = {
-        context: formData.summary || formData.context,
-      };
+      await updateReport({
+        reportId: currentId,
+        context: formData.summary,
+      });
 
-      const response = await axios.patch(`/api/reports/${currentId}`, payload);
 
-      if (response.status === 200) {
-        alert("보고서가 성공적으로 저장되었습니다.");
-        setIsEditing(false);
-        fetchReportDetail(currentId); // 수정 완료 후 데이터 재조회
-      }
+      alert(
+        "보고서가 성공적으로 저장되었습니다."
+      );
+
+
+      setIsEditing(false);
+
+
+      refetchReportDetail();
     } catch (error) {
-      console.error("보고서 저장 실패:", error);
-      alert(error.response?.data?.message || "보고서 저장 중 오류가 발생했습니다.");
+      console.error(
+        "보고서 저장 실패:",
+        error
+      );
+
+
+      alert(
+        error.message ||
+        "보고서 저장 중 오류가 발생했습니다."
+      );
     }
   };
+
+
+  const visibleReports = useMemo(() => {
+    if (!activeReport) {
+      return [];
+    }
+
+    const currentId =
+      activeReport.id ||
+      activeReport.report_id;
+
+    const currentIndex =
+      allReports.findIndex((report) => {
+        const id =
+          report.id ||
+          report.report_id;
+
+        return String(id) ===
+          String(currentId);
+      });
+
+    if (currentIndex === -1) {
+      return [];
+    }
+
+    return allReports.slice(
+      currentIndex + 1
+    );
+  }, [
+    allReports,
+    activeReport,
+  ]);
 
   // 하단 카드를 클릭하면 URL 파라미터를 변경하여 해당 보고서로 이동
   const handleCardClick = (report) => {
@@ -121,8 +201,21 @@ function ReportEditScreen() {
         <div className="header-actions">
           {isEditing ? (
             <>
-              <button className="btn-secondary" onClick={() => setIsEditing(false)}>취소</button>
-              <button className="btn-primary" onClick={handleSave}>저장하기</button>
+              <button
+                className="btn-secondary"
+                onClick={handleCancelEdit}
+              >
+                취소
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleSave}
+                disabled={isUpdating}
+              >
+                {isUpdating
+                  ? "저장 중..."
+                  : "저장하기"}
+              </button>
             </>
           ) : (
             <button className="btn-primary" onClick={() => setIsEditing(true)}>✏️ 보고서 수정</button>
@@ -155,7 +248,11 @@ function ReportEditScreen() {
                     onChange={handleChange}
                   />
                 ) : (
-                  <div className="readonly-box">{formData.summary}</div>
+                  <div className="readonly-box">
+                    <ReactMarkdown>
+                      {formData.summary}
+                    </ReactMarkdown>
+                  </div>
                 )}
               </div>
 
@@ -188,13 +285,13 @@ function ReportEditScreen() {
         </div>
 
         <div className="report-list">
-          {allReports.map((report) => {
+          {visibleReports.map((report) => {
             const currentReportId = report.id || report.report_id;
             const activeId = activeReport ? (activeReport.id || activeReport.report_id) : null;
             const plantName = report.plant || report.wind_farm_name || "발전소";
             const turbineName = report.turbine || report.turbine_name || "터빈";
             const typeName = report.type || report.report_type || "보고서";
-            const dateStr = report.date || report.created_at || "";
+             const dateStr = report.generated_at || "";
 
             return (
               <div 
