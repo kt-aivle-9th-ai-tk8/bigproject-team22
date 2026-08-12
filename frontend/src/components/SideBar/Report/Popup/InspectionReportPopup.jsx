@@ -167,23 +167,29 @@ function InspectionReportPopup({
           />
 
           <InspectionTurbineField
-            turbineOptions={turbineOptions}
+            turbineOptions={turbineOptions.map((turbine) =>
+              typeof turbine === "string"
+                ? turbine
+                : turbine.name || turbine.code
+            )}
             turbines={turbines}
             isFixedTurbine={isFixedTurbine}
             onChangeTurbine={handleTurbineChange}
           />
 
-          <div className="inspection-popup-section">
-            <h3 className="inspection-popup-title">
-              드론 이미지 파일 <span className="required-mark">*</span>
-            </h3>
+          {turbines.length > 0 && (
+            <div className="inspection-popup-section">
+              <h3 className="inspection-popup-title">
+                드론 이미지 파일 <span className="required-mark">*</span>
+              </h3>
 
-            <InspectionArchiveUploader
-              turbineOptions={turbines}
-              selectedFiles={selectedFiles}
-              onChangeFiles={setSelectedFiles}
-            />
-          </div>
+              <InspectionArchiveUploader
+                turbineOptions={turbines}
+                selectedFiles={selectedFiles}
+                onChangeFiles={setSelectedFiles}
+              />
+            </div>
+          )}
         </div>
 
         <div className="inspection-popup-footer">

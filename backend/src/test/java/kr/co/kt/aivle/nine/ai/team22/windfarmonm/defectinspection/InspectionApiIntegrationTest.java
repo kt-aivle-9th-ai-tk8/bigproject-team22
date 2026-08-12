@@ -1,0 +1,288 @@
+package kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection;
+
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.application.port.InspectionStoragePort;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.PartSide;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.infrastructure.UserJpaRepository;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.support.IntegrationTestSupport;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.client.RestClient;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.when;
+
+/**
+ * 점검(결함탐지) API 계약을 실제 HTTP·DB 로 검증한다. 저장소 포트만 목으로 대체한다 —
+ * presign 은 AWS 자격증명이 필요해 CI 에서 실행 불가하고, 그 경계 바깥(인가·행 생성·아웃박스)이 이 테스트의 대상이다.
+ */
+class InspectionApiIntegrationTest extends IntegrationTestSupport {
+
+    @Autowired
+    UserJpaRepository userJpaRepository;
+    @Autowired
+    PasswordEncoder passwordEncoder;
+    @Autowired
+    Environment environment;
+    @Autowired
+    JdbcTemplate jdbc;
+
+    @MockitoBean
+    InspectionStoragePort storagePort;
+
+    private final RestClient client = RestClient.create();
+
+    private long farmId;
+    private long turbineId;
+    private long bladeA;
+
+    @BeforeEach
+    void setUp() {
+        truncateAll(jdbc);
+        jdbc.update("INSERT INTO turbine_model (model) VALUES ('U93')");
+        long modelId = jdbc.queryForObject("SELECT turbine_model_id FROM turbine_model WHERE model='U93'", Long.class);
+        jdbc.update("INSERT INTO wind_farm (wind_farm_name, wind_farm_latitude, wind_farm_longitude) VALUES ('화순', 35.1, 127.0)");
+        farmId = jdbc.queryForObject("SELECT wind_farm_id FROM wind_farm WHERE wind_farm_name='화순'", Long.class);
+        jdbc.update("""
+                INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
+                VALUES (?, ?, 'U1', 35.1, 127.0)
+                """, farmId, modelId);
+        turbineId = jdbc.queryForObject(
+                "SELECT turbine_id FROM turbine WHERE wind_farm_id=? AND turbine_code='U1'", Long.class, farmId);
+        for (String tag : List.of("A", "B", "C")) {
+            jdbc.update("INSERT INTO blade (turbine_id, blade_tag) VALUES (?, ?)", turbineId, tag);
+        }
+        bladeA = jdbc.queryForObject("SELECT blade_id FROM blade WHERE blade_tag='A' AND turbine_id=?", Long.class, turbineId);
+
+        long managerId = seedUser("MGR1");
+        seedUser("MGR2"); // 비담당(은닉 검증용)
+        jdbc.update("INSERT INTO assignment (user_id, wind_farm_id, created_at) VALUES (?, ?, NOW(6))", managerId, farmId);
+
+        when(storagePort.presignImageUpload(anyLong(), anyLong(), any(), anyInt()))
+                .thenAnswer(inv -> new InspectionStoragePort.UploadTarget(
+                        "content/inspections/%d/%d/%s/%d.jpg".formatted(
+                                (long) inv.getArgument(0), (long) inv.getArgument(1),
+                                inv.getArgument(2), (int) inv.getArgument(3)),
+                        "https://s3.presigned.example/upload"));
+    }
+
+    @AfterEach
+    void tearDown() {
+        truncateAll(jdbc); // 잔여 행(assignment 등)이 다른 테스트 클래스의 정리(user 삭제)를 막지 않도록
+    }
+
+    private long seedUser(String employeeId) {
+        return userJpaRepository
+                .save(User.create(employeeId, passwordEncoder.encode("pw12345!"), employeeId, "010-1234-5678", Role.MANAGER))
+                .getId();
+    }
+
+    private String baseUrl() {
+        return "http://localhost:" + environment.getProperty("local.server.port") + "/api";
+    }
+
+    private String loginCookie(String employeeId) {
+        ResponseEntity<String> response = client.method(HttpMethod.POST).uri(baseUrl() + "/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"employee_id\":\"" + employeeId + "\",\"password\":\"pw12345!\"}")
+                .retrieve().toEntity(String.class);
+        return response.getHeaders().get(HttpHeaders.SET_COOKIE).stream()
+                .filter(c -> c.startsWith("SESSION="))
+                .map(c -> c.split(";", 2)[0])
+                .findFirst().orElseThrow();
+    }
+
+    private ResponseEntity<String> post(String path, String jsonBody, String cookie) {
+        RestClient.RequestBodySpec spec = client.method(HttpMethod.POST).uri(baseUrl() + path)
+                .header(HttpHeaders.COOKIE, cookie);
+        if (jsonBody != null) {
+            spec.contentType(MediaType.APPLICATION_JSON).body(jsonBody);
+        }
+        return spec.exchange((request, response) -> ResponseEntity
+                .status(response.getStatusCode())
+                .body(response.bodyTo(String.class)));
+    }
+
+    private String createBody() {
+        return """
+                {"wind_farm_id":"%d",
+                 "inspection_start":"2026-08-01T00:00:00","inspection_end":"2026-08-02T00:00:00",
+                 "turbines":[{"turbine_id":"%d",
+                   "blades":[{"blade_id":"%d","leading_edge_count":2,"pressure_side_count":1,
+                              "suction_side_count":0,"trailing_edge_count":0}]}],
+                 "context":"블레이드 A 전연 위주로 촬영"}
+                """.formatted(farmId, turbineId, bladeA);
+    }
+
+    @Test
+    @DisplayName("생성: 200 + 터빈별 inspection_id·부위별 URL 목록·세션 report_id, 점검(UPLOADING)·보고서(PENDING+참고사항) 행")
+    void createInspection() {
+        String cookie = loginCookie("MGR1");
+
+        ResponseEntity<String> response = post("/inspections", createBody(), cookie);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .contains("\"wind_farm_id\":\"").contains("\"inspection_id\":\"").contains("\"report_id\":\"")
+                .contains("\"leading_edge_upload_urls\":[\"https://s3.presigned.example/upload\",\"https://s3.presigned.example/upload\"]")
+                .contains("\"pressure_side_upload_urls\":[\"https://s3.presigned.example/upload\"]")
+                .contains("\"suction_side_upload_urls\":[]"); // count 0 → 빈 목록
+
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM inspection WHERE status='UPLOADING' AND turbine_id=?
+                  AND inspection_start='2026-08-01 00:00:00' AND inspection_end='2026-08-02 00:00:00'
+                """, Long.class, turbineId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM report WHERE report_type='DEFECT_DIAGNOSIS' AND status='PENDING'
+                  AND wind_farm_id=? AND turbine_id IS NULL AND context='블레이드 A 전연 위주로 촬영'
+                """, Long.class, farmId)).isEqualTo(1);
+        // 점검이 세션 보고서를 가리킨다
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM inspection i JOIN report r ON i.report_id = r.report_id
+                WHERE r.report_type='DEFECT_DIAGNOSIS'
+                """, Long.class)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("생성: 비담당 사용자는 404(존재 은닉), 타 단지 터빈은 404, 그 터빈에 없는 블레이드는 400 D003")
+    void createInspection_authAndTarget() {
+        assertThat(post("/inspections", createBody(), loginCookie("MGR2")).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        String cookie = loginCookie("MGR1");
+        String wrongBlade = createBody().replace("\"blade_id\":\"%d\"".formatted(bladeA), "\"blade_id\":\"999999\"");
+        ResponseEntity<String> response = post("/inspections", wrongBlade, cookie);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("D003");
+
+        // 담당 단지의 세션에 '타 단지 소속 터빈'을 끼워 넣으면 404(소속 불일치 — 존재 은닉과 동일 코드)
+        jdbc.update("INSERT INTO wind_farm (wind_farm_name, wind_farm_latitude, wind_farm_longitude) VALUES ('장흥', 34.7, 126.9)");
+        long otherFarmId = jdbc.queryForObject("SELECT wind_farm_id FROM wind_farm WHERE wind_farm_name='장흥'", Long.class);
+        long modelId = jdbc.queryForObject("SELECT turbine_model_id FROM turbine WHERE turbine_id=?", Long.class, turbineId);
+        jdbc.update("""
+                INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
+                VALUES (?, ?, '1', 34.7, 126.9)
+                """, otherFarmId, modelId);
+        long otherTurbineId = jdbc.queryForObject(
+                "SELECT turbine_id FROM turbine WHERE wind_farm_id=? AND turbine_code='1'", Long.class, otherFarmId);
+        String otherFarmsTurbine = createBody().replace(
+                "\"turbine_id\":\"%d\"".formatted(turbineId), "\"turbine_id\":\"%d\"".formatted(otherTurbineId));
+        assertThat(post("/inspections", otherFarmsTurbine, cookie).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("다중 터빈 세션: 터빈마다 점검 행이 생기고 세션 전체가 보고서 1건을 공유하며, 부위별 URL 이 요청 수량과 슬롯에 맞게 발급된다")
+    void createInspection_multiTurbineSession() {
+        // 같은 단지에 두 번째 터빈 + 블레이드 A 추가
+        long modelId = jdbc.queryForObject("SELECT turbine_model_id FROM turbine WHERE turbine_id=?", Long.class, turbineId);
+        jdbc.update("""
+                INSERT INTO turbine (wind_farm_id, turbine_model_id, turbine_code, turbine_latitude, turbine_longitude)
+                VALUES (?, ?, 'U2', 35.1, 127.0)
+                """, farmId, modelId);
+        long turbine2 = jdbc.queryForObject(
+                "SELECT turbine_id FROM turbine WHERE wind_farm_id=? AND turbine_code='U2'", Long.class, farmId);
+        jdbc.update("INSERT INTO blade (turbine_id, blade_tag) VALUES (?, 'A')", turbine2);
+        long blade2 = jdbc.queryForObject(
+                "SELECT blade_id FROM blade WHERE turbine_id=? AND blade_tag='A'", Long.class, turbine2);
+
+        String body = """
+                {"wind_farm_id":"%d",
+                 "inspection_start":"2026-08-01T00:00:00","inspection_end":"2026-08-02T00:00:00",
+                 "turbines":[
+                   {"turbine_id":"%d","blades":[{"blade_id":"%d","leading_edge_count":1,"pressure_side_count":0,"suction_side_count":0,"trailing_edge_count":0}]},
+                   {"turbine_id":"%d","blades":[{"blade_id":"%d","leading_edge_count":0,"pressure_side_count":0,"suction_side_count":0,"trailing_edge_count":2}]}],
+                 "context":null}
+                """.formatted(farmId, turbineId, bladeA, turbine2, blade2);
+
+        ResponseEntity<String> response = post("/inspections", body, loginCookie("MGR1"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // 터빈마다 점검 1행 + 세션 공유 보고서 1건
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inspection", Long.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(DISTINCT report_id) FROM inspection", Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM report WHERE report_type='DEFECT_DIAGNOSIS'", Long.class)).isEqualTo(1);
+        // 슬롯 매핑: 목 presign 이 키를 URL 로 돌려주진 않지만, 키 규약대로 (inspectionId, bladeId, side, seq) 로
+        // 호출됐는지 응답의 부위별 수량으로 검증한다 — 터빈1/블레이드A 는 LE 1건, 터빈2/블레이드2 는 TE 2건.
+        long inspection2 = jdbc.queryForObject("SELECT inspection_id FROM inspection WHERE turbine_id=?", Long.class, turbine2);
+        assertThat(response.getBody())
+                .contains("\"inspection_id\":\"%d\"".formatted(inspection2))
+                .contains("\"trailing_edge_upload_urls\":[\"https://s3.presigned.example/upload\",\"https://s3.presigned.example/upload\"]");
+        org.mockito.Mockito.verify(storagePort).presignImageUpload(inspection2, blade2, PartSide.TE, 1);
+        org.mockito.Mockito.verify(storagePort).presignImageUpload(inspection2, blade2, PartSide.TE, 2);
+        org.mockito.Mockito.verify(storagePort, org.mockito.Mockito.never())
+                .presignImageUpload(org.mockito.ArgumentMatchers.eq(inspection2), org.mockito.ArgumentMatchers.eq(blade2),
+                        org.mockito.ArgumentMatchers.eq(PartSide.LE), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    @DisplayName("업로드 완료: 200(data null) + 상태 INSPECTING + 이미지당 아웃박스 행, 중복 통보는 400(D002)")
+    void imagesUploaded() {
+        String cookie = loginCookie("MGR1");
+        post("/inspections", createBody(), cookie);
+        long inspectionId = jdbc.queryForObject("SELECT inspection_id FROM inspection", Long.class);
+
+        when(storagePort.listUploadedImages(inspectionId)).thenReturn(List.of(
+                new InspectionStoragePort.UploadedImage(
+                        "content/inspections/%d/%d/LE/1.jpg".formatted(inspectionId, bladeA), bladeA, PartSide.LE),
+                new InspectionStoragePort.UploadedImage(
+                        "content/inspections/%d/%d/LE/2.jpg".formatted(inspectionId, bladeA), bladeA, PartSide.LE)));
+
+        ResponseEntity<String> response = post("/inspections/" + inspectionId + "/images-uploaded", null, cookie);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"data\":null");
+        assertThat(jdbc.queryForObject("SELECT status FROM inspection WHERE inspection_id=?", String.class, inspectionId))
+                .isEqualTo("INSPECTING");
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM outbox_event
+                WHERE status='PENDING' AND event_type='InspectionImageUploaded' AND aggregate_id=?
+                """, Long.class, String.valueOf(inspectionId))).isEqualTo(2);
+        String payload = jdbc.queryForObject(
+                "SELECT payload FROM outbox_event ORDER BY id LIMIT 1", String.class);
+        assertThat(payload).contains("\"inspection_id\"").contains("\"image_key\"")
+                .contains("\"blade_id\"").contains("\"part_side\"");
+
+        // 중복 통보는 400 (명세: inspection already upload completed)
+        assertThat(post("/inspections/" + inspectionId + "/images-uploaded", null, cookie).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("업로드 완료: 비담당 타인은 물론, 같은 단지의 다른 담당자도 404(소유자 전용·존재 은닉)")
+    void imagesUploaded_hidden() {
+        String cookie = loginCookie("MGR1");
+        post("/inspections", createBody(), cookie);
+        long inspectionId = jdbc.queryForObject("SELECT inspection_id FROM inspection", Long.class);
+
+        assertThat(post("/inspections/" + inspectionId + "/images-uploaded", null, loginCookie("MGR2")).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        // 같은 단지에 배정된 동료(MGR3)도 소유자가 아니면 완료 통보 불가 — 부분 업로드 상태의 조기 종료 방지
+        long coworkerId = seedUser("MGR3");
+        jdbc.update("INSERT INTO assignment (user_id, wind_farm_id, created_at) VALUES (?, ?, NOW(6))", coworkerId, farmId);
+        assertThat(post("/inspections/" + inspectionId + "/images-uploaded", null, loginCookie("MGR3")).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        // 상태는 여전히 UPLOADING(소유자의 완료 통보만 유효)
+        assertThat(jdbc.queryForObject("SELECT status FROM inspection WHERE inspection_id=?", String.class, inspectionId))
+                .isEqualTo("UPLOADING");
+    }
+}

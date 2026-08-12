@@ -16,7 +16,7 @@ import org.springframework.web.client.RestClientResponseException;
 
 /**
  * {@link ReportGenerationPort} 어댑터. report-agent 의
- * {@code POST /api-internal/v1/reports {report_type, event_id, period_start, period_end}} 를 <b>동기</b>로 호출해
+ * {@code POST /api-internal/reports {report_type, event_id, period_start, period_end}} 를 <b>동기</b>로 호출해
  * 제목({@code title})과 본문({@code context})을 받는다(에이전트가 웹훅 콜백을 지원하지 않으므로).
  * <p>
  * base-url 미설정이면 호출하지 않고 비활성으로 보고한다. 타임아웃은 report-agent 전용({@link ReportAgentProperties})
@@ -33,7 +33,7 @@ import org.springframework.web.client.RestClientResponseException;
 @EnableConfigurationProperties(ReportAgentProperties.class)
 public class ReportAgentAdapter implements ReportGenerationPort {
 
-    private static final String GENERATE_PATH = "/api-internal/v1/reports";
+    private static final String GENERATE_PATH = "/api-internal/reports";
 
     private final ReportAgentProperties properties;
     private final RestClient restClient;

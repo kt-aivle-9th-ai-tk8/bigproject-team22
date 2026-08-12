@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import SideTitle from "./SideTitle";
 import PowerGaugeGroup from "./Power/PowerGaugeGroup";
 import ReportBox from "./Report/ReportBox";
 import ReportTitleToggle from "./Report/ReportTitleToggle";
 import InspectionReportBox from "./Report/InspectionReportBox";
-import TurbineReportList, { REPORT_TYPE } from "./Report/TurbineReportList";
+import TurbineReportList from "./Report/TurbineReportList";
 
 import "./TurbineSideBar.css";
 
@@ -13,9 +14,12 @@ function TurbineSideBar({
   selectedPlant,
   selectedTurbine,
   turbineDetail,
+  reportItems = [],
   onCreateInspectionReport,
   onCreateOperationReport,
 }) {
+  const navigate = useNavigate();
+
   const [reportMode, setReportMode] = useState("operation");
 
   const plantName = selectedPlant?.title || selectedPlant?.name || "장흥 발전소";
@@ -55,44 +59,24 @@ function TurbineSideBar({
     },
   ];
 
-  const reportItems = [
-    {
-      id: 1,
-      date: "2026-07-09",
-      time: "14:20",
-      status: REPORT_TYPE.FAULT,
-    },
-    {
-      id: 2,
-      date: "2026-07-08",
-      time: "12:20",
-      status: REPORT_TYPE.FAULT,
-    },
-    {
-      id: 3,
-      date: "2026-07-06",
-      time: "14:20",
-      status: REPORT_TYPE.OPERATION,
-    },
-    {
-      id: 4,
-      date: "2026-07-02",
-      time: "14:00",
-      status: REPORT_TYPE.WARNING,
-    },
-    {
-      id: 5,
-      date: "2026-06-24",
-      time: "10:20",
-      status: REPORT_TYPE.REPAIR,
-    },
-  ];
+  const handleSelectReport = (report) => {
+    navigate(`/reports/${report.id}/edit`, {
+      state: {
+        report,
+      },
+    });
+  };
+
+
+  const handleReportList = () => {
+    navigate("/reportlist");
+  };
 
   return (
     <div className="sidebar-content turbine-sidebar-content">
       <section className="sidebar-panel turbine-power-panel">
         <SideTitle>
-          {plantName} {turbineName} 출력 현황
+          {plantName} {turbineName} 터빈 출력 현황
         </SideTitle>
 
         <PowerGaugeGroup items={powerGaugeItems} />
@@ -107,9 +91,8 @@ function TurbineSideBar({
 
         <TurbineReportList
           items={reportItems}
-          onSelectReport={(report) => {
-            console.log("선택한 보고서:", report);
-          }}
+          onSelectReport={handleSelectReport}
+          onMoreClick={handleReportList}
         />
       </section>
 
@@ -139,7 +122,9 @@ function TurbineSideBar({
         {reportMode === "inspection" && (
           <InspectionReportBox
             turbineName={turbineName}
-            turbineOptions={[turbineName]}
+            turbineOptions={
+              selectedTurbine ? [selectedTurbine] : []
+            }
             initialData={{
               turbines: [turbineName],
               fixedTurbine: true,
@@ -151,7 +136,6 @@ function TurbineSideBar({
                 plantName,
                 turbineId: selectedTurbine?.id,
                 turbineName,
-                turbines: [turbineName],
               });
             }}
           />

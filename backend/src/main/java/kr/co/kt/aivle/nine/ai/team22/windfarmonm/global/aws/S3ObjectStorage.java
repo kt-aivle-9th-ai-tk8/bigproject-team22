@@ -11,6 +11,8 @@ import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -18,6 +20,8 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import jakarta.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * S3 접근 게이트웨이. presigned URL 발급과 객체 읽기를 담당한다.
@@ -83,6 +87,32 @@ public class S3ObjectStorage {
                     .toString();
         } catch (RuntimeException e) {
             throw storageFailure("조회 URL 발급 실패 key={}", key, e);
+        }
+    }
+
+    /**
+     * 프리픽스 아래 객체 키를 전부 나열한다(페이지네이션 포함). 업로드 완료 검증이
+     * FE 신고 대신 <b>원천(S3)</b>을 기준으로 삼을 때 쓴다.
+     */
+    public List<String> listKeys(String prefix) {
+        requireConfigured();
+        try {
+            List<String> keys = new ArrayList<>();
+            String continuationToken = null;
+            do {
+                ListObjectsV2Request.Builder request = ListObjectsV2Request.builder()
+                        .bucket(properties.s3().bucket())
+                        .prefix(prefix);
+                if (continuationToken != null) {
+                    request.continuationToken(continuationToken);
+                }
+                ListObjectsV2Response response = client().listObjectsV2(request.build());
+                response.contents().forEach(object -> keys.add(object.key()));
+                continuationToken = response.nextContinuationToken();
+            } while (continuationToken != null);
+            return keys;
+        } catch (RuntimeException e) {
+            throw storageFailure("객체 목록 조회 실패 prefix={}", prefix, e);
         }
     }
 

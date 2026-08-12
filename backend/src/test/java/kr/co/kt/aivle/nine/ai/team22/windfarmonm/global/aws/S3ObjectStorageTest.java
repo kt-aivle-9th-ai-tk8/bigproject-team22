@@ -67,4 +67,15 @@ class S3ObjectStorageTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.STORAGE_NOT_CONFIGURED);
     }
+
+    @Test
+    @DisplayName("미설정 상태에서 객체 목록 조회도 동일하게 503")
+    void listKeys_notConfigured() {
+        S3ObjectStorage storage = new S3ObjectStorage(props("", ""));
+
+        assertThatThrownBy(() -> storage.listKeys("content/inspections/1/"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.STORAGE_NOT_CONFIGURED);
+    }
 }
