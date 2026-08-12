@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { fetchReports } from "../api/reportApi";
 
 
-export const useReportList = () => {
+export const useReportList = ({
+  windFarmId,
+  turbineId,
+  reportType,
+} = {}) => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,7 +21,11 @@ export const useReportList = () => {
         setError(null);
 
         const responseBody =
-          await fetchReports();
+          await fetchReports({
+            windFarmId,
+            turbineId,
+            reportType,
+          });
 
         const responseData =
           responseBody?.data ??
@@ -66,7 +74,11 @@ export const useReportList = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [
+    windFarmId,
+    turbineId,
+    reportType,
+  ]);
 
   return {
     reports,

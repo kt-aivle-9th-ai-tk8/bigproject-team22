@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useReportList } from "../hooks/useReportList";
+import { useReportWindFarms } from "../hooks/useReportWindFarms";
 
 import "./ReportListScreen.css";
 
@@ -17,13 +18,8 @@ function ReportListScreen() {
   const navigate = useNavigate();
 
   const {
-    reports,
-    loading,
-    error,
-  } = useReportList();
-
-  // 로그인 유저 담당 발전소 목록 상태
-  const [userPlants, setUserPlants] = useState([]);
+    windFarms,
+  } = useReportWindFarms();
 
   // 필터 및 정렬 상태
   const [selectedType, setSelectedType] = useState("전체");
@@ -31,6 +27,27 @@ function ReportListScreen() {
   const [selectedTurbine, setSelectedTurbine] = useState("전체");
   const [sortKey, setSortKey] = useState("date");
   const [isAscending, setIsAscending] = useState(false);
+
+  const {
+    reports,
+    loading,
+    error,
+  } = useReportList({
+    windFarmId:
+      selectedPlant !== "전체"
+        ? selectedPlant
+        : undefined,
+
+    turbineId:
+      selectedTurbine !== "전체"
+        ? selectedTurbine
+        : undefined,
+
+    reportType:
+      selectedType !== "전체"
+        ? selectedType
+        : undefined,
+  });
 
   const todayString = new Date().toISOString().slice(0, 10).replace(/-/g, ".");
 
@@ -46,31 +63,22 @@ function ReportListScreen() {
     if (typeParam) setSelectedType(typeParam);
   }, [location.search]);
 
-  // 1. 로그인 유저 담당 발전소 정보 로드
-  useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("userInfo");
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        const assigned = parsed.plants || parsed.assigned_plants || [];
-        setUserPlants(assigned);
-      }
-    } catch (err) {
-      console.error("유저 담당 발전소 로드 에러:", err);
-    }
-  }, []);
-
-  // [더미 제거 1] 전체 보고서 데이터에서 존재하는 발전소 목록만 동적 추출
   const availablePlantOptions = useMemo(() => {
-    // 유저 담당 발전소가 로컬스토리지에 있으면 우선 사용
-    if (userPlants.length > 0) return userPlants;
-
-    // 만약 유저 담당 발전소 정보가 없다면 실제 DB 수신 보고서 데이터에서 추출
-    const plantSet = new Set(
-      reports.map((r) => r.plant || r.wind_farm_name).filter(Boolean)
-    );
-    return Array.from(plantSet);
-  }, [userPlants, reports]);
+    return windFarms
+      .map((plant) => ({
+        id: plant.id,
+        name:
+          plant.title ||
+          plant.name ||
+          plant.wind_farm_name ||
+          `발전소 ${plant.id}`,
+      }))
+      .filter(
+        (plant) =>
+          plant.id !== undefined &&
+          plant.id !== null
+      );
+  }, [windFarms]);
 
   // [요구사항 3] 터빈 드롭다운 선택 가능 여부 (유형 또는 발전소 중 하나라도 지정되어야 함)
   const isTurbineSelectable = useMemo(() => {
@@ -136,41 +144,35 @@ function ReportListScreen() {
 
   // 보고서 필터링 및 정렬
   const filteredAndSortedReports = useMemo(() => {
-    return reports
-      .filter((report) => {
-        const matchesType =
-          selectedType === "전체" ||
-          report.type === selectedType ||
-          report.report_type === selectedType;
-        const matchesPlant =
-          selectedPlant === "전체" ||
-          report.plant === selectedPlant ||
-          report.wind_farm_name === selectedPlant;
-        const matchesTurbine =
-          selectedTurbine === "전체" ||
-          report.turbine === selectedTurbine ||
-          report.turbine_name === selectedTurbine;
-        return matchesType && matchesPlant && matchesTurbine;
-      })
-      .sort((a, b) => {
-        let comparison = 0;
-        const dateA = a.generated_at || "";
-        const dateB = b.generated_at || "";
-        const plantA = a.plant || a.wind_farm_name || "";
-        const plantB = b.plant || b.wind_farm_name || "";
-        const turbineA = a.turbine || a.turbine_name || "";
-        const turbineB = b.turbine || b.turbine_name || "";
+    return [...reports].sort((a, b) => {
+      let comparison = 0;
 
-        if (sortKey === "date") {
-          comparison = dateA.localeCompare(dateB);
-        } else if (sortKey === "title") {
-          const nameA = `${plantA} ${turbineA}`;
-          const nameB = `${plantB} ${turbineB}`;
-          comparison = nameA.localeCompare(nameB, "ko");
-        }
-        return isAscending ? comparison : -comparison;
-      });
-  }, [reports, selectedType, selectedPlant, selectedTurbine, sortKey, isAscending]);
+      const dateA = a.generated_at || "";
+      const dateB = b.generated_at || "";
+
+      if (sortKey === "date") {
+        comparison =
+          dateA.localeCompare(dateB);
+      } else if (sortKey === "title") {
+        const titleA = a.title || "";
+        const titleB = b.title || "";
+
+        comparison =
+          titleA.localeCompare(
+            titleB,
+            "ko"
+          );
+      }
+
+      return isAscending
+        ? comparison
+        : -comparison;
+    });
+  }, [
+    reports,
+    sortKey,
+    isAscending,
+  ]);
 
   const handleCardClick = (report) => {
     const reportId = report.id || report.report_id;
@@ -198,21 +200,46 @@ function ReportListScreen() {
             onChange={handleTypeChange}
             className="select-box"
           >
-            <option value="전체">유형: 전체</option>
-            <option value="wind_farm_operation">단지 운영 리포트</option>
-            <option value="turbine_operation">터빈 운영 리포트</option>
-            <option value="defect_diagnosis">결함 진단 리포트</option>
-            <option value="anomaly_event">이상 감지 리포트</option>
+            <option value="전체">
+              유형: 전체
+            </option>
+
+            <option value="WIND_FARM_OPERATION">
+              단지 운영 리포트
+            </option>
+
+            <option value="TURBINE_OPERATION">
+              터빈 운영 리포트
+            </option>
+
+            <option value="DEFECT_DIAGNOSIS">
+              결함 진단 리포트
+            </option>
+
+            <option value="ANOMALY_EVENT">
+              이상 감지 리포트
+            </option>
           </select>
 
           {/* 2. 발전소 필터 (더미 객체 없이 백엔드 수신/사용자 담당 발전소로 동적 렌더링) */}
-          <select value={selectedPlant} onChange={handlePlantChange} className="select-box">
-            <option value="전체">발전소: 전체</option>
-            {availablePlantOptions.map((plantName) => (
-              <option key={plantName} value={plantName}>{plantName}</option>
+          <select
+            value={selectedPlant}
+            onChange={handlePlantChange}
+            className="select-box"
+          >
+            <option value="전체">
+              발전소: 전체
+            </option>
+
+            {availablePlantOptions.map((plant) => (
+              <option
+                key={plant.id}
+                value={String(plant.id)}
+              >
+                {plant.name}
+              </option>
             ))}
           </select>
-
           {/* 3. 터빈 필터 (유형이나 발전소가 지정되어야 활성화 및 백엔드 실제 터빈만 동적 렌더링) */}
           <select 
             value={selectedTurbine} 
