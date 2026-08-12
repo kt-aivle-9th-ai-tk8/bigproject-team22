@@ -44,6 +44,11 @@
                 {
                     "name": "SCHEDULING_LOCK_KEY_PREFIX",
                     "value":"windfarmonm-prod"
+                },
+
+                {
+                    "name": "REPORT_AGENT_BASE_URL",
+                    "value": "http://report-agent.windfarm.local:8000"
                 }
             ],
 
