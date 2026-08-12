@@ -45,7 +45,8 @@ public enum ErrorCode {
 
     // Inspection / Defect
     INSPECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "D001", "점검 요청을 찾을 수 없습니다."),
-    INSPECTION_STATE_CONFLICT(HttpStatus.CONFLICT, "D002", "현재 상태에서 수행할 수 없는 작업입니다."),
+    // REST 관례는 409 지만 API 명세가 400("inspection already upload completed")을 지정해 그에 맞춘다.
+    INSPECTION_STATE_CONFLICT(HttpStatus.BAD_REQUEST, "D002", "현재 상태에서 수행할 수 없는 작업입니다."),
     INVALID_INSPECTION_TARGET(HttpStatus.BAD_REQUEST, "D003", "요청한 터빈/블레이드가 해당 단지에 속하지 않습니다."),
     // 422: RFC 9110 에서 명칭이 UNPROCESSABLE_CONTENT 로 바뀌었다(구 UNPROCESSABLE_ENTITY 는 deprecated).
     VISION_RESULT_INVALID(HttpStatus.UNPROCESSABLE_CONTENT, "D004", "결함 분석 결과를 해석할 수 없습니다."),
