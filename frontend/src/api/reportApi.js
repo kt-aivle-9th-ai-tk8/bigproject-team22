@@ -1,3 +1,5 @@
+import { apiFetch } from "./apiClient";
+
 export const createReport = async ({
   windFarmId,
   turbineId,
@@ -87,6 +89,58 @@ export const fetchReportById = async (reportId) => {
       responseBody?.message ||
         responseBody?.error ||
         "보고서 정보를 불러오지 못했습니다."
+    );
+  }
+
+  return responseBody;
+};
+
+export const fetchReports = async ({
+  windFarmId,
+  turbineId,
+  reportType,
+}) => {
+  const params = new URLSearchParams();
+
+  if (windFarmId !== undefined && windFarmId !== null) {
+    params.append("wind_farm_id", windFarmId);
+  }
+
+  if (turbineId !== undefined && turbineId !== null) {
+    params.append("turbine_id", turbineId);
+  }
+
+  if (reportType) {
+    params.append("report_type", reportType);
+  }
+
+  const response = await apiFetch(
+    `/api/reports?${params.toString()}`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  const responseText = await response.text();
+
+  let responseBody = null;
+
+  if (responseText) {
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = responseText;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      responseBody?.message ||
+      "보고서 목록을 불러오는데 실패했습니다."
     );
   }
 

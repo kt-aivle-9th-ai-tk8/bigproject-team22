@@ -14,6 +14,7 @@ import { usePowerGeneration } from "../hooks/usePowerGeneration";
 import { useTurbineDetail } from "../hooks/useTurbineDetail";
 import { useReportStatusPolling } from "../hooks/useReportStatusPolling";
 import { useInspectionReport } from "../hooks/useInspectionReport";
+import { useTurbineReports } from "../hooks/useTurbineReports";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -63,6 +64,16 @@ function MainScreen() {
     turbineDetailError,
   } = useTurbineDetail({
     mode: screenMode,
+    turbineId: selectedTurbine?.id,
+    refreshInterval: 10000,
+  });
+
+  // 터빈 상세 페이지 보고서 리스트 api
+  const {
+    reportItems: turbineReportItems,
+  } = useTurbineReports({
+    mode: screenMode,
+    windFarmId: selectedPlant?.id,
     turbineId: selectedTurbine?.id,
     refreshInterval: 10000,
   });
@@ -336,6 +347,7 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           windFarmDetail={windFarmDetail}
           turbineDetail={turbineDetail}
+          turbineReportItems={turbineReportItems}
           notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
