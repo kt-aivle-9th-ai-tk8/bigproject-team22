@@ -1,37 +1,61 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './UserScreen.css';
 
 const UserScreen = ({ onClose }) => {
   const navigate = useNavigate();
 
-  // 사용자 데이터 (추후 API 연동 대상)
-  const userData = {
-    role: '관리자',
-    name: '홍길동',
-    isAdmin: true,
-    employeeId: '12345678',
-    phone: '010-1234-5678',
-    email: 'admin@company.com',
-    department: 'IT 운영팀',
-  };
+  // 사용자 정보 상태 관리
+  const [userData, setUserData] = useState({
+    role: '일반사용자',
+    name: '사용자',
+    isAdmin: false,
+    employeeId: '-',
+    phone: '-',
+    email: '-',
+    department: '-',
+  });
+
+  // 에러/알림 모달 상태 관리
+  const [modalMessage, setModalMessage] = useState(null);
+
+  // 로컬스토리지 로그인 유저 정보 로드
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("userInfo");
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        setUserData({
+          role: parsed.role === 'ADMIN' ? '관리자' : (parsed.role || '일반사용자'),
+          name: parsed.name || parsed.username || '사용자',
+          isAdmin: parsed.role === 'ADMIN' || parsed.isAdmin === true,
+          employeeId: parsed.employee_id || parsed.employeeId || '-',
+          phone: parsed.phone || parsed.mobile || '-',
+          email: parsed.email || '-',
+          department: parsed.department || '운영팀',
+        });
+      }
+    } catch (err) {
+      console.error("유저 정보 로드 실패:", err);
+    }
+  }, []);
 
   // 관리자 페이지 이동 핸들러
   const handleNavigateToAdmin = () => {
+    if (!userData.isAdmin) {
+      setModalMessage("권한이 없습니다");
+      return;
+    }
+    if (onClose) onClose();
     navigate('/admin/users');
   };
 
-  // ⚡ [추가] 본인 로그아웃 처리 핸들러
+  // 본인 로그아웃 처리 핸들러
   const handleLogout = () => {
     if (window.confirm("로그아웃 하시겠습니까?")) {
-      // 1. 브라우저에 저장된 로그인 토큰 및 정보 삭제
       localStorage.removeItem("accessToken");
       localStorage.removeItem("userInfo");
-
-      // 2. 모달이 닫히는 콜백이 있으면 실행
       if (onClose) onClose();
-
-      // 3. 로그인 화면으로 이동
       navigate("/login");
     }
   };
@@ -101,18 +125,27 @@ const UserScreen = ({ onClose }) => {
 
         {/* 하단 액션 버튼 영역 */}
         <div className="action-area">
-          {userData.isAdmin && (
-            <button className="btn-admin-entry" onClick={handleNavigateToAdmin}>
-              관리자 페이지 진입
-            </button>
-          )}
-          {/* ⚡ [수정] onClick={handleLogout} 연결 */}
+          <button className="btn-admin-entry" onClick={handleNavigateToAdmin}>
+            관리자 페이지 진입
+          </button>
           <button className="btn-logout-text" onClick={handleLogout}>
             로그아웃
           </button>
         </div>
 
       </div>
+
+      {/* 권한 제한 안내 모달 */}
+      {modalMessage && (
+        <div className="user-alert-modal-overlay">
+          <div className="user-alert-modal-content">
+            <p className="user-alert-message">{modalMessage}</p>
+            <button className="user-alert-btn" onClick={() => setModalMessage(null)}>
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

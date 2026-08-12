@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import axios from 'axios';
 import './AdminUserScreen.css';
 
-// 샘플 발전소 목록
 const PLANT_OPTIONS = [
   '장흥 발전소', '해남 발전소', '강진 발전소', '삼천포 발전소', 
   '여수 발전소', '광양 발전소', '태안 발전소', '당진 발전소', 
@@ -9,61 +9,87 @@ const PLANT_OPTIONS = [
   '서귀포 발전소', '신안 발전소', '영광 발전소', '함평 발전소'
 ];
 
-// 1. 가입 대기 사용자 샘플 데이터 (카드 내부 발전소 지정 제거)
-const INITIAL_PENDING_USERS = [
-  { id: 'p1', name: '김민수', employeeId: '2505001', createdAt: '2024.05.20 14:30' },
-  { id: 'p2', name: '이영희', employeeId: '2505002', createdAt: '2024.05.20 10:15' },
-  { id: 'p3', name: '박지훈', employeeId: '2505003', createdAt: '2024.05.19 16:45' },
-  { id: 'p4', name: '최유리', employeeId: '2505004', createdAt: '2024.05.19 11:20' },
-  { id: 'p5', name: '정태호', employeeId: '2505005', createdAt: '2024.05.18 15:05' },
-];
-
-// 2. 전체 사용자 샘플 데이터 (차단 상태 = 로그인 5회 실패)
-const INITIAL_APPROVED_USERS = [
-  { id: 1, name: '최유리', employeeId: '2401001', isOnline: true, plants: ['장흥 발전소', '해남 발전소'], loginFailCount: 5, isBlocked: true },
-  { id: 2, name: '정태호', employeeId: '2401002', isOnline: true, plants: ['해남 발전소', '강진 발전소'], loginFailCount: 0, isBlocked: false },
-  { id: 3, name: '오세훈', employeeId: '2401003', isOnline: false, plants: ['삼천포 발전소'], loginFailCount: 2, isBlocked: false },
-  { id: 4, name: '강하나', employeeId: '2401004', isOnline: true, plants: ['여수 발전소', '광양 발전소'], loginFailCount: 5, isBlocked: true },
-  { id: 5, name: '조민석', employeeId: '2401005', isOnline: false, plants: ['태안 발전소'], loginFailCount: 0, isBlocked: false },
-  { id: 6, name: '김민수', employeeId: '2401006', isOnline: true, plants: ['당진 발전소', '평택 발전소'], loginFailCount: 0, isBlocked: false },
-  { id: 7, name: '이영희', employeeId: '2401007', isOnline: false, plants: ['보령 발전소', '서천 발전소'], loginFailCount: 0, isBlocked: false },
-  { id: 8, name: '박지훈', employeeId: '2401008', isOnline: true, plants: ['제주 발전소', '서귀포 발전소'], loginFailCount: 5, isBlocked: true },
-  { id: 9, name: '한지민', employeeId: '2401009', isOnline: false, plants: ['신안 발전소'], loginFailCount: 1, isBlocked: false },
-  { id: 10, name: '윤대영', employeeId: '2401010', isOnline: true, plants: ['영광 발전소', '함평 발전소'], loginFailCount: 0, isBlocked: false },
-];
-
 export default function AdminUserScreen() {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'list'
-  const [pendingUsers, setPendingUsers] = useState(INITIAL_PENDING_USERS);
-  const [approvedUsers, setApprovedUsers] = useState(INITIAL_APPROVED_USERS);
+  const [pendingUsers, setPendingUsers] = useState([]);
+  const [approvedUsers, setApprovedUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // 정렬 및 필터 상태
-  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' (가나다순) | 'desc' (역순)
-  const [selectedPlantFilter, setSelectedPlantFilter] = useState('ALL'); // 발전소 필터링
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [selectedPlantFilter, setSelectedPlantFilter] = useState('ALL');
 
-  // 모달 팝업 상태
+  // 모달 상태
   const [selectedUserForApproval, setSelectedUserForApproval] = useState(null);
   const [selectedPlants, setSelectedPlants] = useState([]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [errorMessageModal, setErrorMessageModal] = useState(null);
+
+  // --- [공통 백엔드 에러 추출 함수] ---
+  const handleApiError = (err, fallbackMsg) => {
+    console.error(err);
+    const serverMessage = err.response?.data?.message || err.message || fallbackMsg;
+    setErrorMessageModal(serverMessage);
+  };
+
+  // --- [1. 백엔드 API 목록 조회 - GET /api/admin/users] ---
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/admin/users');
+      const data = response.data?.data || response.data || [];
+
+      // BE 응답 매핑 (가입대기: PENDING, 일반: APPROVED)
+      const pending = data
+        .filter(u => u.role === 'GUEST' || u.status === 'PENDING')
+        .map(u => ({
+          id: u.id || u.user_id,
+          name: u.name || u.username,
+          employeeId: u.employee_id || u.employeeId,
+          createdAt: u.created_at || u.createdAt || '오늘'
+        }));
+
+      const approved = data
+        .filter(u => u.role !== 'GUEST' && u.status !== 'PENDING')
+        .map(u => ({
+          id: u.id || u.user_id,
+          name: u.name || u.username,
+          employeeId: u.employee_id || u.employeeId,
+          isOnline: u.is_online ?? u.isOnline ?? false,
+          plants: u.plants || u.assigned_plants || [],
+          loginFailCount: u.login_fail_count || 0,
+          isBlocked: u.is_blocked ?? (u.login_fail_count >= 5) ?? false,
+          role: u.role || 'USER'
+        }));
+
+      setPendingUsers(pending);
+      setApprovedUsers(approved);
+    } catch (err) {
+      handleApiError(err, '사용자 리스트를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   // --- [정렬 및 필터링 계산] ---
   const processedApprovedUsers = useMemo(() => {
     let result = [...approvedUsers];
 
-    // 1. 검색어 필터링
     if (searchTerm) {
       result = result.filter(u => 
         u.name.includes(searchTerm) || u.employeeId.includes(searchTerm)
       );
     }
 
-    // 2. 발전소 필터링
     if (selectedPlantFilter !== 'ALL') {
       result = result.filter(u => u.plants.includes(selectedPlantFilter));
     }
 
-    // 3. 이름 정렬 (가나다순 / 역순)
     result.sort((a, b) => {
       if (sortOrder === 'asc') {
         return a.name.localeCompare(b.name, 'ko');
@@ -75,7 +101,7 @@ export default function AdminUserScreen() {
     return result;
   }, [approvedUsers, searchTerm, selectedPlantFilter, sortOrder]);
 
-  // --- [제어 및 모달 이벤트 핸들러] ---
+  // --- [이벤트 핸들러] ---
   const handleOpenApproveModal = (user) => {
     setSelectedUserForApproval(user);
     setSelectedPlants([]);
@@ -92,59 +118,85 @@ export default function AdminUserScreen() {
     );
   };
 
-  const handleConfirmApproval = () => {
+  // --- [2. 승인 처리 및 권한 변경 - PATCH /api/admin/users/{user_id}] ---
+  const handleConfirmApproval = async () => {
     if (selectedPlants.length === 0) {
-      alert('최소 하나 이상의 담당 발전소를 선택해 주세요.');
+      setErrorMessageModal('최소 하나 이상의 담당 발전소를 선택해 주세요.');
       return;
     }
 
-    alert(`${selectedUserForApproval.name} 님의 가입이 승인되었습니다.`);
+    try {
+      await axios.patch(`/api/admin/users/${selectedUserForApproval.id}`, {
+        role: 'USER',
+        plants: selectedPlants
+      });
 
-    setPendingUsers(prev => prev.filter(u => u.id !== selectedUserForApproval.id));
-    const newUser = {
-      id: Date.now(),
-      name: selectedUserForApproval.name,
-      employeeId: selectedUserForApproval.employeeId,
-      isOnline: false,
-      plants: selectedPlants,
-      loginFailCount: 0,
-      isBlocked: false,
-    };
-    setApprovedUsers(prev => [newUser, ...prev]);
-    handleCloseModal();
+      alert(`${selectedUserForApproval.name} 님의 가입이 승인되었습니다.`);
+      handleCloseModal();
+      fetchUsers();
+    } catch (err) {
+      handleApiError(err, '승인 처리에 실패했습니다.');
+    }
   };
 
-  const handleReject = (id, name) => {
+  // --- [3. 가입 거절 - PATCH 또는 DELETE] ---
+  const handleReject = async (id, name) => {
     if (window.confirm(`${name} 님의 가입 신청을 거절하시겠습니까?`)) {
-      setPendingUsers(prev => prev.filter(u => u.id !== id));
-    }
-  };
-
-  // 강제 로그아웃
-  const handleForceLogout = (name) => {
-    alert(`${name} 님을 강제 로그아웃 시켰습니다.`);
-  };
-
-  // 로그인 5회 실패 차단 해제
-  const handleUnblockUser = (id, name) => {
-    if (window.confirm(`${name} 님의 로그인 차단을 해제하시겠습니까?`)) {
-      setApprovedUsers(prev => prev.map(u => 
-        u.id === id ? { ...u, isBlocked: false, loginFailCount: 0 } : u
-      ));
-    }
-  };
-
-  const handleTogglePlantInList = (userId, plantName) => {
-    setApprovedUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        const exists = u.plants.includes(plantName);
-        const updated = exists 
-          ? u.plants.filter(p => p !== plantName)
-          : [...u.plants, plantName];
-        return { ...u, plants: updated };
+      try {
+        await axios.patch(`/api/admin/users/${id}`, { role: 'REJECTED' });
+        alert('거절 처리 되었습니다.');
+        fetchUsers();
+      } catch (err) {
+        handleApiError(err, '가입 거절 처리에 실패했습니다.');
       }
-      return u;
-    }));
+    }
+  };
+
+  // --- [4. 강제 로그아웃 - DELETE /api/admin/users/{user_id}/session] ---
+  const handleForceLogout = async (userId, name) => {
+    try {
+      await axios.delete(`/api/admin/users/${userId}/session`);
+      alert(`${name} 님을 강제 로그아웃 시켰습니다.`);
+      fetchUsers();
+    } catch (err) {
+      handleApiError(err, '강제 로그아웃 처리에 실패했습니다.');
+    }
+  };
+
+  // --- [5. 차단 해제 - PATCH /api/admin/users/{user_id}] ---
+  const handleUnblockUser = async (id, name) => {
+    if (window.confirm(`${name} 님의 로그인 차단을 해제하시겠습니까?`)) {
+      try {
+        await axios.patch(`/api/admin/users/${id}`, {
+          is_blocked: false,
+          login_fail_count: 0
+        });
+        alert('차단이 해제되었습니다.');
+        fetchUsers();
+      } catch (err) {
+        handleApiError(err, '차단 해제 처리에 실패했습니다.');
+      }
+    }
+  };
+
+  // --- [6. 담당 발전소 개별 변경 - PATCH /api/admin/users/{user_id}] ---
+  const handleTogglePlantInList = async (userId, plantName) => {
+    const targetUser = approvedUsers.find(u => u.id === userId);
+    if (!targetUser) return;
+
+    const exists = targetUser.plants.includes(plantName);
+    const updatedPlants = exists 
+      ? targetUser.plants.filter(p => p !== plantName)
+      : [...targetUser.plants, plantName];
+
+    try {
+      await axios.patch(`/api/admin/users/${userId}`, {
+        plants: updatedPlants
+      });
+      fetchUsers();
+    } catch (err) {
+      handleApiError(err, '발전소 설정 변경에 실패했습니다.');
+    }
   };
 
   const filteredPending = pendingUsers.filter(u => 
@@ -241,12 +293,10 @@ export default function AdminUserScreen() {
       {activeTab === 'list' && (
         <div className="aus-tab-content">
           <div className="aus-card">
-            {/* 박스 우측 상단 정렬 및 필터 컨트롤 바 */}
             <div className="aus-card-header">
               <h2 className="aus-sub-title">전체 사용자 관리</h2>
               
               <div className="aus-filter-group">
-                {/* 발전소 필터 드롭다운 */}
                 <select 
                   className="aus-select-filter"
                   value={selectedPlantFilter}
@@ -258,7 +308,6 @@ export default function AdminUserScreen() {
                   ))}
                 </select>
 
-                {/* 이름 정렬 드롭다운 */}
                 <select 
                   className="aus-select-filter"
                   value={sortOrder}
@@ -334,11 +383,10 @@ export default function AdminUserScreen() {
                             </div>
                           </td>
                           <td>
-                            {/* 제어 컬럼: 강제 로그아웃 & 차단 해제 */}
                             <div className="action-cell">
                               <button 
                                 className="btn-logout"
-                                onClick={() => handleForceLogout(user.name)}
+                                onClick={() => handleForceLogout(user.id, user.name)}
                               >
                                 로그아웃
                               </button>
@@ -402,6 +450,23 @@ export default function AdminUserScreen() {
               <button className="btn-modal-cancel" onClick={handleCloseModal}>취소</button>
               <button className="btn-modal-confirm" onClick={handleConfirmApproval}>승인 완료</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 에러 메시지 노출 모달 */}
+      {errorMessageModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ textAlign: 'center', width: '360px' }}>
+            <h3 className="modal-title">알림</h3>
+            <p className="modal-desc" style={{ margin: '16px 0 24px' }}>{errorMessageModal}</p>
+            <button 
+              className="btn-modal-confirm" 
+              style={{ width: '100%' }}
+              onClick={() => setErrorMessageModal(null)}
+            >
+              확인
+            </button>
           </div>
         </div>
       )}
