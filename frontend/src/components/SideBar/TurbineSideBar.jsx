@@ -76,7 +76,7 @@ function TurbineSideBar({
     <div className="sidebar-content turbine-sidebar-content">
       <section className="sidebar-panel turbine-power-panel">
         <SideTitle>
-          {plantName} {turbineName} 출력 현황
+          {plantName} {turbineName} 터빈 출력 현황
         </SideTitle>
 
         <PowerGaugeGroup items={powerGaugeItems} />
