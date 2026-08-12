@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PowerChartDrag from "./UnderBar/PowerChartDrag";
+
 
 function UnderBar({
   mode,
@@ -13,27 +14,19 @@ function UnderBar({
   const [axisStartAt, setAxisStartAt] = useState(null);
   const [axisEndAt, setAxisEndAt] = useState(null);
 
-  const fetchAxisRange = async () => {
-    /*
-     * 실제 API 예시:
-     *
-     * const response = await fetch(
-     *   `/api/plants/${selectedPlant.id}/power-generation/range`
-     * );
-     *
-     * const data = await response.json();
-     *
-     * setAxisStartAt(data.startAt);
-     * setAxisEndAt(data.endAt);
-     */
+  const lastVisibleRangeRef = useRef(null);
 
+
+  const fetchAxisRange = async () => {
     setAxisStartAt("2026-06-01T00:00:00");
     setAxisEndAt(new Date().toISOString());
   };
 
+
   useEffect(() => {
     fetchAxisRange();
   }, [selectedPlant?.id]);
+
 
   const handleRangeDrag = ({
     nextStartAt,
@@ -50,11 +43,47 @@ function UnderBar({
       ),
     });
 
+
+    lastVisibleRangeRef.current = {
+      nextStartAt,
+      nextEndAt,
+    };
+
+
     onFetchPowerGeneration?.({
       nextStartAt,
       nextEndAt,
     });
   };
+
+
+  useEffect(() => {
+    const currentRange = lastVisibleRangeRef.current;
+
+    if (!currentRange) {
+      return;
+    }
+
+    if (mode === "turbine") {
+      if (!selectedTurbine?.id) {
+        return;
+      }
+    } else {
+      if (!selectedPlant?.id) {
+        return;
+      }
+    }
+
+    onFetchPowerGeneration?.({
+      nextStartAt: currentRange.nextStartAt,
+      nextEndAt: currentRange.nextEndAt,
+    });
+  }, [
+    mode,
+    selectedPlant?.id,
+    selectedTurbine?.id,
+  ]);
+
 
   return (
     <section className="under-bar">
@@ -74,5 +103,6 @@ function UnderBar({
     </section>
   );
 }
+
 
 export default UnderBar;

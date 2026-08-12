@@ -174,33 +174,6 @@ function MainScreen() {
   });
 
   useEffect(() => {
-    if (screenMode === "turbine") {
-      if (!selectedTurbine?.id) {
-        return;
-      }
-    } else {
-      if (!underBarPlant?.id) {
-        return;
-      }
-    }
-
-    const nextEndAt = new Date();
-
-    const nextStartAt = new Date(
-      nextEndAt.getTime() - 18 * 60 * 60 * 1000
-    );
-
-    fetchPowerGeneration({
-      nextStartAt,
-      nextEndAt,
-    });
-  }, [
-    screenMode,
-    underBarPlant?.id,
-    selectedTurbine?.id,
-  ]);
-
-  useEffect(() => {
     localStorage.setItem("screenMode", screenMode);
   }, [screenMode]);
 
