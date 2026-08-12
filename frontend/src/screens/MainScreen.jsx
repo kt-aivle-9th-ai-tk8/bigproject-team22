@@ -13,6 +13,7 @@ import { useNotifications } from "../hooks/useNotifications";
 import { usePowerGeneration } from "../hooks/usePowerGeneration";
 import { useTurbineDetail } from "../hooks/useTurbineDetail";
 import { useReportStatusPolling } from "../hooks/useReportStatusPolling";
+import { useInspectionReport } from "../hooks/useInspectionReport";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -81,6 +82,20 @@ function MainScreen() {
     onGenerated: (report) => {
       alert(
         `${report?.title || "보고서"} 생성이 완료되었습니다.`
+      );
+    },
+  });
+
+  const {
+    createInspectionReport,
+    isInspectionCreating,
+    inspectionError,
+  } = useInspectionReport({
+    refreshInterval: 5000,
+
+    onGenerated: (report) => {
+      alert(
+        `${report?.title || "점검 보고서"} 생성이 완료되었습니다.`
       );
     },
   });
@@ -255,16 +270,24 @@ function MainScreen() {
     moveMode("map", null, null);
   };
 
-  const handleCreateInspectionReport = (reportData) => {
-    console.log("MainScreen에서 받은 점검 보고서 데이터:", reportData);
+  const handleCreateInspectionReport = async (
+    reportData
+  ) => {
+    if (!selectedPlant?.id) {
+      alert("발전소 정보가 없습니다.");
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append("reportKind", reportData.reportKind);
-
-    if (reportData.file) {
-      formData.append("file", reportData.file);
+    try {
+      await createInspectionReport({
+        windFarmId: selectedPlant.id,
+        reportData,
+      });
+    } catch (error) {
+      alert(error.message);
     }
   };
+
   const handleCreateOperationReport = async ({
     startDate,
     endDate,
