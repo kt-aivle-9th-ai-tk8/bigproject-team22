@@ -38,11 +38,11 @@
                 {
                     "name": "OPENAI_API_KEY",
                     "valueFrom":
-                    "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarm/prod/openai-api-key-wgpa2H::"
+                    "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarmonm/prod/openai-api-key-86HTLP"
                 },
                 {
                     "name": "DB_URL",
-                    "valueFrom":"arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarmonm/prod/report-agent-db-url"
+                    "valueFrom":"arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarmonm/prod/report-agent-db-url-d1PkGY"
                 }
             ],
             "systemControls": []
