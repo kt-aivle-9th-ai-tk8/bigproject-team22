@@ -87,8 +87,22 @@ export const useTurbineReports = ({
               report.report_type || ""
             ).toLowerCase();
 
+            const generatedDate =
+              report.generated_at
+                ? report.generated_at
+                    .slice(0, 10)
+                    .replaceAll("-", ".")
+                : "";
+
+            const displayTitle =
+              reportType === "turbine_operation"
+                ? `${generatedDate} 운영보고서`
+                : report.title;
+
             return {
               ...report,
+
+              title: displayTitle,
 
               status: reportType,
 
