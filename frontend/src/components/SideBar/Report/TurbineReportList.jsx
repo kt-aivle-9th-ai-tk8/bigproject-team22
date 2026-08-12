@@ -1,27 +1,32 @@
 import "./TurbineReportList.css";
 
+
 export const REPORT_TYPE = {
-  FAULT: "FAULT",
-  WARNING: "WARNING",
-  OPERATION: "OPERATION",
-  REPAIR: "REPAIR",
+  TURBINE_OPERATION: "turbine_operation",
+  DEFECT_DIAGNOSIS: "defect_diagnosis",
+  ANOMALY_EVENT: "anomaly_event",
 };
+
 
 const REPORT_TYPE_LABEL = {
-  [REPORT_TYPE.FAULT]: "결함 보고서",
-  [REPORT_TYPE.WARNING]: "경고 보고서",
-  [REPORT_TYPE.OPERATION]: "운영 보고서",
-  [REPORT_TYPE.REPAIR]: "수리 보고서",
+  [REPORT_TYPE.TURBINE_OPERATION]: "터빈별 운영 리포트",
+  [REPORT_TYPE.DEFECT_DIAGNOSIS]: "결함 진단 리포트",
+  [REPORT_TYPE.ANOMALY_EVENT]: "이상 감지 리포트",
 };
+
 
 const REPORT_TYPE_ICON = {
-  [REPORT_TYPE.FAULT]: "🚨",
-  [REPORT_TYPE.WARNING]: "⚠️",
-  [REPORT_TYPE.OPERATION]: "📊",
-  [REPORT_TYPE.REPAIR]: "🔧",
+  [REPORT_TYPE.TURBINE_OPERATION]: "📊",
+  [REPORT_TYPE.DEFECT_DIAGNOSIS]: "🚨",
+  [REPORT_TYPE.ANOMALY_EVENT]: "⚠️",
 };
 
-function TurbineReportList({ items = [], onSelectReport }) {
+
+function TurbineReportList({
+  items = [],
+  onSelectReport,
+  onMoreClick,
+}) {
   return (
     <div className="turbine-report-list">
       <div className="turbine-report-items">
@@ -29,27 +34,44 @@ function TurbineReportList({ items = [], onSelectReport }) {
           <div
             className="turbine-report-item"
             key={item.id}
-            onClick={() => onSelectReport?.(item)}
+            onClick={() =>
+              onSelectReport?.(item)
+            }
           >
             <div className="turbine-report-date">
-              {item.date} | {item.time}
+              {item.title}
             </div>
+
 
             <div
               className={`turbine-report-icon ${item.status?.toLowerCase()}`}
-              title={REPORT_TYPE_LABEL[item.status]}
+              title={
+                REPORT_TYPE_LABEL[
+                  item.status
+                ]
+              }
             >
-              {REPORT_TYPE_ICON[item.status]}
+              {
+                REPORT_TYPE_ICON[
+                  item.status
+                ]
+              }
             </div>
           </div>
         ))}
       </div>
 
-      <button className="turbine-report-more-button">
+
+      <button
+        className="turbine-report-more-button"
+        type="button"
+        onClick={onMoreClick}
+      >
         전체보기
       </button>
     </div>
   );
 }
+
 
 export default TurbineReportList;

@@ -13,6 +13,8 @@ import { useNotifications } from "../hooks/useNotifications";
 import { usePowerGeneration } from "../hooks/usePowerGeneration";
 import { useTurbineDetail } from "../hooks/useTurbineDetail";
 import { useReportStatusPolling } from "../hooks/useReportStatusPolling";
+import { useInspectionReport } from "../hooks/useInspectionReport";
+import { useTurbineReports } from "../hooks/useTurbineReports";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -66,6 +68,16 @@ function MainScreen() {
     refreshInterval: 10000,
   });
 
+  // 터빈 상세 페이지 보고서 리스트 api
+  const {
+    reportItems: turbineReportItems,
+  } = useTurbineReports({
+    mode: screenMode,
+    windFarmId: selectedPlant?.id,
+    turbineId: selectedTurbine?.id,
+    refreshInterval: 10000,
+  });
+
   // 알림 보고서 api
   const {
     notifications
@@ -81,6 +93,20 @@ function MainScreen() {
     onGenerated: (report) => {
       alert(
         `${report?.title || "보고서"} 생성이 완료되었습니다.`
+      );
+    },
+  });
+
+  const {
+    createInspectionReport,
+    isInspectionCreating,
+    inspectionError,
+  } = useInspectionReport({
+    refreshInterval: 5000,
+
+    onGenerated: (report) => {
+      alert(
+        `${report?.title || "점검 보고서"} 생성이 완료되었습니다.`
       );
     },
   });
@@ -159,33 +185,6 @@ function MainScreen() {
   });
 
   useEffect(() => {
-    if (screenMode === "turbine") {
-      if (!selectedTurbine?.id) {
-        return;
-      }
-    } else {
-      if (!underBarPlant?.id) {
-        return;
-      }
-    }
-
-    const nextEndAt = new Date();
-
-    const nextStartAt = new Date(
-      nextEndAt.getTime() - 18 * 60 * 60 * 1000
-    );
-
-    fetchPowerGeneration({
-      nextStartAt,
-      nextEndAt,
-    });
-  }, [
-    screenMode,
-    underBarPlant?.id,
-    selectedTurbine?.id,
-  ]);
-
-  useEffect(() => {
     localStorage.setItem("screenMode", screenMode);
   }, [screenMode]);
 
@@ -255,16 +254,24 @@ function MainScreen() {
     moveMode("map", null, null);
   };
 
-  const handleCreateInspectionReport = (reportData) => {
-    console.log("MainScreen에서 받은 점검 보고서 데이터:", reportData);
+  const handleCreateInspectionReport = async (
+    reportData
+  ) => {
+    if (!selectedPlant?.id) {
+      alert("발전소 정보가 없습니다.");
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append("reportKind", reportData.reportKind);
-
-    if (reportData.file) {
-      formData.append("file", reportData.file);
+    try {
+      await createInspectionReport({
+        windFarmId: selectedPlant.id,
+        reportData,
+      });
+    } catch (error) {
+      alert(error.message);
     }
   };
+
   const handleCreateOperationReport = async ({
     startDate,
     endDate,
@@ -340,6 +347,7 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           windFarmDetail={windFarmDetail}
           turbineDetail={turbineDetail}
+          turbineReportItems={turbineReportItems}
           notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}

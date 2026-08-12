@@ -69,6 +69,7 @@ export const usePowerGeneration = ({
       const convertedPowerData = powerList.map((item) => ({
         measuredAt: item.time,
         powerGeneration: item.power ?? 0,
+        isPowerGenerationNull: item.power == null,
       }));
 
       setPowerData(convertedPowerData);

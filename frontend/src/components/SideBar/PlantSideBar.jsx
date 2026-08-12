@@ -101,7 +101,7 @@ function PlantSideBar({
 
         {reportMode === "inspection" && (
           <InspectionReportBox
-            turbineOptions={turbineItems.map((turbine) => turbine.name)}
+            turbineOptions={turbineItems}
             onCreateReport={(reportData) => {
               onCreateInspectionReport?.({
                 ...reportData,

@@ -5,8 +5,11 @@
 }
 .turbine-report-items {
   width: 100%;
+  height: 180px;
   display: flex;
   flex-direction: column;
+
+  overflow-y: auto;
 }
 
 .turbine-report-item {
