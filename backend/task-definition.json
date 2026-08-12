@@ -26,7 +26,7 @@
                 },
                 {
                     "name": "DB_URL",
-                    "value": "jdbc:mysql://db-windfarmonm.clicg40gq1nb.ap-northeast-2.rds.amazonaws.com:3306/db-windfarmonm"
+                    "value": "jdbc:mysql://db-windfarmonm.clicg40gq1nb.ap-northeast-2.rds.amazonaws.com:3306/db-windfarmonm?rewriteBatchedStatements=true"
                 },
                 {
                     "name": "DB_USERNAME",
