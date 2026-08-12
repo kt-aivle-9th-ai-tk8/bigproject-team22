@@ -87,7 +87,7 @@ function MainScreen() {
 
   const {
     createOperationReport,
-    reportDetail,
+    reportId: operationReportId,
     isReportCreating,
   } = useReportStatusPolling({
     refreshInterval: 5000,
@@ -99,14 +99,9 @@ function MainScreen() {
     },
   });
 
-  const currentReportStatus = String(
-    reportDetail?.status || ""
-  ).toLowerCase();
-
   const isOperationReportPending =
     isReportCreating ||
-    currentReportStatus === "pending" ||
-    currentReportStatus === "processing";
+    Boolean(operationReportId);
 
   const {
     createInspectionReport,
@@ -363,6 +358,7 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           windFarmDetail={windFarmDetail}
           turbineDetail={turbineDetail}
+          turbineReportItems={turbineReportItems}
           notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}

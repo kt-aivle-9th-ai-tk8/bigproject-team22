@@ -101,8 +101,8 @@
 }
 
 .inspection-report-box .report-create-button:disabled {
-  background-color: var(--color-divider);
-  border-color: var(--color-dark-gray);
+  background-color: var(--color-light-divider);
+  border-color: var(--color-divider);
   color: #666666;
 
   cursor: default;
