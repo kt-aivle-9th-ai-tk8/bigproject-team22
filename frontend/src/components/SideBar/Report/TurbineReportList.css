@@ -5,10 +5,10 @@
 }
 .turbine-report-items {
   width: 100%;
+  height: 180px;
   display: flex;
   flex-direction: column;
 
-  max-height: 180px;
   overflow-y: auto;
 }
 
