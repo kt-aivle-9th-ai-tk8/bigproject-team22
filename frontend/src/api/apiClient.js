@@ -12,7 +12,6 @@ export const apiFetch = async (url, options = {}) => {
   }
 
   const isSessionExpired =
-    response.status === 403 ||
     response.status === 404 ||
     responseBody?.code === "A001";
 
