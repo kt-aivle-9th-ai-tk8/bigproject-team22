@@ -167,7 +167,11 @@ function InspectionReportPopup({
           />
 
           <InspectionTurbineField
-            turbineOptions={turbineOptions}
+            turbineOptions={turbineOptions.map((turbine) =>
+              typeof turbine === "string"
+                ? turbine
+                : turbine.name || turbine.code
+            )}
             turbines={turbines}
             isFixedTurbine={isFixedTurbine}
             onChangeTurbine={handleTurbineChange}

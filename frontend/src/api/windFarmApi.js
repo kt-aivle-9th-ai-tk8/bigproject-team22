@@ -1,3 +1,5 @@
+import { apiFetch } from "./apiClient";
+
 export const fetchWindFarms = async ({
   location,
   power,
@@ -25,7 +27,7 @@ export const fetchWindFarms = async ({
 
   console.log("[fetchWindFarms] 요청 URL:", requestUrl);
 
-  const response = await fetch(requestUrl, {
+  const response = await apiFetch(requestUrl, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -198,7 +200,7 @@ export const fetchWindFarmPower = async ({
 
   console.log("[fetchWindFarmPower] 요청 URL:", requestUrl);
 
-  const response = await fetch(requestUrl, {
+  const response = await apiFetch(requestUrl, {
     method: "GET",
     credentials: "include",
     headers: {

@@ -14,6 +14,7 @@ function TurbineSideBar({
   selectedTurbine,
   turbineDetail,
   onCreateInspectionReport,
+  onCreateOperationReport,
 }) {
   const [reportMode, setReportMode] = useState("operation");
 
@@ -79,12 +80,6 @@ function TurbineSideBar({
       time: "14:00",
       status: REPORT_TYPE.WARNING,
     },
-    {
-      id: 5,
-      date: "2026-06-24",
-      time: "10:20",
-      status: REPORT_TYPE.REPAIR,
-    },
   ];
 
   return (
@@ -131,22 +126,16 @@ function TurbineSideBar({
             reportMode={reportMode}
             startDate={today}
             endDate={today}
-            onCreateReport={(reportData) => {
-              console.log("터빈 운영 보고서 생성 데이터:", {
-                ...reportData,
-                plantId: selectedPlant?.id,
-                plantName,
-                turbineId: selectedTurbine?.id,
-                turbineName,
-              });
-            }}
+            onCreateReport={onCreateOperationReport}
           />
         )}
 
         {reportMode === "inspection" && (
           <InspectionReportBox
             turbineName={turbineName}
-            turbineOptions={[turbineName]}
+            turbineOptions={
+              selectedTurbine ? [selectedTurbine] : []
+            }
             initialData={{
               turbines: [turbineName],
               fixedTurbine: true,
@@ -158,7 +147,6 @@ function TurbineSideBar({
                 plantName,
                 turbineId: selectedTurbine?.id,
                 turbineName,
-                turbines: [turbineName],
               });
             }}
           />

@@ -13,7 +13,7 @@ function SideBar({
   onSelectPlant,
   onSelectTurbine,
   onCreateInspectionReport,
-  onCreateRepairReport,
+  onCreateOperationReport,
 }) {
   return (
     <aside className="side-bar">
@@ -30,7 +30,7 @@ function SideBar({
           selectedPlant={selectedPlant}
           windFarmDetail={windFarmDetail}
           onSelectTurbine={onSelectTurbine}
-          onCreateRepairReport={onCreateRepairReport}
+          onCreateOperationReport={onCreateOperationReport}
         />
       )}
 
@@ -40,6 +40,7 @@ function SideBar({
           selectedTurbine={selectedTurbine}
           turbineDetail={turbineDetail}
           onCreateInspectionReport={onCreateInspectionReport}
+          onCreateOperationReport={onCreateOperationReport}
         />
       )}
     </aside>

@@ -1,7 +1,7 @@
-"""보고서 API 라우트 (공유 — main.py가 /api/v1/reports 로 마운트).
+"""보고서 API 라우트 (공유 — main.py가 /api-internal/reports 로 마운트).
 
 입구는 제네릭 하나뿐이다: report_type + event_id(+선택 기간)로 4종 전부 생성.
-  POST /api/v1/reports
+  POST /api-internal/reports
       {"report_type": "operation", "event_id": 11,
        "period_start": "2025-03-01", "period_end": "2025-05-31"}
 

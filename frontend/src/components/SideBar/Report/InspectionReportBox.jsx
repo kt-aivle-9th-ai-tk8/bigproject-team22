@@ -59,6 +59,23 @@ function InspectionReportBox({
       return;
     }
 
+    const turbineIds = inspectionInfo.turbines
+      .map((turbineName) => {
+        const turbine = turbineOptions.find((option) => {
+          if (typeof option === "string") {
+            return false;
+          }
+
+          return (
+            option.name === turbineName ||
+            option.code === turbineName
+          );
+        });
+
+        return turbine?.id;
+      })
+      .filter((id) => id !== undefined && id !== null);
+
     const reportData = {
       reportKind: "inspection",
       inspectionPeriod:
@@ -71,12 +88,13 @@ function InspectionReportBox({
       endTime: inspectionInfo.endTime,
       startDateTime: inspectionInfo.startDateTime,
       endDateTime: inspectionInfo.endDateTime,
-      turbines: inspectionInfo.turbines,
+      turbines: turbineIds,
+      turbineNames: inspectionInfo.turbines,
       turbineName:
         inspectionInfo.turbines.length > 0
           ? inspectionInfo.turbines.join(", ")
           : turbineName,
-      content: inspectionInfo.content,
+      //content: inspectionInfo.content,
       additionalItems: inspectionInfo.additionalItems,
       files,
       filesBySurface: inspectionInfo.filesBySurface || {},
