@@ -131,6 +131,7 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
 }
 
 function AlarmReportList({ alarm, onSelectReport }) {
+  console.log("알림 리스트 데이터:", alarm);
   if (alarm.length === 0) {
     return <div className="alarm-empty">등록된 알림이 없습니다.</div>;
   }
@@ -145,7 +146,9 @@ function AlarmReportList({ alarm, onSelectReport }) {
           onClick={() => onSelectReport(report)}
         >
           <div className="alarm-list-main">
-            <span className="alarm-title">{report.title}</span>
+            <span className="alarm-title">
+              {report.report_title || report.title || "제목 없음"}
+            </span>
           </div>
 
           <div className="alarm-list-sub">
