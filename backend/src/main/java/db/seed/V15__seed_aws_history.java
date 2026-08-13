@@ -33,11 +33,21 @@ public class V15__seed_aws_history extends BaseJavaMigration {
     static final String RESOURCE = "db/seed/aws_hourly.csv.gz";
     private static final int BATCH_SIZE = 5_000;
 
+    /**
+     * 번들 CSV 의 행 수 계약. CSV 와 이 마이그레이션은 같은 커밋에 얼어붙는 불변 쌍이므로
+     * 하드코딩이 맞다 — 리소스가 잘리거나 다른 버전이 클래스패스에 오르면 여기서 즉시 중단된다.
+     */
+    static final long EXPECTED_SOURCE_ROWS = 140_122;
+
     @Override
     public void migrate(Context context) throws Exception {
         Connection conn = context.getConnection();
 
         long inserted = loadCsv(conn);
+        if (inserted != EXPECTED_SOURCE_ROWS) {
+            throw new IllegalStateException("AWS 시드 행 수 불일치: expected=" + EXPECTED_SOURCE_ROWS
+                    + ", actual=" + inserted + " — 리소스가 불완전하다(부분 적재는 DML 이라 롤백된다)");
+        }
         long copied = copy2025To2026(conn);
         System.out.printf("[V15] aws_record 적재 %,d행 + 2026 복사 %,d행%n", inserted, copied);
 

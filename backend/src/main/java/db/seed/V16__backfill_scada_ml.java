@@ -34,6 +34,9 @@ public class V16__backfill_scada_ml extends BaseJavaMigration {
     static final String RESOURCE = "db/seed/ml_backfill.csv.gz";
     private static final int BATCH_SIZE = 5_000;
 
+    /** 번들 CSV 의 행 수 계약(V15 와 동일 논리 — CSV·마이그레이션은 같은 커밋의 불변 쌍). */
+    static final long EXPECTED_SOURCE_ROWS = 917_712;
+
     private static final String ML_SET = "air_density = ?, norm_wind_speed = ?, is_stopped = ?,"
             + " train_mask = ?, expected_power_pooled = ?, expected_power_unit = ?";
 
@@ -61,8 +64,14 @@ public class V16__backfill_scada_ml extends BaseJavaMigration {
      * <p>
      * CSV: {@code turbine_id,recorded_at,air_density,norm_wind_speed,is_stopped,train_mask,
      * expected_power_pooled,expected_power_unit} (헤더 없음). 8열이 아니면 즉시 중단.
-     * INSERT 가 아니라 UPDATE 다 — 행이 없는 키는 raw 시드(V11/V14)와 어긋난 것이므로
-     * 조용히 만들어내지 않고 개수 불일치로 드러나게 둔다(사후검증 로그).
+     * INSERT 가 아니라 UPDATE 다 — 행이 없는 키를 조용히 만들어내지 않는다.
+     * <p>
+     * <b>키 정합 검증</b>: CSV 행 수가 계약({@link #EXPECTED_SOURCE_ROWS})과 다르거나,
+     * UPDATE 가 매칭한 행 수가 CSV 행 수와 다르면(= raw 시드 V11/V14 와 키집합이 어긋난 CSV)
+     * 예외로 중단한다 — DML 이라 전부 롤백된다. 매칭 수는 배치 결과 합으로 센다. Connector/J 는
+     * 기본(useAffectedRows=false)에서 found-rows 를 돌려주므로 "값이 같아 변경 0" 인 행도 1 로
+     * 집계된다(결측 NULL→NULL 행 포함). 드라이버가 개수 대신 SUCCESS_NO_INFO 를 돌려주는 설정
+     * (rewriteBatchedStatements 등)이면 이 검증만 건너뛰고 로그로 알린다.
      */
     static long applyCsv(Connection conn) throws Exception {
         InputStream in = V16__backfill_scada_ml.class.getClassLoader().getResourceAsStream(RESOURCE);
@@ -72,6 +81,8 @@ public class V16__backfill_scada_ml extends BaseJavaMigration {
         String sql = "UPDATE scada_record SET " + ML_SET
                 + " WHERE turbine_id = ? AND recorded_at = ?";
         long count = 0;
+        long matched = 0;
+        boolean countable = true;
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new GZIPInputStream(in), StandardCharsets.UTF_8));
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -97,7 +108,9 @@ public class V16__backfill_scada_ml extends BaseJavaMigration {
                 ps.addBatch();
                 count++;
                 if (++batch == BATCH_SIZE) {
-                    ps.executeBatch();
+                    long[] r = tallyBatch(ps);
+                    matched += r[0];
+                    countable &= r[1] == 1;
                     batch = 0;
                 }
                 if (count % 100_000 == 0) {
@@ -105,10 +118,35 @@ public class V16__backfill_scada_ml extends BaseJavaMigration {
                 }
             }
             if (batch > 0) {
-                ps.executeBatch();
+                long[] r = tallyBatch(ps);
+                matched += r[0];
+                countable &= r[1] == 1;
             }
         }
+        if (count != EXPECTED_SOURCE_ROWS) {
+            throw new IllegalStateException("ML 백필 CSV 행 수 불일치: expected=" + EXPECTED_SOURCE_ROWS
+                    + ", actual=" + count + " — 리소스가 불완전하다");
+        }
+        if (countable && matched != count) {
+            throw new IllegalStateException("ML 백필 키 불일치: CSV " + count + "행 중 "
+                    + matched + "행만 scada_record 에 존재 — raw 시드(V11/V14)와 CSV 버전이 어긋났다");
+        }
+        if (!countable) {
+            System.out.println("[V16] 드라이버가 행 수를 보고하지 않아(SUCCESS_NO_INFO) 키 정합 검증을 건너뛴다");
+        }
         return count;
+    }
+
+    /** 배치 실행 후 [매칭 행 합, 집계가능 여부(1/0)] 를 돌려준다. */
+    private static long[] tallyBatch(PreparedStatement ps) throws Exception {
+        long sum = 0;
+        for (int c : ps.executeBatch()) {
+            if (c < 0) {                      // Statement.SUCCESS_NO_INFO 등 — 개수 미보고
+                return new long[]{0, 0};
+            }
+            sum += c;
+        }
+        return new long[]{sum, 1};
     }
 
     /** 2025 파생값을 1년 밀어 2026 행에 복사한다(평년끼리 1:1 — SCADA/AWS 복사와 동일 근거). */
