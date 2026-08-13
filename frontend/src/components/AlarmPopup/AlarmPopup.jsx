@@ -91,7 +91,14 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
       >
         <div className="alarm-popup-header">
           <h2 id="alarm-popup-title">
-            {selectedReport?.report_title ?? "알림 보고서 리스트"}
+            {selectedReport
+              ? (
+                  reportDetail?.title ||
+                  selectedReport?.title ||
+                  selectedReport?.report_title ||
+                  "보고서"
+                )
+              : "알림 보고서 리스트"}
           </h2>
 
           <button
