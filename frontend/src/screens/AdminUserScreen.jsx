@@ -152,7 +152,6 @@ const pending = userList
     }
   };
 
-  // --- [4. 강제 로그아웃 - DELETE /api/admin/users/{user_id}/session] ---
   const handleForceLogout = async (userId, name) => {
     try {
       await axios.delete(`/api/admin/users/${userId}/session`);
@@ -163,7 +162,6 @@ const pending = userList
     }
   };
 
-  // --- [5. 차단 해제 - PATCH /api/admin/users/{user_id}] ---
   const handleUnblockUser = async (id, name) => {
     if (window.confirm(`${name} 님의 로그인 차단을 해제하시겠습니까?`)) {
       try {
@@ -179,7 +177,6 @@ const pending = userList
     }
   };
 
-  // --- [6. 담당 발전소 개별 변경 - PATCH /api/admin/users/{user_id}] ---
   const handleTogglePlantInList = async (userId, plantName) => {
     const targetUser = approvedUsers.find(u => u.id === userId);
     if (!targetUser) return;
