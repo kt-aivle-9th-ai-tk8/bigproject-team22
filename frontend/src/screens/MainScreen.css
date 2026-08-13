@@ -110,7 +110,7 @@
   justify-content: flex-end;
   gap: 10px;
 
-  transform: translate(12px, 12px);
+  transform: translate(20px, 12px);
 }
 
 .report-complete-actions button {
