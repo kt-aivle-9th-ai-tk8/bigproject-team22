@@ -2,13 +2,85 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import axios from "axios";
 
 import "./ReportEditScreen.css";
 
 import { useReportDetail } from "../hooks/useReportDetail";
 import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
-import { useDeleteReport } from "../hooks/useDeleteReport"; // 삭제 훅 (프로젝트 경로에 맞춰 사용)
+
+const formatReportType = (type) => {
+  if (!type) return "보고서";
+  const upperType = String(type).toUpperCase();
+  switch (upperType) {
+    case "WIND_FARM_OPERATION":
+      return "단지 운영보고서";
+    case "TURBINE_OPERATION":
+      return "터빈 운영보고서";
+    case "ANOMALY_EVENT":
+    case "ANOMALY":
+      return "이상 분석보고서";
+    case "DEFECT":
+      return "결함 보고서";
+    default:
+      return type;
+  }
+};
+
+function ReportEditScreen() {
+  const { reportId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [activeReport, setActiveReport] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const { reports: allReports } = useReportList();
+
+  const [formData, setFormData] = useState({
+    title: "",
+    summary: "",
+    context: "",
+  });
+
+  const targetReportId =
+    reportId ||
+    location.state?.report?.id ||
+    location.state?.report?.report_id;
+
+  const {
+    reportDetail,
+    loading,
+    refetch: refetchReportDetail,
+  } = useReportDetail({
+    reportId: targetReportId,
+  });
+
+  const { updateReport, isUpdating } = useUpdateReport();
+
+  // 보고서 삭제 처리
+  const handleDelete = async () => {
+    const currentId =
+      reportId || (activeReport && (activeReport.id || activeReport.report_id));
+    if (!currentId) return;
+
+    const isConfirmed = window.confirm("해당 보고서를 삭제하시겠습니까?");
+    if (!isConfirmed) return;
+
+    try {
+      await axios.delete(`/api/reports/${currentId}`);
+      alert("보고서가 삭제되었습니다.");
+      navigate("/reportlist");
+    } catch (error) {
+      console.error("보고서 삭제 실패:", error);
+      alert(
+        error.response?.data?.message ||
+          error.message ||
+          "보고서 삭제 중 오류가 발생했습니다."
+      );
+    }
+  };
 
 // 한글 매핑 함수
 const formatReportType = (type) => {
