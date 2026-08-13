@@ -5,8 +5,8 @@
 }
 
 .wind-speed-unit {
-  font-size: 16px;
-  color: #555;
+  font-size: 18px;
+  color: #000;
 }
 
 #wind-speed-number {
@@ -16,7 +16,7 @@
   padding: 0 10px;
 
   border: 1px solid #d0d5dd;
-  border-radius: 8px;
+  border-radius: 5px;
 
   background-color: #ffffff;
   color: #222222;

@@ -189,3 +189,9 @@
   transform: scale(1.18);
   background-color: #ffea00;
 }
+
+.turbine-3d-field .wind-speed-unit {
+  font-size: 18px;
+  color: #000;
+  text-align: left;
+}
