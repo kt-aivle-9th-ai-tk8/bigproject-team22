@@ -7,7 +7,6 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* 상단 헤더 영역 */
 .edit-header {
   display: flex;
   justify-content: space-between;
@@ -28,7 +27,6 @@
   gap: 12px;
 }
 
-/* 버튼 스타일 (참고 이미지의 깔끔한 둥근 캡슐형 적용) */
 .btn-primary {
   background-color: #3b82f6;
   color: #ffffff;
@@ -64,7 +62,6 @@
   color: #1e293b;
 }
 
-/* 편집 메인 카드 (참고 이미지의 모던 라운드 카드 레이아웃) */
 .edit-content-card {
   background: #ffffff;
   border-radius: 24px;
@@ -91,7 +88,7 @@
   line-height: 1.4;
 }
 
-/* 폼 배치 레이아웃 */
+/* 폼 레이아웃 */
 .edit-grid-layout {
   display: flex;
   flex-direction: column;
@@ -101,12 +98,12 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-/* 섹션 라벨 (참고 이미지의 포인트 아이콘 느낌 강조) */
+
 .form-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: #334155;
   display: flex;
@@ -123,19 +120,19 @@
   background-color: #3b82f6;
 }
 
-/* 입력 텍스트 영역 (참고 이미지의 연한 소프트 배경 입력창 스타일) */
 .styled-textarea {
   width: 100%;
-  padding: 16px 20px;
+  padding: 18px 20px;
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   font-size: 14px;
   color: #1e293b;
-  line-height: 1.6;
+  line-height: 1.7;
   box-sizing: border-box;
   transition: all 0.2s ease;
   resize: vertical;
+  font-family: inherit;
 }
 
 .styled-textarea:focus {
@@ -145,29 +142,31 @@
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
-/* 읽기 전용 상자 (참고 이미지의 매끄러운 폼 영역) */
 .readonly-box {
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 20px 24px;
+  padding: 24px;
   font-size: 14px;
   color: #334155;
-  line-height: 1.7;
+  line-height: 1.8;
+  word-break: break-word;
 }
 
-/* AI 소견 박스 */
-.ai-box {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 14px;
-  padding: 20px 24px;
-  color: #166534;
-  font-size: 14px;
-  line-height: 1.7;
+.readonly-box p {
+  margin-top: 0;
+  margin-bottom: 12px;
 }
 
-/* 하단 목록 섹션 */
+.readonly-box p:last-child {
+  margin-bottom: 0;
+}
+
+.readonly-box ul, .readonly-box ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
 .bottom-list-section {
   margin-top: 40px;
 }
@@ -200,7 +199,6 @@
   color: #3b82f6;
 }
 
-/* 보고서 카드리스트 */
 .report-list {
   display: flex;
   flex-direction: column;
@@ -258,7 +256,6 @@
   border-radius: 20px;
 }
 
-/* 배지 색상 스타일 */
 .type-badge.운영보고서 {
   background-color: #eff6ff;
   color: #2563eb;
