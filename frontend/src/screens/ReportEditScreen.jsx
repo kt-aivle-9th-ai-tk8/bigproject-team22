@@ -10,7 +10,7 @@ import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
 
 function ReportEditScreen() {
-  const { reportId } = useParams(); // URL 파라미터에서 reportId 추출 (/reports/:reportId/edit)
+  const { reportId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
