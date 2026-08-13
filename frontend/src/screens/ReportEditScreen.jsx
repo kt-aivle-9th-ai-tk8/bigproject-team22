@@ -168,7 +168,7 @@ const handleDelete = async () => {
           ) : (
   <>
     <button className="btn-primary" onClick={() => setIsEditing(true)}>
-      ✏️ 보고서 수정
+      보고서 수정
     </button>
     <button className="btn-delete-text" onClick={handleDelete}>
       보고서 삭제
@@ -193,7 +193,7 @@ const handleDelete = async () => {
 
             <div className="edit-grid-layout">
               <div className="form-group">
-                <label className="form-label">보고서 요약 및 상세 내용</label>
+                <label className="form-label">보고서 요약</label>
                 {isEditing ? (
                   <textarea
                     name="summary"
