@@ -1,4 +1,4 @@
-import "./Turbine3DSidbar.css";
+import "./Turbine3DSidebar.css";
 
 const STATUS_TEXT = {
   "manual-stop": "수동 정지",
