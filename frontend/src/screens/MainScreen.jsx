@@ -447,6 +447,7 @@ function MainScreen() {
       {generatedReport && (
         <div className="report-complete-overlay">
           <div className="report-complete-popup">
+
             <p className="report-complete-message">
               {generatedReport.displayTitle} 보고서 생성이 완료되었습니다.
             </p>

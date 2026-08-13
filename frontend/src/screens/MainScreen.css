@@ -68,10 +68,13 @@
   z-index: 9999;
 
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 
+  padding-top: 0px;
+
   background-color: rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
 }
 
 .report-complete-popup {
@@ -80,19 +83,11 @@
   padding: 28px;
 
   background-color: #ffffff;
-  border-radius: 12px;
+  border-radius: 7px;
 
   box-sizing: border-box;
 
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
-}
-
-.report-complete-title {
-  margin: 0 0 18px;
-
-  font-size: 18px;
-  font-weight: 700;
-  color: #000000;
 }
 
 .report-complete-message {
