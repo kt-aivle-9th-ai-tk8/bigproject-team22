@@ -33,16 +33,16 @@ export default function AdminUserScreen() {
     setErrorMessageModal(serverMessage);
   };
 
-  // --- [1. 백엔드 API 목록 조회 - GET /api/admin/users] ---
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/admin/users');
-      const data = response.data?.data || response.data || [];
 
-      // BE 응답 매핑 (가입대기: PENDING, 일반: APPROVED)
-      const pending = data
-        .filter(u => u.role === 'GUEST' || u.status === 'PENDING')
+const rawData = response.data?.data || response.data?.users || response.data;
+const userList = Array.isArray(rawData) ? rawData : [];
+
+const pending = userList
+  .filter(u => u.role === 'GUEST' || u.status === 'PENDING')
         .map(u => ({
           id: u.id || u.user_id,
           name: u.name || u.username,
