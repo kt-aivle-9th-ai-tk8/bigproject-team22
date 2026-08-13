@@ -318,24 +318,37 @@ function MainScreen() {
         ? "TURBINE_OPERATION"
         : "WIND_FARM_OPERATION";
 
+
+    const requestData = {
+      windFarmId: selectedPlant.id,
+
+      turbineId:
+        screenMode === "turbine"
+          ? selectedTurbine.id
+          : undefined,
+
+      periodStart: `${startDate}T00:00:00`,
+      periodEnd: `${endDate}T23:59:59`,
+
+      reportType,
+    };
+
+
+    console.log(
+      "실제 보고서 생성 요청 데이터:",
+      requestData
+    );
+
+
     try {
-      await createOperationReport({
-        windFarmId: selectedPlant.id,
-
-        turbineId:
-          screenMode === "turbine"
-            ? selectedTurbine.id
-            : undefined,
-
-        periodStart: `${startDate}T00:00:00`,
-        periodEnd: `${endDate}T23:59:59`,
-
-        reportType,
-      });
+      await createOperationReport(
+        requestData
+      );
     } catch (error) {
       alert(error.message);
     }
   };
+
   const handleNavigateUser = () => {
     navigate("/user");
   };
