@@ -10,6 +10,7 @@ import { useReportDetail } from "../hooks/useReportDetail";
 import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
 
+// 1. 보고서 유형 영문 -> 한글 매핑 함수
 const formatReportType = (type) => {
   if (!type) return "보고서";
   const upperType = String(type).toUpperCase();
@@ -26,6 +27,16 @@ const formatReportType = (type) => {
     default:
       return type;
   }
+};
+
+// 2. ISO 날짜 포맷팅 함수 (yyyy-mm-dd hh:mm)
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  if (dateStr.includes("T")) {
+    const [date, time] = dateStr.split("T");
+    return `${date} ${time.slice(0, 5)}`;
+  }
+  return dateStr;
 };
 
 function ReportEditScreen() {
@@ -82,96 +93,13 @@ function ReportEditScreen() {
     }
   };
 
-// 한글 매핑 함수
-const formatReportType = (type) => {
-  if (!type) return "보고서";
-  const upperType = String(type).toUpperCase();
-  switch (upperType) {
-    case "WIND_FARM_OPERATION":
-      return "단지 운영보고서";
-    case "TURBINE_OPERATION":
-      return "터빈 운영보고서";
-    case "ANOMALY_EVENT":
-    case "ANOMALY":
-      return "이상 분석보고서";
-    case "DEFECT":
-      return "결함 보고서";
-    default:
-      return type;
-  }
-};
-
-// ISO 날짜 문자열 포맷팅 (yyyy-mm-dd hh:mm)
-const formatDate = (dateStr) => {
-  if (!dateStr) return "";
-  if (dateStr.includes("T")) {
-    const [date, time] = dateStr.split("T");
-    return `${date} ${time.slice(0, 5)}`;
-  }
-  return dateStr;
-};
-
-function ReportEditScreen() {
-  const { reportId } = useParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // 상단 메인 보고서 상세 데이터
-  const [activeReport, setActiveReport] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-
-  const { reports: allReports } = useReportList();
-
-  const [formData, setFormData] = useState({
-    title: "",
-    summary: "",
-    context: "",
-  });
-
-  const targetReportId =
-    reportId ||
-    location.state?.report?.id ||
-    location.state?.report?.report_id;
-
-  const {
-    reportDetail,
-    loading,
-    refetch: refetchReportDetail,
-  } = useReportDetail({
-    reportId: targetReportId,
-  });
-
-  const { updateReport, isUpdating } = useUpdateReport();
-  const { deleteReport } = useDeleteReport(); // 백엔드 삭제 함수
-
   const handleCancelEdit = () => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData({
+      title: reportDetail?.title || "",
       summary: reportDetail?.context || "",
       context: reportDetail?.context || "",
-    }));
+    });
     setIsEditing(false);
-  };
-
-  // 보고서 삭제 처리
-  const handleDelete = async () => {
-    const currentId =
-      reportId || (activeReport && (activeReport.id || activeReport.report_id));
-    if (!currentId) return;
-
-    const isConfirmed = window.confirm("해당 보고서를 삭제하시겠습니까?");
-    if (!isConfirmed) return;
-
-    try {
-      if (typeof deleteReport === "function") {
-        await deleteReport(currentId);
-      }
-      alert("보고서가 삭제되었습니다.");
-      navigate("/reportlist");
-    } catch (error) {
-      console.error("보고서 삭제 실패:", error);
-      alert(error.message || "보고서 삭제 중 오류가 발생했습니다.");
-    }
   };
 
   useEffect(() => {
@@ -179,7 +107,6 @@ function ReportEditScreen() {
 
     setActiveReport(reportDetail);
 
-    // 백엔드 다양한 필드명 호환
     const plantStr =
       reportDetail.plant_name ||
       reportDetail.plant ||
@@ -324,7 +251,6 @@ function ReportEditScreen() {
                   />
                 ) : (
                   <div className="readonly-box">
-                    {/* GFM 플러그인 적용하여 표(Table) 정상 출력 */}
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {formData.summary || "작성된 보고서 내용이 없습니다."}
                     </ReactMarkdown>
@@ -357,7 +283,6 @@ function ReportEditScreen() {
               ? activeReport.id || activeReport.report_id
               : null;
 
-            // 백엔드 데이터 필드 파싱
             const plantName =
               report.plant_name ||
               report.plant ||
