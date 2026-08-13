@@ -6,6 +6,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.applicatio
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.application.port.ReportAssetPort;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.Report;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.ReportRepository;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.ReportType;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -66,6 +68,27 @@ public class ReportCommandService {
             // 단지/터빈 FK 또는 (터빈,단지) 복합 FK 위반. 어느 참조가 문제인지는 구분하지 않는다.
             throw new BusinessException(ErrorCode.INVALID_REPORT_TARGET);
         }
+    }
+
+    /**
+     * 결함 진단 보고서 행 생성(<b>내부 전용</b> — 점검 세션 생성이 같은 트랜잭션에서 부른다).
+     * <p>
+     * 공개 생성 API 와 달리 ① 인가·유형 검증을 하지 않고(호출측이 담당 인가를 이미 통과), ② <b>생성 파이프라인
+     * 이벤트를 발행하지 않는다</b> — 결함 보고서의 본문은 결함 적재가 끝난 뒤에야 만들 수 있으므로, 생성 트리거는
+     * 결함 적재 완료 시점(P5)이 담당한다. 여기서는 PENDING 행으로 자리만 잡는다.
+     * 세션이 터빈 여러 대를 묶으므로 turbine_id 는 비운다.
+     *
+     * @param context 사용자가 넣은 보고서 참고사항(초기 본문). null 이면 비워 둔다
+     */
+    @Transactional
+    public Long createDefectDiagnosis(Long windFarmId, LocalDateTime periodStart, LocalDateTime periodEnd,
+                                      Long createdBy, String context) {
+        Report report = Report.request(ReportType.DEFECT_DIAGNOSIS,
+                windFarmId, null, periodStart, periodEnd, null, createdBy);
+        if (context != null && !context.isBlank()) {
+            report.editContext(context);
+        }
+        return reportRepository.save(report).getId();
     }
 
     /**

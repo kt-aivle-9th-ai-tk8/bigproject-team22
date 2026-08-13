@@ -76,8 +76,6 @@ function LoginScreen() {
       console.error("로그인 실패:", err);
       setModalType("fail");
 
-      // 백엔드에서 전달된 에러 메시지를 모달에 출력
-      // (게스트 로그인 거부, 계정 잠금, 비밀번호 불일치 등 BE 메시지 그대로 노출)
       const serverMessage =
         err.response?.data?.message || err.message || "로그인 정보가 올바르지 않습니다.";
       

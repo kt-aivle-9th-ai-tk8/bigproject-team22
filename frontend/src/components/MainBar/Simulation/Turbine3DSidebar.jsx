@@ -1,3 +1,5 @@
+import "./Turbine3DSidebar.css";
+
 const STATUS_TEXT = {
   "manual-stop": "수동 정지",
   "below-cut-in": "시동 풍속 미달",
@@ -59,29 +61,30 @@ function Turbine3DSidebar({
 
       <div className="turbine-3d-field">
         <label htmlFor="wind-speed-number">
-          풍속 직접 입력
+          풍속 입력
         </label>
 
-        <input
-          id="wind-speed-number"
-          type="number"
-          min="0"
-          max="30"
-          step="0.5"
-          value={windSpeed}
-          onChange={handleWindSpeedChange}
-        />
+        <div className="wind-speed-input-wrap">
+          <input
+            id="wind-speed-number"
+            type="number"
+            min="0"
+            max="30"
+            step="0.5"
+            value={windSpeed}
+            onChange={handleWindSpeedChange}
+          />
+
+          <span className="wind-speed-unit">
+            m/s
+          </span>
+        </div>
       </div>
 
       <div className="turbine-3d-status">
         <div>
-          <span>운전 상태</span>
+          <span>운전 상태: </span>
           <strong>{statusText}</strong>
-        </div>
-
-        <div>
-          <span>터빈 회전 속도</span>
-          <strong>{bladeSpeed.toFixed(3)}</strong>
         </div>
       </div>
 

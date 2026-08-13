@@ -3,6 +3,16 @@ import ReactMarkdown from "react-markdown";
 
 import "./AlarmPopup.css";
 
+const formatSentAt = (sentAt) => {
+  if (!sentAt) {
+    return "";
+  }
+
+  const [date, time] = sentAt.split("T");
+
+  return `${date.replaceAll("-", ".")}  ${time?.slice(0, 5) || ""}`;
+};
+
 function AlarmPopup({ alarm = [], isOpen, onClose }) {
   const [selectedReport, setSelectedReport] = useState(null);
 
@@ -55,16 +65,6 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
 
   const handleBackClick = () => {
     setSelectedReport(null);
-  };
-
-  const formatSentAt = (sentAt) => {
-    if (!sentAt) {
-      return "";
-    }
-
-    const [date, time] = sentAt.split("T");
-
-    return `${date.replaceAll("-", ".")}  ${time?.slice(0, 5) || ""}`;
   };
 
   return (

@@ -549,11 +549,25 @@ function PowerChartDrag({
                     stroke="var(--color-point)"
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{
-                      r: 4,
-                      fill: "var(--color-text-point-dark)",
-                      stroke: "#ffffff",
-                      strokeWidth: 1,
+                    activeDot={(props) => {
+                      const { cx, cy, payload } = props;
+
+                      const isNull = payload?.isPowerGenerationNull;
+
+                      return (
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={4}
+                          fill={
+                            isNull
+                              ? "#f5c518"
+                              : "var(--color-text-point-dark)"
+                          }
+                          stroke="#ffffff"
+                          strokeWidth={1}
+                        />
+                      );
                     }}
                     isAnimationActive={false}
                   />

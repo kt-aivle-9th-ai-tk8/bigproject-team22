@@ -62,3 +62,34 @@ export const signupApi = async (userData) => {
 
   return responseBody;
 };
+
+export const logout = async () => {
+  const response = await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  const responseText = await response.text();
+
+  let responseBody = null;
+
+  if (responseText) {
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = responseText;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      responseBody?.message ||
+      "로그아웃에 실패했습니다."
+    );
+  }
+
+  return responseBody;
+};

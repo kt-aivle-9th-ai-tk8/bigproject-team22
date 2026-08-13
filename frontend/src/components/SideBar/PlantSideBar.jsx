@@ -20,6 +20,8 @@ function PlantSideBar({
   onSelectTurbine,
   onCreateInspectionReport,
   onCreateOperationReport,
+  isOperationReportPending,
+  isInspectionReportCreating,
 }) {
   const [isWeatherHelpOpen, setIsWeatherHelpOpen] = useState(false);
   const [reportMode, setReportMode] = useState("operation");
@@ -96,12 +98,14 @@ function PlantSideBar({
             startDate={today}
             endDate={today}
             onCreateReport={onCreateOperationReport}
+            isCreating={isOperationReportPending}
           />
         )}
 
         {reportMode === "inspection" && (
           <InspectionReportBox
             turbineOptions={turbineItems}
+            isCreating={isInspectionReportCreating}
             onCreateReport={(reportData) => {
               onCreateInspectionReport?.({
                 ...reportData,

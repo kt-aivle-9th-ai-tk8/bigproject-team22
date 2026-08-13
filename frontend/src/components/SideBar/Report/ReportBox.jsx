@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ReportBox.css";
 
@@ -28,6 +28,7 @@ function ReportBox({
   startDate = getTodayString(),
   endDate = getTodayString(),
   onCreateReport,
+  isCreating = false,
 }) {
   const navigate = useNavigate();
 
@@ -36,6 +37,25 @@ function ReportBox({
     startDate,
     endDate,
   });
+
+  const [loadingDotCount, setLoadingDotCount] = useState(1);
+
+  useEffect(() => {
+    if (!isCreating) {
+      setLoadingDotCount(1);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setLoadingDotCount((prev) =>
+        prev >= 3 ? 1 : prev + 1
+      );
+    }, 500);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isCreating]);
 
   const handleDailyClick = () => {
     const today = getTodayString();
@@ -124,7 +144,6 @@ function ReportBox({
       endDate: reportInfo.endDate,
     };
 
-    console.log("발전소 운영 보고서 생성 JSON:", reportData);
     onCreateReport?.(reportData);
 
     setReportInfo({
@@ -210,8 +229,11 @@ function ReportBox({
         className="report-create-button"
         type="button"
         onClick={handleCreateReport}
+        disabled={isCreating}
       >
-        보고서 생성
+        {isCreating
+          ? `보고서 생성 중${".".repeat(loadingDotCount)}`
+          : "보고서 생성"}
       </button>
 
       <button

@@ -33,6 +33,8 @@
 
   overflow-y: auto;
   margin-bottom: 15px;
+
+  flex: 1;
 }
 
 .inspection-popup-main-title {
@@ -166,6 +168,9 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .inspection-popup-cancel-button,

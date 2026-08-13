@@ -7,6 +7,8 @@ import MainBar from "../components/MainBar";
 import UnderBar from "../components/UnderBar";
 import SideBar from "../components/SideBar";
 
+import { logout } from "../api/authApi";
+
 import { useWindFarmDetail } from "../hooks/useWindFarmDetail";
 import { useWindFarms } from "../hooks/useWindFarms";
 import { useNotifications } from "../hooks/useNotifications";
@@ -14,6 +16,7 @@ import { usePowerGeneration } from "../hooks/usePowerGeneration";
 import { useTurbineDetail } from "../hooks/useTurbineDetail";
 import { useReportStatusPolling } from "../hooks/useReportStatusPolling";
 import { useInspectionReport } from "../hooks/useInspectionReport";
+import { useTurbineReports } from "../hooks/useTurbineReports";
 
 import "./MainScreen.css";
 import "../components/Bar.css";
@@ -67,15 +70,27 @@ function MainScreen() {
     refreshInterval: 10000,
   });
 
+  // 터빈 상세 페이지 보고서 리스트 api
+  const {
+    reportItems: turbineReportItems,
+  } = useTurbineReports({
+    mode: screenMode,
+    windFarmId: selectedPlant?.id,
+    turbineId: selectedTurbine?.id,
+    refreshInterval: 10000,
+  });
+
   // 알림 보고서 api
   const {
     notifications
   } = useNotifications({
-    refreshInterval: 600000,
+    refreshInterval: 10000,
   });
 
   const {
     createOperationReport,
+    reportId: operationReportId,
+    isReportCreating,
   } = useReportStatusPolling({
     refreshInterval: 5000,
 
@@ -86,8 +101,13 @@ function MainScreen() {
     },
   });
 
+  const isOperationReportPending =
+    isReportCreating ||
+    Boolean(operationReportId);
+
   const {
     createInspectionReport,
+    reportId: inspectionReportId,
     isInspectionCreating,
     inspectionError,
   } = useInspectionReport({
@@ -99,6 +119,10 @@ function MainScreen() {
       );
     },
   });
+
+  const isInspectionReportCreating =
+    isInspectionCreating ||
+    Boolean(inspectionReportId);
 
   useEffect(() => {
     if (!selectedPlant) {
@@ -227,12 +251,23 @@ function MainScreen() {
     [moveMode]
   );
 
-  const handleLogout = () => {
-    localStorage.removeItem("screenMode");
-    localStorage.removeItem("selectedPlant");
-    localStorage.removeItem("selectedTurbine");
+  const handleLogout = async () => {
+    try {
+      await logout();
 
-    navigate("/login");
+      localStorage.removeItem("screenMode");
+      localStorage.removeItem("selectedPlant");
+      localStorage.removeItem("selectedTurbine");
+
+      navigate("/login");
+    } catch (error) {
+      console.error(
+        "로그아웃 API 에러:",
+        error
+      );
+
+      alert(error.message);
+    }
   };
 
   const handleSelectTurbine = (turbine) => {
@@ -283,24 +318,37 @@ function MainScreen() {
         ? "TURBINE_OPERATION"
         : "WIND_FARM_OPERATION";
 
+
+    const requestData = {
+      windFarmId: selectedPlant.id,
+
+      turbineId:
+        screenMode === "turbine"
+          ? selectedTurbine.id
+          : undefined,
+
+      periodStart: `${startDate}T00:00:00`,
+      periodEnd: `${endDate}T23:59:59`,
+
+      reportType,
+    };
+
+
+    console.log(
+      "실제 보고서 생성 요청 데이터:",
+      requestData
+    );
+
+
     try {
-      await createOperationReport({
-        windFarmId: selectedPlant.id,
-
-        turbineId:
-          screenMode === "turbine"
-            ? selectedTurbine.id
-            : undefined,
-
-        periodStart: `${startDate}T00:00:00`,
-        periodEnd: `${endDate}T23:59:59`,
-
-        reportType,
-      });
+      await createOperationReport(
+        requestData
+      );
     } catch (error) {
       alert(error.message);
     }
   };
+
   const handleNavigateUser = () => {
     navigate("/user");
   };
@@ -336,11 +384,14 @@ function MainScreen() {
           selectedTurbine={selectedTurbine}
           windFarmDetail={windFarmDetail}
           turbineDetail={turbineDetail}
+          turbineReportItems={turbineReportItems}
           notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
           onCreateInspectionReport={handleCreateInspectionReport}
           onCreateOperationReport={handleCreateOperationReport}
+          isOperationReportPending={isOperationReportPending}
+          isInspectionReportCreating={isInspectionReportCreating}
         />
 
         <UnderBar
