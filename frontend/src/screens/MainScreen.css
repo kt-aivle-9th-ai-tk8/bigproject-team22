@@ -57,3 +57,84 @@
 .mypage-link-text:active {
   transform: scale(0.96);
 }
+
+/* ==========================================
+   보고서 생성 완료 팝업
+   ========================================== */
+
+.report-complete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.report-complete-popup {
+  width: 380px;
+
+  padding: 28px;
+
+  background-color: #ffffff;
+  border-radius: 12px;
+
+  box-sizing: border-box;
+
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+}
+
+.report-complete-title {
+  margin: 0 0 18px;
+
+  font-size: 18px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.report-complete-message {
+  margin: 0 0 8px;
+
+  font-size: 15px;
+  font-weight: 600;
+  color: #222222;
+}
+
+.report-complete-question {
+  margin: 0 0 24px;
+
+  font-size: 14px;
+  color: #555555;
+}
+
+.report-complete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.report-complete-actions button {
+  min-width: 72px;
+  height: 38px;
+
+  border: none;
+  border-radius: 8px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.report-complete-confirm {
+  background-color: var(--color-point);
+  color: #000000;
+}
+
+.report-complete-cancel {
+  background-color: var(--color-divider);
+  color: #333333;
+}

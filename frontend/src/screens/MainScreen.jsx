@@ -24,6 +24,8 @@ import "../components/Bar.css";
 function MainScreen() {
   const navigate = useNavigate();
 
+  const [generatedReport, setGeneratedReport] = useState(null);
+
   const [screenMode, setScreenMode] = useState(() => {
     return localStorage.getItem("screenMode") || "map";
   });
@@ -95,30 +97,48 @@ function MainScreen() {
     refreshInterval: 5000,
 
     onGenerated: (report) => {
-    const isConfirmed = window.confirm(
-      `${report?.title || "보고서"} 생성이 완료되었습니다.\n보고서를 확인하시겠습니까?`
-    );
+      const displayTitle = String(
+        report?.title || "운영보고서"
+      )
+        .replace(
+          /\s*\d{4}-\d{2}-\d{2}\s*~\s*\d{4}-\d{2}-\d{2}\s*/g,
+          " "
+        )
+        .replace(/\s+/g, " ")
+        .trim();
 
-    if (!isConfirmed) {
-      return;
-    }
+      setGeneratedReport({
+        ...report,
+        displayTitle,
+      });
+    },
+  });
 
+  const handleConfirmGeneratedReport = () => {
     const reportId =
-      report?.id ||
-      report?.report_id;
+      generatedReport?.id ||
+      generatedReport?.report_id;
 
     if (!reportId) {
       alert("보고서 ID가 없습니다.");
       return;
     }
 
+    const report = generatedReport;
+
+    setGeneratedReport(null);
+
     navigate(`/reports/${reportId}/edit`, {
       state: {
         report,
       },
     });
-  },
-  });
+  };
+
+
+  const handleCancelGeneratedReport = () => {
+    setGeneratedReport(null);
+  };
 
   const isOperationReportPending =
     isReportCreating ||
@@ -423,6 +443,42 @@ function MainScreen() {
           onFetchPowerGeneration={fetchPowerGeneration}
         />
       </div>
+
+      {generatedReport && (
+        <div className="report-complete-overlay">
+          <div className="report-complete-popup">
+            <p className="report-complete-title">
+              {generatedReport.displayTitle}
+            </p>
+
+            <p className="report-complete-message">
+              보고서 생성이 완료되었습니다.
+            </p>
+
+            <p className="report-complete-question">
+              보고서를 확인하시겠습니까?
+            </p>
+
+            <div className="report-complete-actions">
+              <button
+                type="button"
+                className="report-complete-confirm"
+                onClick={handleConfirmGeneratedReport}
+              >
+                확인
+              </button>
+
+              <button
+                type="button"
+                className="report-complete-cancel"
+                onClick={handleCancelGeneratedReport}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
