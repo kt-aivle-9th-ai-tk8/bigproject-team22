@@ -144,7 +144,6 @@ function ReportBox({
       endDate: reportInfo.endDate,
     };
 
-    console.log("발전소 운영 보고서 생성 JSON:", reportData);
     onCreateReport?.(reportData);
 
     setReportInfo({
