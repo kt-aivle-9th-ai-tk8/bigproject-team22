@@ -7,7 +7,6 @@ import "./ReportEditScreen.css";
 import { useReportDetail } from "../hooks/useReportDetail";
 import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
-import { useDeleteReport } from "../hooks/useDeleteReport";
 
 function ReportEditScreen() {
   const { reportId } = useParams();
