@@ -20,14 +20,18 @@ import java.util.zip.GZIPInputStream;
  * {@code expected_power_pooled}/{@code expected_power_unit} 는 지금까지 전부 NULL 이었고, 그래서
  * 운영·단지 보고서가 유효 행 0(터빈 0건)으로 나왔다. {@code db/seed/build_ml_backfill.py} 가
  * AWS 관측(V15)과 SCADA 풍속을 병합해 밀도보정풍속(IEC 61400-12-1)·LightGBM 기대발전량
- * (pooled/터빈별)·플래그를 계산한 결과를 번들 CSV 로 담았고, 여기서 스트리밍 UPDATE 한다.
+ * (pooled/터빈별)·플래그를 계산한 결과를 번들 CSV 로 담았고, 여기서 적재한다.
+ * <p>
+ * <b>왜 임시 테이블 + UPDATE JOIN 인가</b> — 첫 구현은 행마다 UPDATE 를 배치로 보냈는데, UPDATE 는
+ * {@code rewriteBatchedStatements} 의 다중행 재작성 혜택을 받지 못해 91.7만 왕복 ≈ 14분이 걸렸다.
+ * ECS 헬스체크 유예(~9분)가 그보다 짧아 기동 중 태스크가 반복 킬되는 크래시 루프가 됐다(실측 2회,
+ * 매번 50만 행 부근에서 킬·롤백). 임시 테이블로 스테이징(INSERT 는 다중행 재작성으로 초고속)한 뒤
+ * 서버 안에서 UPDATE JOIN 한 방으로 반영하면 전체가 2~3분으로 줄어 유예 안에 끝난다.
+ * {@code CREATE TEMPORARY TABLE} 은 암묵 커밋을 일으키지 않으므로 실패 시 DML 전체 롤백도 유지된다.
  * <p>
  * 결측 규약: 기상·풍속이 없던 시각은 expected 가 NULL(예측 불가 신호)이다 — 0 으로 채우지 않는다.
- * 소비자(report-agent)는 expected NULL 행을 유효 모집단에서 제외한다.
- * <p>
- * 2026 은 2025 의 계산 결과를 1년 밀어 복사하고(원본 관측이 2025 까지 — SCADA V12/V14 와 동일한 이유),
- * 보성(15~21)은 화순(7~13) 2026 을 복사한다({@link ScadaSeed#deriveBoseong} 과 같은 +8 매핑).
- * raw(power_output·wind_speed)는 손대지 않는다 — 이 마이그레이션은 파생 컬럼만 소유한다.
+ * 2026 은 2025 결과를 1년 밀어 복사하고, 보성(15~21)은 화순(7~13) 2026 을 복사한다
+ * ({@link ScadaSeed#deriveBoseong} 의 +8 매핑). raw(power_output·wind_speed)는 손대지 않는다.
  */
 public class V16__backfill_scada_ml extends BaseJavaMigration {
 
@@ -37,20 +41,67 @@ public class V16__backfill_scada_ml extends BaseJavaMigration {
     /** 번들 CSV 의 행 수 계약(V15 와 동일 논리 — CSV·마이그레이션은 같은 커밋의 불변 쌍). */
     static final long EXPECTED_SOURCE_ROWS = 917_712;
 
-    private static final String ML_SET = "air_density = ?, norm_wind_speed = ?, is_stopped = ?,"
-            + " train_mask = ?, expected_power_pooled = ?, expected_power_unit = ?";
+    private static final String STAGE = "ml_backfill_stage";
 
     @Override
     public void migrate(Context context) throws Exception {
         Connection conn = context.getConnection();
 
-        long updated = applyCsv(conn);
+        try (Statement st = conn.createStatement()) {
+            // 세션 종료 시 자동 소멸. PK 를 scada_record 와 동일하게 잡아 JOIN 이 PK 룩업이 되게 한다.
+            st.executeUpdate("CREATE TEMPORARY TABLE " + STAGE + " ("
+                    + " turbine_id BIGINT NOT NULL,"
+                    + " recorded_at DATETIME(6) NOT NULL,"
+                    + " air_density DOUBLE NULL,"
+                    + " norm_wind_speed DOUBLE NULL,"
+                    + " is_stopped TINYINT NULL,"
+                    + " train_mask TINYINT NULL,"
+                    + " expected_power_pooled DOUBLE NULL,"
+                    + " expected_power_unit DOUBLE NULL,"
+                    + " PRIMARY KEY (turbine_id, recorded_at)) ENGINE = InnoDB");
+        }
+
+        long staged = stageCsv(conn);
+        if (staged != EXPECTED_SOURCE_ROWS) {
+            throw new IllegalStateException("ML 백필 CSV 행 수 불일치: expected=" + EXPECTED_SOURCE_ROWS
+                    + ", actual=" + staged + " — 리소스가 불완전하다");
+        }
+
+        // 키 정합: 스테이지의 모든 (turbine_id, recorded_at) 가 scada_record 에 실재해야 한다.
+        // 하나라도 빠지면 raw 시드(V11/V14)와 CSV 버전이 어긋난 것 — 부분 반영 대신 중단(DML 롤백).
+        long matched;
+        try (Statement st = conn.createStatement()) {
+            var rs = st.executeQuery("SELECT COUNT(*) FROM " + STAGE + " s"
+                    + " JOIN scada_record r ON r.turbine_id = s.turbine_id AND r.recorded_at = s.recorded_at");
+            rs.next();
+            matched = rs.getLong(1);
+        }
+        if (matched != staged) {
+            throw new IllegalStateException("ML 백필 키 불일치: CSV " + staged + "행 중 "
+                    + matched + "행만 scada_record 에 존재 — raw 시드(V11/V14)와 CSV 버전이 어긋났다");
+        }
+
+        long applied;
+        try (Statement st = conn.createStatement()) {
+            applied = st.executeUpdate("""
+                    UPDATE scada_record r
+                    JOIN %s s ON s.turbine_id = r.turbine_id AND s.recorded_at = r.recorded_at
+                    SET r.air_density = s.air_density,
+                        r.norm_wind_speed = s.norm_wind_speed,
+                        r.is_stopped = s.is_stopped,
+                        r.train_mask = s.train_mask,
+                        r.expected_power_pooled = s.expected_power_pooled,
+                        r.expected_power_unit = s.expected_power_unit
+                    """.formatted(STAGE));
+        }
+
         long y2026 = copy2025To2026(conn);
         long boseong = deriveBoseong(conn);
-        System.out.printf("[V16] ML 백필 %,d행 + 2026 복사 %,d행 + 보성 복사 %,d행%n",
-                updated, y2026, boseong);
+        System.out.printf("[V16] 스테이징 %,d행(키 매칭 %,d) → 반영 %,d행 + 2026 복사 %,d행 + 보성 복사 %,d행%n",
+                staged, matched, applied, y2026, boseong);
 
         try (Statement st = conn.createStatement()) {
+            st.executeUpdate("DROP TEMPORARY TABLE " + STAGE);
             var rs = st.executeQuery(
                     "SELECT COUNT(*), COUNT(expected_power_unit) FROM scada_record");
             rs.next();
@@ -60,29 +111,22 @@ public class V16__backfill_scada_ml extends BaseJavaMigration {
     }
 
     /**
-     * 번들 CSV → PK(turbine_id, recorded_at) 기준 UPDATE.
+     * 번들 CSV → 임시 테이블 INSERT.
      * <p>
      * CSV: {@code turbine_id,recorded_at,air_density,norm_wind_speed,is_stopped,train_mask,
      * expected_power_pooled,expected_power_unit} (헤더 없음). 8열이 아니면 즉시 중단.
-     * INSERT 가 아니라 UPDATE 다 — 행이 없는 키를 조용히 만들어내지 않는다.
-     * <p>
-     * <b>키 정합 검증</b>: CSV 행 수가 계약({@link #EXPECTED_SOURCE_ROWS})과 다르거나,
-     * UPDATE 가 매칭한 행 수가 CSV 행 수와 다르면(= raw 시드 V11/V14 와 키집합이 어긋난 CSV)
-     * 예외로 중단한다 — DML 이라 전부 롤백된다. 매칭 수는 배치 결과 합으로 센다. Connector/J 는
-     * 기본(useAffectedRows=false)에서 found-rows 를 돌려주므로 "값이 같아 변경 0" 인 행도 1 로
-     * 집계된다(결측 NULL→NULL 행 포함). 드라이버가 개수 대신 SUCCESS_NO_INFO 를 돌려주는 설정
-     * (rewriteBatchedStatements 등)이면 이 검증만 건너뛰고 로그로 알린다.
+     * INSERT 배치는 {@code rewriteBatchedStatements=true}(운영 JDBC URL)에서 다중행 문장으로
+     * 재작성되어 UPDATE 배치와 달리 왕복이 상수화된다.
      */
-    static long applyCsv(Connection conn) throws Exception {
+    static long stageCsv(Connection conn) throws Exception {
         InputStream in = V16__backfill_scada_ml.class.getClassLoader().getResourceAsStream(RESOURCE);
         if (in == null) {
             throw new IllegalStateException("시드 리소스를 찾을 수 없다: " + RESOURCE);
         }
-        String sql = "UPDATE scada_record SET " + ML_SET
-                + " WHERE turbine_id = ? AND recorded_at = ?";
+        String sql = "INSERT INTO " + STAGE
+                + " (turbine_id, recorded_at, air_density, norm_wind_speed, is_stopped, train_mask,"
+                + " expected_power_pooled, expected_power_unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         long count = 0;
-        long matched = 0;
-        boolean countable = true;
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new GZIPInputStream(in), StandardCharsets.UTF_8));
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -97,56 +141,29 @@ public class V16__backfill_scada_ml extends BaseJavaMigration {
                     throw new IllegalStateException("ML 백필 CSV 는 8열이어야 한다. "
                             + (count + 1) + "번째 줄: " + line);
                 }
-                setNullableDouble(ps, 1, cols[2]);           // air_density
-                setNullableDouble(ps, 2, cols[3]);           // norm_wind_speed
-                setNullableInt(ps, 3, cols[4]);              // is_stopped
-                setNullableInt(ps, 4, cols[5]);              // train_mask
-                setNullableDouble(ps, 5, cols[6]);           // expected_power_pooled
-                setNullableDouble(ps, 6, cols[7]);           // expected_power_unit
-                ps.setLong(7, Long.parseLong(cols[0]));
-                ps.setString(8, cols[1]);
+                ps.setLong(1, Long.parseLong(cols[0]));
+                ps.setString(2, cols[1]);
+                setNullableDouble(ps, 3, cols[2]);
+                setNullableDouble(ps, 4, cols[3]);
+                setNullableInt(ps, 5, cols[4]);
+                setNullableInt(ps, 6, cols[5]);
+                setNullableDouble(ps, 7, cols[6]);
+                setNullableDouble(ps, 8, cols[7]);
                 ps.addBatch();
                 count++;
                 if (++batch == BATCH_SIZE) {
-                    long[] r = tallyBatch(ps);
-                    matched += r[0];
-                    countable &= r[1] == 1;
+                    ps.executeBatch();
                     batch = 0;
                 }
                 if (count % 100_000 == 0) {
-                    System.out.printf("[V16] 진행 %,d행%n", count);
+                    System.out.printf("[V16] 스테이징 진행 %,d행%n", count);
                 }
             }
             if (batch > 0) {
-                long[] r = tallyBatch(ps);
-                matched += r[0];
-                countable &= r[1] == 1;
+                ps.executeBatch();
             }
-        }
-        if (count != EXPECTED_SOURCE_ROWS) {
-            throw new IllegalStateException("ML 백필 CSV 행 수 불일치: expected=" + EXPECTED_SOURCE_ROWS
-                    + ", actual=" + count + " — 리소스가 불완전하다");
-        }
-        if (countable && matched != count) {
-            throw new IllegalStateException("ML 백필 키 불일치: CSV " + count + "행 중 "
-                    + matched + "행만 scada_record 에 존재 — raw 시드(V11/V14)와 CSV 버전이 어긋났다");
-        }
-        if (!countable) {
-            System.out.println("[V16] 드라이버가 행 수를 보고하지 않아(SUCCESS_NO_INFO) 키 정합 검증을 건너뛴다");
         }
         return count;
-    }
-
-    /** 배치 실행 후 [매칭 행 합, 집계가능 여부(1/0)] 를 돌려준다. */
-    private static long[] tallyBatch(PreparedStatement ps) throws Exception {
-        long sum = 0;
-        for (int c : ps.executeBatch()) {
-            if (c < 0) {                      // Statement.SUCCESS_NO_INFO 등 — 개수 미보고
-                return new long[]{0, 0};
-            }
-            sum += c;
-        }
-        return new long[]{sum, 1};
     }
 
     /** 2025 파생값을 1년 밀어 2026 행에 복사한다(평년끼리 1:1 — SCADA/AWS 복사와 동일 근거). */
