@@ -84,7 +84,7 @@ function MainScreen() {
   const {
     notifications
   } = useNotifications({
-    refreshInterval: 600000,
+    refreshInterval: 10000,
   });
 
   const {
