@@ -1,12 +1,43 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import "./ReportEditScreen.css";
 
 import { useReportDetail } from "../hooks/useReportDetail";
 import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
+import { useDeleteReport } from "../hooks/useDeleteReport"; // 삭제 훅 (프로젝트 경로에 맞춰 사용)
+
+// 한글 매핑 함수
+const formatReportType = (type) => {
+  if (!type) return "보고서";
+  const upperType = String(type).toUpperCase();
+  switch (upperType) {
+    case "WIND_FARM_OPERATION":
+      return "단지 운영보고서";
+    case "TURBINE_OPERATION":
+      return "터빈 운영보고서";
+    case "ANOMALY_EVENT":
+    case "ANOMALY":
+      return "이상 분석보고서";
+    case "DEFECT":
+      return "결함 보고서";
+    default:
+      return type;
+  }
+};
+
+// ISO 날짜 문자열 포맷팅 (yyyy-mm-dd hh:mm)
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  if (dateStr.includes("T")) {
+    const [date, time] = dateStr.split("T");
+    return `${date} ${time.slice(0, 5)}`;
+  }
+  return dateStr;
+};
 
 function ReportEditScreen() {
   const { reportId } = useParams();
@@ -39,6 +70,7 @@ function ReportEditScreen() {
   });
 
   const { updateReport, isUpdating } = useUpdateReport();
+  const { deleteReport } = useDeleteReport(); // 백엔드 삭제 함수
 
   const handleCancelEdit = () => {
     setFormData((prev) => ({
@@ -49,42 +81,48 @@ function ReportEditScreen() {
     setIsEditing(false);
   };
 
-const handleDelete = async () => {
-  const currentId = reportId || (activeReport && (activeReport.id || activeReport.report_id));
-  if (!currentId) return;
+  // 보고서 삭제 처리
+  const handleDelete = async () => {
+    const currentId =
+      reportId || (activeReport && (activeReport.id || activeReport.report_id));
+    if (!currentId) return;
 
-  const isConfirmed = window.confirm("해당 보고서를 삭제하시겠습니까?");
-  if (!isConfirmed) return;
+    const isConfirmed = window.confirm("해당 보고서를 삭제하시겠습니까?");
+    if (!isConfirmed) return;
 
-  try {
-    await deleteReport(currentId); 
-    alert("보고서가 삭제되었습니다.");
-    navigate("/reportlist");
-  } catch (error) {
-    console.error("보고서 삭제 실패:", error);
-    alert(error.message || "보고서 삭제 중 오류가 발생했습니다.");
-  }
-};
+    try {
+      if (typeof deleteReport === "function") {
+        await deleteReport(currentId);
+      }
+      alert("보고서가 삭제되었습니다.");
+      navigate("/reportlist");
+    } catch (error) {
+      console.error("보고서 삭제 실패:", error);
+      alert(error.message || "보고서 삭제 중 오류가 발생했습니다.");
+    }
+  };
 
   useEffect(() => {
     if (!reportDetail) return;
 
     setActiveReport(reportDetail);
 
+    // 백엔드 다양한 필드명 호환
     const plantStr =
+      reportDetail.plant_name ||
       reportDetail.plant ||
       reportDetail.wind_farm_name ||
       "발전소";
 
     const turbineStr =
-      reportDetail.turbine ||
       reportDetail.turbine_name ||
+      reportDetail.turbine ||
+      reportDetail.turbine_id ||
       "터빈";
 
-    const typeStr =
-      reportDetail.type ||
-      reportDetail.report_type ||
-      "보고서";
+    const typeStr = formatReportType(
+      reportDetail.report_type || reportDetail.type
+    );
 
     setFormData({
       title:
@@ -104,7 +142,7 @@ const handleDelete = async () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 3. 보고서 수정 저장 처리
+  // 보고서 수정 저장 처리
   const handleSave = async () => {
     const currentId =
       reportId ||
@@ -128,7 +166,7 @@ const handleDelete = async () => {
   };
 
   const visibleReports = useMemo(() => {
-    if (!activeReport) return [];
+    if (!activeReport || !Array.isArray(allReports)) return [];
 
     const currentId = activeReport.id || activeReport.report_id;
 
@@ -166,15 +204,18 @@ const handleDelete = async () => {
               </button>
             </>
           ) : (
-  <>
-    <button className="btn-primary" onClick={() => setIsEditing(true)}>
-      보고서 수정
-    </button>
-    <button className="btn-delete-text" onClick={handleDelete}>
-      보고서 삭제
-    </button>
-  </>
-)}
+            <>
+              <button
+                className="btn-primary"
+                onClick={() => setIsEditing(true)}
+              >
+                보고서 수정
+              </button>
+              <button className="btn-delete-text" onClick={handleDelete}>
+                보고서 삭제
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -186,8 +227,14 @@ const handleDelete = async () => {
           <>
             <div className="card-title-row">
               <h2>{formData.title}</h2>
-              <span className={`type-badge ${activeReport.type || activeReport.report_type}`}>
-                {activeReport.type || activeReport.report_type}
+              <span
+                className={`type-badge ${
+                  activeReport.report_type || activeReport.type
+                }`}
+              >
+                {formatReportType(
+                  activeReport.report_type || activeReport.type
+                )}
               </span>
             </div>
 
@@ -205,7 +252,8 @@ const handleDelete = async () => {
                   />
                 ) : (
                   <div className="readonly-box">
-                    <ReactMarkdown>
+                    {/* GFM 플러그인 적용하여 표(Table) 정상 출력 */}
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {formData.summary || "작성된 보고서 내용이 없습니다."}
                     </ReactMarkdown>
                   </div>
@@ -222,7 +270,10 @@ const handleDelete = async () => {
       <section className="bottom-list-section">
         <div className="bottom-list-header">
           <h3>다른 보고서 목록</h3>
-          <button className="view-all-btn" onClick={() => navigate("/reportlist")}>
+          <button
+            className="view-all-btn"
+            onClick={() => navigate("/reportlist")}
+          >
             전체글 보기 ›
           </button>
         </div>
@@ -230,29 +281,51 @@ const handleDelete = async () => {
         <div className="report-list">
           {visibleReports.map((report) => {
             const currentReportId = report.id || report.report_id;
-            const activeId = activeReport ? activeReport.id || activeReport.report_id : null;
-            const plantName = report.plant || report.wind_farm_name || "발전소";
-            const turbineName = report.turbine || report.turbine_name || "터빈";
-            const typeName = report.type || report.report_type || "보고서";
-            const dateStr = report.generated_at || report.created_at || report.date || "";
+            const activeId = activeReport
+              ? activeReport.id || activeReport.report_id
+              : null;
+
+            // 백엔드 데이터 필드 파싱
+            const plantName =
+              report.plant_name ||
+              report.plant ||
+              report.wind_farm_name ||
+              "발전소";
+            const turbineName =
+              report.turbine_name ||
+              report.turbine ||
+              report.turbine_id ||
+              "터빈";
+            const rawType = report.report_type || report.type;
+            const displayType = formatReportType(rawType);
+            const dateStr = formatDate(
+              report.generated_at || report.created_at || report.date
+            );
 
             return (
               <div
                 key={currentReportId}
-                className={`report-card ${currentReportId === activeId ? "active-card" : ""}`}
+                className={`report-card ${
+                  currentReportId === activeId ? "active-card" : ""
+                }`}
                 onClick={() => handleCardClick(report)}
                 style={{ cursor: "pointer" }}
               >
                 <div className="report-content">
                   <div className="card-main-row">
                     <h3 className="plant-name">
-                      {plantName} <span className="turbine-tag">[{turbineName}]</span>
+                      {plantName}{" "}
+                      <span className="turbine-tag">[{turbineName}]</span>
                     </h3>
-                    <span className={`type-badge ${typeName}`}>{typeName}</span>
+                    <span className={`type-badge ${rawType}`}>
+                      {displayType}
+                    </span>
                     <span className="report-date">{dateStr}</span>
                   </div>
                 </div>
-                <div className="card-arrow"><span>›</span></div>
+                <div className="card-arrow">
+                  <span>›</span>
+                </div>
               </div>
             );
           })}

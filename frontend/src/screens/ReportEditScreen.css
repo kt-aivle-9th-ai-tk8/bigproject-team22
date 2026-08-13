@@ -297,3 +297,45 @@
   color: #dc2626;
   text-decoration: underline;
 }
+
+.readonly-box table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 13px;
+}
+
+.readonly-box th, 
+.readonly-box td {
+  border: 1px solid #e2e8f0;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.readonly-box th {
+  background-color: #f1f5f9;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.readonly-box tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.card-main-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.plant-name {
+  min-width: 180px;
+}
+
+.report-date {
+  font-size: 13px;
+  color: #64748b;
+  margin-left: auto;
+  letter-spacing: 0.02em;
+}
