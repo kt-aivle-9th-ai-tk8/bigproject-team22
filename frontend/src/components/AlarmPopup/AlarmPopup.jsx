@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
+import { useReportDetail } from "../../hooks/useReportDetail";
+
 import "./AlarmPopup.css";
 
 const formatSentAt = (sentAt) => {
@@ -15,19 +17,26 @@ const formatSentAt = (sentAt) => {
 
 function AlarmPopup({ alarm = [], isOpen, onClose }) {
   const [selectedReport, setSelectedReport] = useState(null);
+  
+  const selectedReportId =
+    selectedReport?.report_id ||
+    selectedReport?.id;
 
+  const {
+    reportDetail,
+    loading: isReportDetailLoading,
+  } = useReportDetail({
+    reportId: selectedReportId,
+  });
+  
   useEffect(() => {
     if (!isOpen) {
       setSelectedReport(null);
       return;
     }
 
-    if (alarm.length === 1) {
-      setSelectedReport(alarm[0]);
-    } else {
-      setSelectedReport(null);
-    }
-  }, [isOpen, alarm]);
+    setSelectedReport(null);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -98,8 +107,10 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
         {selectedReport ? (
           <AlarmReportDetail
             report={selectedReport}
+            reportDetail={reportDetail}
+            isLoading={isReportDetailLoading}
             onBack={handleBackClick}
-            showBackButton={alarm.length > 1}
+            showBackButton={true}
           />
         ) : (
           <AlarmReportList
@@ -139,7 +150,17 @@ function AlarmReportList({ alarm, onSelectReport }) {
   );
 }
 
-function AlarmReportDetail({ report, onBack, showBackButton = true }) {
+function AlarmReportDetail({
+  report,
+  reportDetail,
+  isLoading,
+  onBack,
+  showBackButton = true,
+}) {
+  const markdownContent =
+    reportDetail?.context ||
+    "";
+
   return (
     <div className="alarm-report-detail">
       {showBackButton && (
@@ -153,7 +174,19 @@ function AlarmReportDetail({ report, onBack, showBackButton = true }) {
       )}
 
       <div className="alarm-report-markdown">
-        <ReactMarkdown>{report.markdown ?? ""}</ReactMarkdown>
+        {isLoading ? (
+          <div className="alarm-empty">
+            보고서 내용을 불러오는 중입니다...
+          </div>
+        ) : markdownContent ? (
+          <ReactMarkdown>
+            {markdownContent}
+          </ReactMarkdown>
+        ) : (
+          <div className="alarm-empty">
+            표시할 보고서 내용이 없습니다.
+          </div>
+        )}
       </div>
     </div>
   );
