@@ -95,10 +95,29 @@ function MainScreen() {
     refreshInterval: 5000,
 
     onGenerated: (report) => {
-      alert(
-        `${report?.title || "보고서"} 생성이 완료되었습니다.`
-      );
-    },
+    const isConfirmed = window.confirm(
+      `${report?.title || "보고서"} 생성이 완료되었습니다.\n보고서를 확인하시겠습니까?`
+    );
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    const reportId =
+      report?.id ||
+      report?.report_id;
+
+    if (!reportId) {
+      alert("보고서 ID가 없습니다.");
+      return;
+    }
+
+    navigate(`/reports/${reportId}/edit`, {
+      state: {
+        report,
+      },
+    });
+  },
   });
 
   const isOperationReportPending =
