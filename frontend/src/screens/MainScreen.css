@@ -83,7 +83,7 @@
   padding: 28px;
 
   background-color: #ffffff;
-  border-radius: 7px;
+  border-radius: 0 0 12px 12px;
 
   box-sizing: border-box;
 
@@ -125,11 +125,10 @@
 }
 
 .report-complete-confirm {
-  background-color: var(--color-point);
+  background-color: var(--color-point-bright);
   color: #000000;
 }
 
 .report-complete-cancel {
-  background-color: var(--color-divider);
-  color: #333333;
+  color: var(--color-dark-gray);
 }
