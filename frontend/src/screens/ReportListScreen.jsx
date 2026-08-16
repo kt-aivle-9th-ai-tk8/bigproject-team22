@@ -28,6 +28,14 @@ function ReportListScreen() {
   const [selectedTurbine, setSelectedTurbine] = useState("전체");
   const [sortKey, setSortKey] = useState("date");
   const [isAscending, setIsAscending] = useState(false);
+  
+  const formatGeneratedAt = (dateStr) => {
+    if (!dateStr) return "";
+
+    const [date, time] = dateStr.split("T");
+
+    return `${date.replaceAll("-", ".")} ${time?.slice(0, 5) || ""}`;
+  };
 
   const {
     windFarmDetail: selectedWindFarmDetail,
@@ -283,21 +291,9 @@ function ReportListScreen() {
         ) : filteredAndSortedReports.length > 0 ? (
           filteredAndSortedReports.map((report) => {
             const reportId = report.id || report.report_id;
-            const plantName = report.plant || report.wind_farm_name || "발전소";
-            const turbineName = report.turbine || report.turbine_name || "터빈";
-            const reportType =
-              String(
-                report.report_type ||
-                report.type ||
-                ""
-              ).toLowerCase();
-
-            const typeName =
-              REPORT_TYPE_LABEL[reportType] ||
-              report.report_type ||
-              report.type ||
-              "보고서";
-            const dateStr = report.generated_at || "";
+            const dateStr = formatGeneratedAt(
+              report.generated_at
+            );
 
             return (
               <div 
@@ -309,10 +305,12 @@ function ReportListScreen() {
                 <div className="report-content">
                   <div className="card-main-row">
                     <h3 className="plant-name">
-                      {plantName} <span className="turbine-tag">[{turbineName}]</span>
+                      {report.title || "보고서"}
                     </h3>
-                    <span className={`type-badge ${reportType}`}>{typeName}</span>
-                    <span className="report-date">{dateStr}</span>
+
+                    <span className="report-date">
+                      {dateStr}
+                    </span>
                   </div>
                 </div>
                 <div className="card-arrow"><span>›</span></div>
