@@ -36,6 +36,15 @@ function ReportListScreen() {
 
     return `${date.replaceAll("-", ".")} ${time?.slice(0, 5) || ""}`;
   };
+  
+  const formatReportTitle = (title) => {
+    if (!title) return "보고서";
+
+    return title.replace(
+      /(\d{4}-\d{2}-\d{2})\s*~\s*\1/g,
+      "$1"
+    );
+  };
 
   const {
     windFarmDetail: selectedWindFarmDetail,
@@ -305,7 +314,7 @@ function ReportListScreen() {
                 <div className="report-content">
                   <div className="card-main-row">
                     <h3 className="plant-name">
-                      {report.title || "보고서"}
+                      {formatReportTitle(report.title)}
                     </h3>
 
                     <span className="report-date">
