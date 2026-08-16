@@ -9,6 +9,17 @@ const AVAILABLE_REPORT_TYPES = [
   "anomaly_event",
 ];
 
+const formatReportTitle = (title) => {
+  if (!title) {
+    return "보고서";
+  }
+
+  return title.replace(
+    /(\d{4}-\d{2}-\d{2})\s*~\s*\1/g,
+    "$1"
+  );
+};
+
 
 export const useTurbineReports = ({
   mode,
@@ -87,16 +98,9 @@ export const useTurbineReports = ({
               report.report_type || ""
             ).toLowerCase();
 
-            const generatedDate =
-              report.generated_at
-                ? report.generated_at
-                    .slice(0, 10)
-                    .replaceAll("-", ".")
-                : "";
-
             const displayTitle =
               reportType === "turbine_operation"
-                ? `${generatedDate} 운영보고서`
+                ? formatReportTitle(report.title)
                 : report.title;
 
             return {
