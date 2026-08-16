@@ -223,3 +223,38 @@ export const updateReportContext = async ({
 
   return responseBody;
 };
+
+export const deleteReportById = async (reportId) => {
+  if (reportId === undefined || reportId === null) {
+    throw new Error("보고서 ID가 필요합니다.");
+  }
+
+  const response = await apiFetch(`/api/reports/${reportId}`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  const responseText = await response.text();
+
+  let responseBody = null;
+
+  if (responseText) {
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = responseText;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      responseBody?.message ||
+        "보고서 삭제에 실패했습니다."
+    );
+  }
+
+  return responseBody;
+};

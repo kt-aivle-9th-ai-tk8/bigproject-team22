@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import axios from "axios";
 
 import "./ReportEditScreen.css";
 
 import { useReportDetail } from "../hooks/useReportDetail";
 import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
+import { useDeleteReport } from "../hooks/useDeleteReport";
 
 // 1. 보고서 유형 영문 -> 한글 매핑 함수
 const formatReportType = (type) => {
@@ -70,24 +70,45 @@ function ReportEditScreen() {
 
   const { updateReport, isUpdating } = useUpdateReport();
 
+  const {
+    deleteReport,
+    isDeleting,
+  } = useDeleteReport();
+
   // 보고서 삭제 처리
   const handleDelete = async () => {
     const currentId =
-      reportId || (activeReport && (activeReport.id || activeReport.report_id));
-    if (!currentId) return;
+      reportId ||
+      (activeReport &&
+        (activeReport.id || activeReport.report_id));
 
-    const isConfirmed = window.confirm("해당 보고서를 삭제하시겠습니까?");
-    if (!isConfirmed) return;
+    if (!currentId) {
+      alert("보고서 ID가 없습니다.");
+      return;
+    }
+
+    const isConfirmed = window.confirm(
+      "해당 보고서를 삭제하시겠습니까?"
+    );
+
+    if (!isConfirmed) {
+      return;
+    }
 
     try {
-      await axios.delete(`/api/reports/${currentId}`);
+      await deleteReport(currentId);
+
       alert("보고서가 삭제되었습니다.");
+
       navigate("/reportlist");
     } catch (error) {
-      console.error("보고서 삭제 실패:", error);
+      console.error(
+        "보고서 삭제 실패:",
+        error
+      );
+
       alert(
-        error.response?.data?.message ||
-          error.message ||
+        error.message ||
           "보고서 삭제 중 오류가 발생했습니다."
       );
     }
