@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import './AdminUserScreen.css';
 
+import { useAdminUsers } from "../hooks/useAdminUsers";
+import { useForceLogoutUser } from "../hooks/useForceLogoutUser";
+
 const PLANT_OPTIONS = [
   '장흥 발전소', '해남 발전소', '강진 발전소', '삼천포 발전소', 
   '여수 발전소', '광양 발전소', '태안 발전소', '당진 발전소', 
@@ -12,7 +15,6 @@ const PLANT_OPTIONS = [
 export default function AdminUserScreen() {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'list'
   const [pendingUsers, setPendingUsers] = useState([]);
-  const [approvedUsers, setApprovedUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +27,20 @@ export default function AdminUserScreen() {
   const [selectedPlants, setSelectedPlants] = useState([]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [errorMessageModal, setErrorMessageModal] = useState(null);
+
+  const {
+    users: approvedUsers,
+    loading: adminUsersLoading,
+    error: adminUsersError,
+    refetch: refetchAdminUsers,
+  } = useAdminUsers();
+
+  const {
+    forceLogoutUser,
+    isForceLoggingOut,
+  } = useForceLogoutUser();
+
+  
 
   // --- [공통 백엔드 에러 추출 함수] ---
   const handleApiError = (err, fallbackMsg) => {
@@ -50,21 +66,7 @@ const pending = userList
           createdAt: u.created_at || u.createdAt || '오늘'
         }));
 
-      const approved = data
-        .filter(u => u.role !== 'GUEST' && u.status !== 'PENDING')
-        .map(u => ({
-          id: u.id || u.user_id,
-          name: u.name || u.username,
-          employeeId: u.employee_id || u.employeeId,
-          isOnline: u.is_online ?? u.isOnline ?? false,
-          plants: u.plants || u.assigned_plants || [],
-          loginFailCount: u.login_fail_count || 0,
-          isBlocked: u.is_blocked ?? (u.login_fail_count >= 5) ?? false,
-          role: u.role || 'USER'
-        }));
-
       setPendingUsers(pending);
-      setApprovedUsers(approved);
     } catch (err) {
       handleApiError(err, '사용자 리스트를 불러오는데 실패했습니다.');
     } finally {
@@ -154,11 +156,18 @@ const pending = userList
 
   const handleForceLogout = async (userId, name) => {
     try {
-      await axios.delete(`/api/admin/users/${userId}/session`);
-      alert(`${name} 님을 강제 로그아웃 시켰습니다.`);
-      fetchUsers();
+      await forceLogoutUser(userId);
+
+      alert(
+        `${name} 님을 강제 로그아웃 시켰습니다.`
+      );
+
+      refetchAdminUsers();
     } catch (err) {
-      handleApiError(err, '강제 로그아웃 처리에 실패했습니다.');
+      handleApiError(
+        err,
+        "강제 로그아웃 처리에 실패했습니다."
+      );
     }
   };
 
