@@ -80,6 +80,10 @@ class DefectResultServiceTest {
         when(storagePort.readJson("s3://bucket/async-out/abc.json")).thenReturn("""
                 [{"bbox":[10.0,20.0,50.0,80.0],"defect_type":"Paint Damage","confidence":0.97,"severity":"3"},
                  {"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.5,"severity":"high"}]""");
+        // 종료 판정은 점검 행을 먼저 잠근 뒤 미완료를 조회한다 — 잠금 스텁이 없으면 그 경로에 닿지 않는다.
+        Inspection inspecting = Inspection.request(7L, 10L, 90L, START, END);
+        inspecting.markInspecting();
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspecting));
         when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(true); // 아직 남음
 
         boolean done = service.process(completedNotification());
@@ -103,7 +107,7 @@ class DefectResultServiceTest {
         assertThat(first.getImagePath()).isEqualTo("content/inspections/5/31/LE/1.jpg");
         assertThat(defects.get(1).getSeverity()).isNull(); // 비숫자 클래스명 → null
         // 아직 미완 이미지가 남아 전이/생성은 없다
-        verify(inspectionRepository, never()).findById(any());
+        assertThat(inspecting.getStatus()).isEqualTo(InspectionStatus.INSPECTING);
         verify(reportPort, never()).requestGeneration(any());
     }
 
@@ -116,7 +120,7 @@ class DefectResultServiceTest {
         when(outboxEventRepository.existsCompletedByAggregate("Inspection", "5")).thenReturn(true);
         Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
         inspection.markInspecting();
-        when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
 
         service.process(completedNotification());
 
@@ -124,6 +128,22 @@ class DefectResultServiceTest {
         assertThat(inspection.getStatus()).isEqualTo(InspectionStatus.INSPECTED);
         verify(reportPort).requestGeneration(90L);
         verify(defectRepository, never()).saveAll(any()); // 0건이면 저장 호출 없음
+    }
+
+    @Test
+    @DisplayName("잠금 대기 중 다른 소비자가 이미 종결했으면 조용히 물러난다(재전이 예외 방지)")
+    void alreadyFinished_backsOff() {
+        when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
+        when(storagePort.readJson(any())).thenReturn("[]");
+        when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(false);
+        Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
+        inspection.markInspecting();
+        inspection.markInspected();   // 경쟁 소비자가 먼저 끝냈다
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
+
+        service.process(completedNotification());   // 예외가 새지 않아야 한다
+
+        verify(reportPort, never()).requestGeneration(any());
     }
 
     @Test
@@ -161,7 +181,7 @@ class DefectResultServiceTest {
         lenient().when(outboxEventRepository.countFailedByAggregate("Inspection", "5")).thenReturn(3L);
         Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
         inspection.markInspecting();
-        when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
 
         service.process("""
                 {"invocationStatus":"Failed","inferenceId":"77","failureReason":"model error"}""");
@@ -180,7 +200,7 @@ class DefectResultServiceTest {
         when(outboxEventRepository.countFailedByAggregate("Inspection", "5")).thenReturn(1L);
         Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
         inspection.markInspecting();
-        when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
+        when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
 
         service.process("""
                 {"invocationStatus":"Failed","inferenceId":"77","failureReason":"model error"}""");
@@ -197,7 +217,7 @@ class DefectResultServiceTest {
                 [{"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"9"},
                  {"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"0"},
                  {"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"4"}]""");
-        when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(true);
+        lenient().when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(true);
 
         service.process(completedNotification());
 

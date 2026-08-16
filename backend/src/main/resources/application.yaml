@@ -49,7 +49,9 @@ aws:
     presign-ttl: ${AWS_S3_PRESIGN_TTL:15m} # 업로드는 다건이라 넉넉히
   sagemaker:
     anomaly-endpoint: ${AWS_SAGEMAKER_ANOMALY_ENDPOINT:} # 이상감지 Serverless Inference 엔드포인트명
-    defect-endpoint: ${AWS_SAGEMAKER_DEFECT_ENDPOINT:} # 결함탐지 Async Inference 엔드포인트명. 미설정 시 릴레이가 발사 skip(아웃박스 PENDING 유지)
+    # 결함탐지 Async Inference 엔드포인트명. 미설정 시 발사 폴러만 휴면한다 — 릴레이는 요청 큐에 넣고
+    # 아웃박스를 PUBLISHED 로 전이하므로, 요청은 큐에 남아 엔드포인트가 설정되면 그대로 소비된다.
+    defect-endpoint: ${AWS_SAGEMAKER_DEFECT_ENDPOINT:}
     invoke-timeout: ${AWS_SAGEMAKER_INVOKE_TIMEOUT:70s} # 모델 응답 상한(60s)보다 길게 — 짧으면 성공할 추론을 먼저 끊는다
   sqs:
     # 추론 발사 요청 큐. 아웃박스 릴레이가 넣고 발사 폴러가 꺼내 SageMaker 를 호출한다. 미설정 시 둘 다 skip.

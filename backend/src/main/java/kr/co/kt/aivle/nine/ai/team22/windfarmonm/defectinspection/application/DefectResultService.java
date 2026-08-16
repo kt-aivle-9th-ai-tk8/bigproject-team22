@@ -6,6 +6,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.Defect;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.DefectRepository;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.Inspection;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.InspectionRepository;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.InspectionStatus;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.OutboxEvent;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.OutboxEventRepository;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.PartSide;
@@ -148,13 +149,21 @@ public class DefectResultService {
     private void finishInspectionIfDone(OutboxEvent event) {
         String aggregateType = event.getAggregateType();
         String aggregateId = event.getAggregateId();
+        long inspectionId = Long.parseLong(aggregateId);
+
+        // 점검 행을 먼저 잠그고 그 뒤에 미완료를 조회한다 — 순서가 반대면 두 소비자가 각각 '남은 건 있다'를
+        // 보고 둘 다 물러나 아무도 종결하지 못한다. ShedLock 은 상호배제 보장이 아니라(lockAtMostFor 만료·
+        // 장애 조정 중 동시 실행 가능) 이 직렬화는 DB 잠금으로 해야 한다.
+        Inspection inspection = inspectionRepository.findByIdForUpdate(inspectionId).orElse(null);
+        if (inspection == null) {
+            log.warn("점검 {} 이 없다(경쟁 삭제?) — 전이/생성 생략", inspectionId);
+            return;
+        }
         if (outboxEventRepository.existsUnfinishedByAggregate(aggregateType, aggregateId)) {
             return; // 아직 결과 대기 중인 이미지가 남았다
         }
-        long inspectionId = Long.parseLong(aggregateId);
-        Inspection inspection = inspectionRepository.findById(inspectionId).orElse(null);
-        if (inspection == null) {
-            log.warn("점검 {} 이 없다(경쟁 삭제?) — 전이/생성 생략", inspectionId);
+        if (inspection.getStatus() != InspectionStatus.INSPECTING) {
+            // 잠금을 기다리는 동안 다른 소비자가 이미 종결했다. 재전이는 예외가 되므로 조용히 물러난다.
             return;
         }
         inspection.markInspected();
