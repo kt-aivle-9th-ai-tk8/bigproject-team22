@@ -34,6 +34,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DefectResultService {
 
+    /** 심각도 계약 범위(V5 주석: 1~4). 범위 검증은 애플리케이션 담당이다. */
+    private static final int MIN_SEVERITY = 1;
+    private static final int MAX_SEVERITY = 4;
+
     private final OutboxEventRepository outboxEventRepository;
     private final InspectionRepository inspectionRepository;
     private final DefectRepository defectRepository;
@@ -129,23 +133,48 @@ public class DefectResultService {
         log.info("추론 결과 적재 완료 inspection={} image={} 결함 {}건", inspectionId, imageKey, defects.size());
     }
 
-    /** 점검의 모든 이미지가 종결됐으면 INSPECTED 로 전이하고 결함 보고서 본문 생성을 요청한다. */
+    /**
+     * 점검의 모든 이미지가 종결됐으면 INSPECTED 로 전이하고, <b>성공한 추론이 하나라도 있을 때만</b>
+     * 결함 보고서 본문 생성을 요청한다.
+     * <p>
+     * 전이 기준은 "미완료(PENDING/PUBLISHED) 없음"이다 — FAILED 를 미완료로 치면 이미지 한 장의 영구
+     * 실패(손상 파일 등)로 점검이 INSPECTING 에 영원히 갇힌다. 추론 실패는 재시도 경로가 없으므로
+     * 그 정체는 운영자 개입 전까지 풀리지 않는다.
+     * <p>
+     * 다만 <b>전부 실패한 세션은 보고서를 만들지 않는다</b> — 결함 0건이 '정상'인지 '추론 실패'인지
+     * 구분되지 않은 채 보고서가 나가면 없는 안전을 보고하는 셈이 된다. 일부만 실패한 경우는 확보된
+     * 결함으로 보고서를 만들되 경고를 남긴다(부분 결과가 무결과보다 낫다).
+     */
     private void finishInspectionIfDone(OutboxEvent event) {
-        if (outboxEventRepository.existsUnfinishedByAggregate(event.getAggregateType(), event.getAggregateId())) {
+        String aggregateType = event.getAggregateType();
+        String aggregateId = event.getAggregateId();
+        if (outboxEventRepository.existsUnfinishedByAggregate(aggregateType, aggregateId)) {
             return; // 아직 결과 대기 중인 이미지가 남았다
         }
-        long inspectionId = Long.parseLong(event.getAggregateId());
+        long inspectionId = Long.parseLong(aggregateId);
         Inspection inspection = inspectionRepository.findById(inspectionId).orElse(null);
         if (inspection == null) {
             log.warn("점검 {} 이 없다(경쟁 삭제?) — 전이/생성 생략", inspectionId);
             return;
         }
         inspection.markInspected();
+
+        long failed = outboxEventRepository.countFailedByAggregate(aggregateType, aggregateId);
+        boolean anySucceeded = outboxEventRepository.existsCompletedByAggregate(aggregateType, aggregateId);
+        if (!anySucceeded) {
+            log.error("점검 {} 의 추론이 전부 실패({}건) — INSPECTED 로 닫되 보고서는 생성하지 않는다"
+                    + "(결함 0건이 정상인지 실패인지 구분되지 않는다)", inspectionId, failed);
+            return;
+        }
+        if (failed > 0) {
+            log.warn("점검 {} 에 추론 실패 {}건이 섞였다 — 확보된 결함으로 보고서를 생성한다(부분 결과)",
+                    inspectionId, failed);
+        }
         if (inspection.getReportId() != null) {
             // 이 트랜잭션이 커밋된 뒤(AFTER_COMMIT) 생성 파이프라인이 돈다 — 커밋 전 결함으로 생성하지 않는다.
             reportPort.requestGeneration(inspection.getReportId());
         }
-        log.info("점검 {} 결과 전부 적재 — INSPECTED 전이, 보고서 {} 생성 요청", inspectionId, inspection.getReportId());
+        log.info("점검 {} 결과 적재 종결 — INSPECTED 전이, 보고서 {} 생성 요청", inspectionId, inspection.getReportId());
     }
 
     private static PartSide parsePartSide(String raw) {
@@ -159,13 +188,22 @@ public class DefectResultService {
         }
     }
 
-    /** CNN 심각도(1~4 기대). 숫자가 아닌 클래스명이 오면 null 로 두고 흔적을 남긴다(모델 계약 확인 필요). */
+    /**
+     * CNN 심각도. 모델은 체크포인트의 class_names 값을 그대로 내보내므로 숫자가 아닐 수 있다
+     * (inference.py 확인 — AI 팀과 계약 정렬 중). 숫자가 아니거나 계약 범위(1~4) 밖이면
+     * null 로 두고 흔적을 남긴다 — 범위 밖 값을 그대로 넣으면 이미지 그룹의 max_severity 가 오염된다.
+     */
     private static Integer parseSeverity(String raw) {
         if (raw == null) {
             return null;
         }
         try {
-            return Integer.parseInt(raw.trim());
+            int severity = Integer.parseInt(raw.trim());
+            if (severity < MIN_SEVERITY || severity > MAX_SEVERITY) {
+                log.warn("계약 범위({}~{}) 밖 severity: {} — null 로 적재", MIN_SEVERITY, MAX_SEVERITY, raw);
+                return null;
+            }
+            return severity;
         } catch (NumberFormatException e) {
             log.warn("숫자가 아닌 severity 클래스명: {} — null 로 적재", raw);
             return null;

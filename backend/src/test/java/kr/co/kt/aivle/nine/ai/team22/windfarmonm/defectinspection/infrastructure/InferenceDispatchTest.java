@@ -133,6 +133,18 @@ class InferenceDispatchTest {
         }
 
         @Test
+        @DisplayName("깨진 JSON 메시지는 폐기한다 — 재배달하면 같은 실패로 DLQ 만 오염된다")
+        void poll_discardsMalformedJson() {
+            queueReady();
+            when(sqsQueueClient.receiveRequestMessages()).thenReturn(List.of(message("{not-json")));
+
+            poller.poll();   // 예외가 새지 않아야 한다
+
+            verify(sageMakerInvoker, never()).invokeDefectEndpointAsync(any(), any());
+            verify(sqsQueueClient).deleteRequestMessage("r1");
+        }
+
+        @Test
         @DisplayName("큐나 엔드포인트가 미설정이면 폴링 자체를 건너뛴다(휴면)")
         void poll_skipsWhenUnconfigured() {
             when(sqsQueueClient.isRequestQueueConfigured()).thenReturn(false);

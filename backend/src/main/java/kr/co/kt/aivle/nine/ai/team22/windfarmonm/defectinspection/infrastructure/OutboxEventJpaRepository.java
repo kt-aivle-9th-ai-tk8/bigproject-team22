@@ -14,4 +14,7 @@ public interface OutboxEventJpaRepository extends JpaRepository<OutboxEvent, Lon
 
     boolean existsByAggregateTypeAndAggregateIdAndStatusIn(
             String aggregateType, String aggregateId, Collection<OutboxStatus> statuses);
+
+    long countByAggregateTypeAndAggregateIdAndStatus(
+            String aggregateType, String aggregateId, OutboxStatus status);
 }

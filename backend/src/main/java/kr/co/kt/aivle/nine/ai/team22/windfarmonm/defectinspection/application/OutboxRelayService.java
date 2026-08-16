@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.JsonNode;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
@@ -58,10 +58,17 @@ public class OutboxRelayService {
         if (event == null || event.getStatus() != OutboxStatus.PENDING) {
             return; // 경쟁 처리됨 — 조용히 종료
         }
-        JsonNode payload = objectMapper.readTree(event.getPayload());
-        String imageKey = payload.path("image_key").asString(null);
+        String imageKey;
+        try {
+            imageKey = objectMapper.readTree(event.getPayload()).path("image_key").asString(null);
+        } catch (JacksonException e) {
+            // 깨진 JSON 은 재시도해도 같은 실패다 — 예외를 올리면 PENDING 으로 남아 무한 재시도된다.
+            log.error("아웃박스 {} payload 가 JSON 이 아니다 — FAILED 처리: {}", eventId, event.getPayload(), e);
+            event.markFailed();
+            return;
+        }
         if (imageKey == null || imageKey.isBlank()) {
-            // 규약 밖 payload 는 재시도해도 소용없다 — FAILED 로 빼서 무한 재시도를 막는다.
+            // 규약 밖 payload 도 재시도해도 소용없다 — FAILED 로 빼서 무한 재시도를 막는다.
             log.error("아웃박스 {} payload 에 image_key 가 없다 — FAILED 처리: {}", eventId, event.getPayload());
             event.markFailed();
             return;

@@ -37,6 +37,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DefectResultServiceTest {
 
+    private static final LocalDateTime START = LocalDateTime.of(2026, 8, 1, 0, 0);
+    private static final LocalDateTime END = LocalDateTime.of(2026, 8, 2, 0, 0);
+
     private static final String PAYLOAD = """
             {"inspection_id":5,"image_key":"content/inspections/5/31/LE/1.jpg","blade_id":31,"part_side":"LE"}""";
 
@@ -110,8 +113,8 @@ class DefectResultServiceTest {
         when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
         when(storagePort.readJson(any())).thenReturn("[]"); // 결함 0건도 정상 종결
         when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(false);
-        Inspection inspection = Inspection.request(7L, 10L, 90L,
-                LocalDateTime.of(2026, 8, 1, 0, 0), LocalDateTime.of(2026, 8, 2, 0, 0));
+        when(outboxEventRepository.existsCompletedByAggregate("Inspection", "5")).thenReturn(true);
+        Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
         inspection.markInspecting();
         when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
 
@@ -147,6 +150,63 @@ class DefectResultServiceTest {
         assertThat(done).isTrue();
         assertThat(event.getStatus()).isEqualTo(OutboxStatus.FAILED);
         verify(defectRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("전부 실패한 세션: INSPECTED 로 닫되 보고서는 생성하지 않는다(없는 안전을 보고하지 않기 위해)")
+    void allFailed_noReportGeneration() {
+        when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
+        when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(false);
+        when(outboxEventRepository.existsCompletedByAggregate("Inspection", "5")).thenReturn(false);
+        lenient().when(outboxEventRepository.countFailedByAggregate("Inspection", "5")).thenReturn(3L);
+        Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
+        inspection.markInspecting();
+        when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
+
+        service.process("""
+                {"invocationStatus":"Failed","inferenceId":"77","failureReason":"model error"}""");
+
+        assertThat(event.getStatus()).isEqualTo(OutboxStatus.FAILED);
+        assertThat(inspection.getStatus()).isEqualTo(InspectionStatus.INSPECTED); // 영구 정체 방지
+        verify(reportPort, never()).requestGeneration(any());                     // 빈 보고서 방지
+    }
+
+    @Test
+    @DisplayName("일부만 실패한 세션: 확보된 결함으로 보고서를 생성한다(부분 결과가 무결과보다 낫다)")
+    void partialFailure_stillGeneratesReport() {
+        when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
+        when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(false);
+        when(outboxEventRepository.existsCompletedByAggregate("Inspection", "5")).thenReturn(true);
+        when(outboxEventRepository.countFailedByAggregate("Inspection", "5")).thenReturn(1L);
+        Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
+        inspection.markInspecting();
+        when(inspectionRepository.findById(5L)).thenReturn(Optional.of(inspection));
+
+        service.process("""
+                {"invocationStatus":"Failed","inferenceId":"77","failureReason":"model error"}""");
+
+        assertThat(inspection.getStatus()).isEqualTo(InspectionStatus.INSPECTED);
+        verify(reportPort).requestGeneration(90L);
+    }
+
+    @Test
+    @DisplayName("계약 범위(1~4) 밖 severity 는 null 로 적재한다 — max_severity 오염 방지")
+    void severityOutOfRange_storedAsNull() {
+        when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
+        when(storagePort.readJson(any())).thenReturn("""
+                [{"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"9"},
+                 {"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"0"},
+                 {"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"4"}]""");
+        when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(true);
+
+        service.process(completedNotification());
+
+        ArgumentCaptor<List<Defect>> captor = ArgumentCaptor.captor();
+        verify(defectRepository).saveAll(captor.capture());
+        List<Defect> defects = captor.getValue();
+        assertThat(defects.get(0).getSeverity()).isNull(); // 9 = 범위 초과
+        assertThat(defects.get(1).getSeverity()).isNull(); // 0 = 범위 미만
+        assertThat(defects.get(2).getSeverity()).isEqualTo(4);
     }
 
     @Test

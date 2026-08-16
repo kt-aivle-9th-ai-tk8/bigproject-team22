@@ -8,6 +8,7 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.model.Message;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -60,7 +61,14 @@ public class InferenceDispatchPoller {
      *         큐에 남겨 두면 DLQ 만 오염시킨다. 일시 장애는 예외로 올라가 미삭제된다.
      */
     private boolean dispatch(String body) {
-        JsonNode node = objectMapper.readTree(body);
+        JsonNode node;
+        try {
+            node = objectMapper.readTree(body);
+        } catch (JacksonException e) {
+            // 깨진 JSON 은 재배달해도 같은 실패다 — 큐에 남기면 DLQ 만 오염시킨다.
+            log.error("요청 큐 메시지가 JSON 이 아니다 — 폐기: {}", body, e);
+            return true;
+        }
         String inferenceId = node.path("inference_id").asString(null);
         String imageS3Uri = node.path("image_s3_uri").asString(null);
         if (inferenceId == null || imageS3Uri == null) {

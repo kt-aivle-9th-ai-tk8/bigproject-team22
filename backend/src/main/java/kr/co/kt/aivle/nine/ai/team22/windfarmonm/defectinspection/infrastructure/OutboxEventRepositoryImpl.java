@@ -37,4 +37,16 @@ public class OutboxEventRepositoryImpl implements OutboxEventRepository {
         return jpaRepository.existsByAggregateTypeAndAggregateIdAndStatusIn(
                 aggregateType, aggregateId, List.of(OutboxStatus.PENDING, OutboxStatus.PUBLISHED));
     }
+
+    @Override
+    public boolean existsCompletedByAggregate(String aggregateType, String aggregateId) {
+        return jpaRepository.existsByAggregateTypeAndAggregateIdAndStatusIn(
+                aggregateType, aggregateId, List.of(OutboxStatus.COMPLETED));
+    }
+
+    @Override
+    public long countFailedByAggregate(String aggregateType, String aggregateId) {
+        return jpaRepository.countByAggregateTypeAndAggregateIdAndStatus(
+                aggregateType, aggregateId, OutboxStatus.FAILED);
+    }
 }

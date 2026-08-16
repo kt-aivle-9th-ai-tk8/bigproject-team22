@@ -77,6 +77,18 @@ class OutboxRelayServiceTest {
     }
 
     @Test
+    @DisplayName("payload 가 깨진 JSON 이어도 FAILED 로 종결한다 — 예외를 올리면 PENDING 무한 재시도가 된다")
+    void publishOne_malformedJson_failed() {
+        OutboxEvent event = pendingEvent(77L, "{not-json");
+        when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
+
+        service.publishOne(77L);   // 예외가 새지 않아야 한다
+
+        verify(dispatchPort, never()).dispatch(any(), any());
+        assertThat(event.getStatus()).isEqualTo(OutboxStatus.FAILED);
+    }
+
+    @Test
     @DisplayName("payload 에 image_key 가 없으면 FAILED 로 빼서 무한 재시도를 막는다")
     void publishOne_invalidPayload_failed() {
         OutboxEvent event = pendingEvent(77L, "{\"inspection_id\":5}");
