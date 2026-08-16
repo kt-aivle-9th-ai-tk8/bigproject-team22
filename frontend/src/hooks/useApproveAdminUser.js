@@ -4,67 +4,59 @@ import {
   updateAdminUser,
 } from "../api/adminUserApi";
 
-export const useUpdateAdminUser = () => {
-  const [isUpdatingUser, setIsUpdatingUser] =
+export const useApproveAdminUser = () => {
+  const [isApproving, setIsApproving] =
     useState(false);
 
-  const [updateUserError, setUpdateUserError] =
+  const [approveError, setApproveError] =
     useState(null);
 
-  const updateUser = async ({
+  const approveUser = async ({
     userId,
-    role,
     windFarmIds,
   }) => {
     if (!userId) {
-      throw new Error(
-        "사용자 ID가 필요합니다."
-      );
+      throw new Error("사용자 ID가 필요합니다.");
     }
 
-    if (!role) {
+    if (
+      !Array.isArray(windFarmIds) ||
+      windFarmIds.length === 0
+    ) {
       throw new Error(
-        "사용자 권한이 필요합니다."
-      );
-    }
-
-    if (!Array.isArray(windFarmIds)) {
-      throw new Error(
-        "담당 발전소 ID 목록이 필요합니다."
+        "최소 하나 이상의 담당 발전소를 선택해 주세요."
       );
     }
 
     try {
-      setIsUpdatingUser(true);
-      setUpdateUserError(null);
+      setIsApproving(true);
+      setApproveError(null);
 
       const response =
         await updateAdminUser({
           userId,
-          role,
+          role: "MANAGER",
           windFarmIds,
         });
 
       return response;
     } catch (error) {
       console.error(
-        "관리자 사용자 변경 에러:",
+        "사용자 승인 에러:",
         error
       );
 
-      setUpdateUserError(
-        error.message
-      );
+      setApproveError(error.message);
 
       throw error;
     } finally {
-      setIsUpdatingUser(false);
+      setIsApproving(false);
     }
   };
 
   return {
-    updateUser,
-    isUpdatingUser,
-    updateUserError,
+    approveUser,
+    isApproving,
+    approveError,
   };
 };
