@@ -1,4 +1,4 @@
-import { apiFetch } from "./authApi";
+import { apiFetch } from "./apiClient";
 
 export const fetchAdminUsers = async ({
   role,
