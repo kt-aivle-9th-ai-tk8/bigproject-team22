@@ -2,14 +2,23 @@ import { apiFetch } from "./apiClient";
 
 export const createInspection = async ({
   windFarmId,
+  inspectionStart,
+  inspectionEnd,
   turbines,
   context,
 }) => {
   const requestBody = {
     wind_farm_id: windFarmId,
+    inspection_start: inspectionStart,
+    inspection_end: inspectionEnd,
     turbines,
     context: context || "",
   };
+
+  console.log(
+    "POST /api/inspections 요청:",
+    requestBody
+  );
 
   const response = await apiFetch("/api/inspections", {
     method: "POST",
@@ -45,7 +54,6 @@ export const createInspection = async ({
 
   return responseBody;
 };
-
 
 export const uploadInspectionImage = async ({
   uploadUrl,
