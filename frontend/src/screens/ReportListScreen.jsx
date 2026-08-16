@@ -202,7 +202,12 @@ function ReportListScreen() {
           <span className="current-date">{todayString}</span>
         </div>
         <div className="header-btn-group">
-          <button className="back-btn" onClick={() => navigate(-1)}>뒤로가기</button>
+          <button
+            className="back-btn"
+            onClick={() => navigate("/main")}
+          >
+            홈
+          </button>
         </div>
       </header>
 
