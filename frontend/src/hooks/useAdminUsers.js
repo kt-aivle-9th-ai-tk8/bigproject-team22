@@ -27,22 +27,23 @@ export const useAdminUsers = ({
           role,
         });
 
-      const responseData =
-        responseBody?.data ??
-        responseBody;
-
       const rawUsers =
-        Array.isArray(responseData)
-          ? responseData
-          : [];
+        responseBody?.data?.users ??
+        responseBody?.users ??
+        [];
 
-      const userList = rawUsers
-        .filter(
-          (user) =>
-            user.role === "ADMIN" ||
-            user.role === "MANAGER"
-        )
-        .map((user) => ({
+      const filteredUsers = role
+        ? rawUsers.filter(
+            (user) => user.role === role
+          )
+        : rawUsers.filter(
+            (user) =>
+              user.role === "ADMIN" ||
+              user.role === "MANAGER"
+          );
+
+      const userList = filteredUsers.map(
+        (user) => ({
           id: user.user_id,
           name: user.user_name,
           employeeId: user.employee_id,
@@ -68,8 +69,12 @@ export const useAdminUsers = ({
 
           role: user.role,
 
+          createdAt:
+            user.created_at || "오늘",
+
           isBlocked: false,
-        }));
+        })
+      );
 
       setUsers(userList);
 

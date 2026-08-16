@@ -86,3 +86,68 @@ export const forceLogoutAdminUser = async (userId) => {
 
   return responseBody;
 };
+
+export const updateAdminUser = async ({
+  userId,
+  role,
+  windFarmIds,
+}) => {
+  if (userId === undefined || userId === null) {
+    throw new Error("사용자 ID가 필요합니다.");
+  }
+
+  if (!role) {
+    throw new Error("사용자 권한이 필요합니다.");
+  }
+
+  if (!Array.isArray(windFarmIds)) {
+    throw new Error(
+      "담당 발전소 ID 목록이 필요합니다."
+    );
+  }
+
+  const requestBody = {
+    role,
+    wind_farm_ids: windFarmIds,
+  };
+
+  console.log(
+    `PATCH /api/admin/users/${userId} 요청:`,
+    requestBody
+  );
+
+  const response = await apiFetch(
+    `/api/admin/users/${userId}`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    }
+  );
+
+  const responseText = await response.text();
+
+  let responseBody = null;
+
+  if (responseText) {
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = responseText;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      responseBody?.message ||
+        responseBody?.error ||
+        "사용자 정보 변경에 실패했습니다."
+    );
+  }
+
+  return responseBody;
+};
