@@ -9,22 +9,52 @@ const AVAILABLE_REPORT_TYPES = [
   "anomaly_event",
 ];
 
-const formatReportTitle = (title) => {
+const getTurbineReportDisplay = (title) => {
   if (!title) {
-    return "보고서";
+    return {
+      title: "보고서",
+      subtitle: "",
+    };
   }
 
-  return title
-    .replace(
-      /(\d{4}-\d{2}-\d{2})\s*~\s*\1/g,
-      "$1"
-    )
-    .replace(
-      /\d{4}-\d{2}-\d{2}/g,
-      (date) => date.replaceAll("-", ".")
-    );
-};
+  const datePattern =
+    /(\d{4}-\d{2}-\d{2})(?:\s*~\s*(\d{4}-\d{2}-\d{2}))?/;
 
+  const match = title.match(datePattern);
+
+  if (!match) {
+    return {
+      title,
+      subtitle: "",
+    };
+  }
+
+  const startDate = match[1];
+  const endDate = match[2];
+
+  const formattedStartDate =
+    startDate.replaceAll("-", ".");
+
+  const formattedEndDate =
+    endDate
+      ? endDate.replaceAll("-", ".")
+      : "";
+
+  const subtitle =
+    endDate && endDate !== startDate
+      ? `${formattedStartDate} ~ ${formattedEndDate}`
+      : formattedStartDate;
+
+  const displayTitle = title
+    .replace(datePattern, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return {
+    title: displayTitle || "보고서",
+    subtitle,
+  };
+};
 
 export const useTurbineReports = ({
   mode,
@@ -103,15 +133,30 @@ export const useTurbineReports = ({
               report.report_type || ""
             ).toLowerCase();
 
-            const displayTitle =
-              reportType === "turbine_operation"
-                ? formatReportTitle(report.title)
-                : report.title;
+            let displayTitle = report.title;
+            let subtitle = "";
+
+            if (
+              reportType ===
+              "turbine_operation"
+            ) {
+              const display =
+                getTurbineReportDisplay(
+                  report.title
+                );
+
+              displayTitle =
+                display.title;
+
+              subtitle =
+                display.subtitle;
+            }
 
             return {
               ...report,
 
               title: displayTitle,
+              subtitle,
 
               status: reportType,
 

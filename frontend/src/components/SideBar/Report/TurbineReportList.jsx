@@ -38,8 +38,16 @@ function TurbineReportList({
               onSelectReport?.(item)
             }
           >
-            <div className="turbine-report-date">
-              {item.title}
+            <div className="turbine-report-text">
+              <div className="turbine-report-title">
+                {item.title}
+              </div>
+
+              {item.subtitle && (
+                <div className="turbine-report-subtitle">
+                  {item.subtitle}
+                </div>
+              )}
             </div>
 
 
