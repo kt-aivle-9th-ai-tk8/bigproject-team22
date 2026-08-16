@@ -31,7 +31,7 @@ public class InferenceResultPoller {
     @Scheduled(fixedDelayString = "PT2S")
     @SchedulerLock(name = "defect-result-poller", lockAtMostFor = "PT2M")
     public void poll() {
-        if (!sqsQueueClient.isConfigured()) {
+        if (!sqsQueueClient.isResultQueueConfigured()) {
             return; // 큐 미설정 — 휴면(CI/로컬에서 무해)
         }
         List<Message> messages = sqsQueueClient.receiveResultMessages();

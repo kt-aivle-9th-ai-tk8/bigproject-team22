@@ -48,10 +48,14 @@ public record AwsProperties(
     }
 
     /**
-     * @param resultQueueUrl 추론 결과 수신 큐(windfarm-sqs) URL. success/error SNS 토픽이 raw delivery 로
-     *                       이 큐에 통보를 넣고, BE 폴러가 long-polling 으로 소비한다. 비어 있으면 미설정.
+     * @param requestQueueUrl 추론 발사 요청 큐 URL. 아웃박스 릴레이가 넣고 발사 폴러가 꺼내
+     *                        SageMaker 를 호출한다. 발사 실패는 큐의 redrive 가 DLQ 로 격리한다.
+     *                        비어 있으면 미설정(릴레이·발사 폴러 휴면).
+     * @param resultQueueUrl  추론 결과 수신 큐(windfarm-sqs) URL. success/error SNS 토픽이 raw delivery 로
+     *                        이 큐에 통보를 넣고, BE 폴러가 long-polling 으로 소비한다. 비어 있으면 미설정.
      */
     public record Sqs(
+            @DefaultValue("") String requestQueueUrl,
             @DefaultValue("") String resultQueueUrl
     ) {
     }

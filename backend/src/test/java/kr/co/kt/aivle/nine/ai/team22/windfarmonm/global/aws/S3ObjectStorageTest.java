@@ -23,7 +23,7 @@ class S3ObjectStorageTest {
                 region,
                 new AwsProperties.S3(bucket, "content", Duration.ofMinutes(15)),
                 new AwsProperties.Sagemaker("", "", Duration.ofSeconds(70)),
-                new AwsProperties.Sqs(""));
+                new AwsProperties.Sqs("", ""));
     }
 
     @Test

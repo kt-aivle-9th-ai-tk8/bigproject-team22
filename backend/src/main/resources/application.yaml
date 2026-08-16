@@ -52,6 +52,8 @@ aws:
     defect-endpoint: ${AWS_SAGEMAKER_DEFECT_ENDPOINT:} # 결함탐지 Async Inference 엔드포인트명. 미설정 시 릴레이가 발사 skip(아웃박스 PENDING 유지)
     invoke-timeout: ${AWS_SAGEMAKER_INVOKE_TIMEOUT:70s} # 모델 응답 상한(60s)보다 길게 — 짧으면 성공할 추론을 먼저 끊는다
   sqs:
+    # 추론 발사 요청 큐. 아웃박스 릴레이가 넣고 발사 폴러가 꺼내 SageMaker 를 호출한다. 미설정 시 둘 다 skip.
+    request-queue-url: ${AWS_SQS_REQUEST_QUEUE_URL:}
     # 추론 결과 수신 큐(windfarm-sqs). success/error SNS 토픽이 raw delivery 로 넣는다. 미설정 시 폴러 skip.
     result-queue-url: ${AWS_SQS_RESULT_QUEUE_URL:}
 
