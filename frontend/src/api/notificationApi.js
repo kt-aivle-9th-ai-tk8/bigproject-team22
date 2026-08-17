@@ -75,3 +75,47 @@ export const fetchNotifications = async () => {
 
   return responseBody;
 };
+
+export const readNotification = async (
+  notificationId
+) => {
+  if (!notificationId) {
+    throw new Error(
+      "알림 ID가 필요합니다."
+    );
+  }
+
+  const response = await apiFetch(
+    `/api/notifications/${notificationId}/read`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  const responseText =
+    await response.text();
+
+  let responseBody = null;
+
+  try {
+    responseBody = responseText
+      ? JSON.parse(responseText)
+      : null;
+  } catch {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      responseBody?.message ||
+        responseBody?.error ||
+        "알림 읽음 처리에 실패했습니다."
+    );
+  }
+
+  return responseBody;
+};

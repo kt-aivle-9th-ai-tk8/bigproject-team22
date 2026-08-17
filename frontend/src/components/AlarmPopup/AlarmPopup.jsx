@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react";
-import ReactMarkdown from "react-markdown";
-
-import { useReportDetail } from "../../hooks/useReportDetail";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 import "./AlarmPopup.css";
+
 
 const formatSentAt = (sentAt) => {
   if (!sentAt) {
@@ -15,28 +14,15 @@ const formatSentAt = (sentAt) => {
   return `${date.replaceAll("-", ".")}  ${time?.slice(0, 5) || ""}`;
 };
 
-function AlarmPopup({ alarm = [], isOpen, onClose }) {
-  const [selectedReport, setSelectedReport] = useState(null);
-  
-  const selectedReportId =
-    selectedReport?.report_id ||
-    selectedReport?.id;
 
-  const {
-    reportDetail,
-    loading: isReportDetailLoading,
-  } = useReportDetail({
-    reportId: selectedReportId,
-  });
-  
-  useEffect(() => {
-    if (!isOpen) {
-      setSelectedReport(null);
-      return;
-    }
+function AlarmPopup({
+  alarm = [],
+  isOpen,
+  onClose,
+  onReadNotification,
+}) {
+  const navigate = useNavigate();
 
-    setSelectedReport(null);
-  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -49,32 +35,74 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
     };
   }, [isOpen, onClose]);
+
 
   if (!isOpen) {
     return null;
   }
 
+
   const handleOverlayClick = () => {
     onClose();
   };
+
 
   const handlePopupClick = (event) => {
     event.stopPropagation();
   };
 
-  const handleReportClick = (report) => {
-    setSelectedReport(report);
+
+  const handleReportClick = async (
+    report
+  ) => {
+    const notificationId =
+      report?.id;
+
+    const reportId =
+      report?.report_id ||
+      report?.id;
+
+    if (!reportId) {
+      console.error(
+        "이동할 보고서 ID가 없습니다.",
+        report
+      );
+
+      return;
+    }
+
+    if (notificationId) {
+      try {
+        await onReadNotification?.(
+          notificationId
+        );
+      } catch (error) {
+        console.error(
+          "알림 읽음 처리 실패:",
+          error
+        );
+      }
+    }
+
+    onClose();
+
+    navigate(
+      `/reports/${reportId}/edit`
+    );
   };
 
-  const handleBackClick = () => {
-    setSelectedReport(null);
-  };
 
   return (
     <div
@@ -91,14 +119,7 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
       >
         <div className="alarm-popup-header">
           <h2 id="alarm-popup-title">
-            {selectedReport
-              ? (
-                  reportDetail?.title ||
-                  selectedReport?.title ||
-                  selectedReport?.report_title ||
-                  "보고서"
-                )
-              : "알림 보고서 리스트"}
+            알림 보고서 리스트
           </h2>
 
           <button
@@ -111,28 +132,28 @@ function AlarmPopup({ alarm = [], isOpen, onClose }) {
           </button>
         </div>
 
-        {selectedReport ? (
-          <AlarmReportDetail
-            report={selectedReport}
-            reportDetail={reportDetail}
-            isLoading={isReportDetailLoading}
-            onBack={handleBackClick}
-            showBackButton={true}
-          />
-        ) : (
-          <AlarmReportList
-            alarm={alarm}
-            onSelectReport={handleReportClick}
-          />
-        )}
+        <AlarmReportList
+          alarm={alarm}
+          onSelectReport={
+            handleReportClick
+          }
+        />
       </section>
     </div>
   );
 }
 
-function AlarmReportList({ alarm, onSelectReport }) {
+
+function AlarmReportList({
+  alarm,
+  onSelectReport,
+}) {
   if (alarm.length === 0) {
-    return <div className="alarm-empty">등록된 알림이 없습니다.</div>;
+    return (
+      <div className="alarm-empty">
+        등록된 알림이 없습니다.
+      </div>
+    );
   }
 
   return (
@@ -142,7 +163,9 @@ function AlarmReportList({ alarm, onSelectReport }) {
           className="alarm-list-item"
           key={report.id}
           type="button"
-          onClick={() => onSelectReport(report)}
+          onClick={() =>
+            onSelectReport(report)
+          }
         >
           <div className="alarm-list-main">
             <span className="alarm-title">
@@ -151,7 +174,9 @@ function AlarmReportList({ alarm, onSelectReport }) {
           </div>
 
           <div className="alarm-list-sub">
-            {formatSentAt(report.sent_at)}
+            {formatSentAt(
+              report.sent_at
+            )}
           </div>
         </button>
       ))}
@@ -159,46 +184,5 @@ function AlarmReportList({ alarm, onSelectReport }) {
   );
 }
 
-function AlarmReportDetail({
-  report,
-  reportDetail,
-  isLoading,
-  onBack,
-  showBackButton = true,
-}) {
-  const markdownContent =
-    reportDetail?.context ||
-    "";
-
-  return (
-    <div className="alarm-report-detail">
-      {showBackButton && (
-        <button
-          className="alarm-back-button"
-          type="button"
-          onClick={onBack}
-        >
-          ← 목록으로
-        </button>
-      )}
-
-      <div className="alarm-report-markdown">
-        {isLoading ? (
-          <div className="alarm-empty">
-            보고서 내용을 불러오는 중입니다...
-          </div>
-        ) : markdownContent ? (
-          <ReactMarkdown>
-            {markdownContent}
-          </ReactMarkdown>
-        ) : (
-          <div className="alarm-empty">
-            표시할 보고서 내용이 없습니다.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default AlarmPopup;

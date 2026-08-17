@@ -17,7 +17,7 @@ import { useTurbineDetail } from "../hooks/useTurbineDetail";
 import { useReportStatusPolling } from "../hooks/useReportStatusPolling";
 import { useInspectionReport } from "../hooks/useInspectionReport";
 import { useTurbineReports } from "../hooks/useTurbineReports";
-
+import { useReadNotification } from "../hooks/useReadNotification";
 import "./MainScreen.css";
 import "../components/Bar.css";
 
@@ -39,6 +39,24 @@ function MainScreen() {
     const savedTurbine = localStorage.getItem("selectedTurbine");
     return savedTurbine ? JSON.parse(savedTurbine) : null;
   });
+
+  const {
+    markNotificationAsRead,
+  } = useReadNotification();
+
+  const handleReadNotification =
+    async (notificationId) => {
+      try {
+        await markNotificationAsRead(
+          notificationId
+        );
+      } catch (error) {
+        console.error(
+          "알림 읽음 처리 실패:",
+          error
+        );
+      }
+    };
 
   // 전체 발전소 페이지 api
   const {
@@ -399,6 +417,7 @@ function MainScreen() {
         onTitleClick={handleBackToMap}
         onMyPage={handleNavigateUser}
         alarm={notifications}
+        onReadNotification={handleReadNotification}
       />
 
       <div className="dashboard-layout">
