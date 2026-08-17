@@ -110,7 +110,7 @@ class AdminUserServiceTest {
     void rejectSignUp_deletesGuest() {
         User guest = User.create("E2001", "hashed", "신입", "010-0000-0000", Role.GUEST);
         guest.updateLatestSessionId("sess-1");
-        when(userRepository.findById(9L)).thenReturn(Optional.of(guest));
+        when(userRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(guest));
 
         adminUserService.rejectSignUp(9L);
 
@@ -122,7 +122,7 @@ class AdminUserServiceTest {
     @DisplayName("거절: 이미 승인된 계정은 400 U003 — 삭제는 되돌릴 수 없어 정지로 다뤄야 한다")
     void rejectSignUp_rejectsApproved() {
         User manager = User.create("E1001", "hashed", "홍길동", "010-1234-5678", Role.MANAGER);
-        when(userRepository.findById(9L)).thenReturn(Optional.of(manager));
+        when(userRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(manager));
 
         assertThatThrownBy(() -> adminUserService.rejectSignUp(9L))
                 .isInstanceOf(BusinessException.class)
@@ -135,7 +135,7 @@ class AdminUserServiceTest {
     @DisplayName("거절: 남긴 데이터가 참조 중이면 409 U004 로 번역한다")
     void rejectSignUp_translatesFkViolation() {
         User guest = User.create("E2001", "hashed", "신입", "010-0000-0000", Role.GUEST);
-        when(userRepository.findById(9L)).thenReturn(Optional.of(guest));
+        when(userRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(guest));
         doThrow(new DataIntegrityViolationException("fk"))
                 .when(userRepository).flush();
 
@@ -148,11 +148,23 @@ class AdminUserServiceTest {
     @Test
     @DisplayName("거절: 없는 사용자는 404 U002")
     void rejectSignUp_notFound() {
-        when(userRepository.findById(404L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdForUpdate(404L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> adminUserService.rejectSignUp(404L))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.USER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("거절: 역할 확인을 잠금 조회로 한다 — 잠금 없이 읽으면 확인과 삭제 사이에 승인이 끼어든다")
+    void rejectSignUp_readsUnderLock() {
+        User guest = User.create("E2001", "hashed", "신입", "010-0000-0000", Role.GUEST);
+        when(userRepository.findByIdForUpdate(9L)).thenReturn(Optional.of(guest));
+
+        adminUserService.rejectSignUp(9L);
+
+        verify(userRepository).findByIdForUpdate(9L);
+        verify(userRepository, never()).findById(any());   // 비잠금 조회로 되돌아가면 경쟁이 복원된다
     }
 }

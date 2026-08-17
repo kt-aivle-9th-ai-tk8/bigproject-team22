@@ -98,7 +98,9 @@ public class AdminUserService {
      */
     @Transactional
     public void rejectSignUp(Long userId) {
-        User user = userRepository.findById(userId)
+        // 쓰기 잠금으로 조회한다 — 잠금 없이 읽으면 "GUEST 확인 → 삭제" 사이에 승인(changeRole)이
+        // 커밋되어 승인된 계정이 지워질 수 있다. 잠금 뒤에 읽은 역할은 삭제 시점까지 유효하다.
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         if (user.getRole() != Role.GUEST) {
             throw new BusinessException(ErrorCode.USER_NOT_PENDING);

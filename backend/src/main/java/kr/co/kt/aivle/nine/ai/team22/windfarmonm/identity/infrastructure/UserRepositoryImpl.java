@@ -59,6 +59,11 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByIdForUpdate(Long id) {
+        return userJpaRepository.findWithLockById(id);
+    }
+
+    @Override
     public void flush() {
         userJpaRepository.flush();
     }

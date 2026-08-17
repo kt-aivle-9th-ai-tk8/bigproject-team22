@@ -13,6 +13,13 @@ public interface UserRepository {
 
     Optional<User> findById(Long id);
 
+    /**
+     * 쓰기 잠금(PESSIMISTIC_WRITE)으로 조회한다. 조회한 상태를 근거로 파괴적 변경을 하는 경로가
+     * 다른 트랜잭션과 직렬화되도록 쓴다 — 잠금 없이는 "GUEST 확인 → 삭제" 사이에 승인(changeRole)이
+     * 끼어들어 승인된 계정이 지워질 수 있다.
+     */
+    Optional<User> findByIdForUpdate(Long id);
+
     /** 사용자 존재 여부. assetmanagement의 담당 배정 시 실존 검증에 사용 */
     boolean existsById(Long id);
 
