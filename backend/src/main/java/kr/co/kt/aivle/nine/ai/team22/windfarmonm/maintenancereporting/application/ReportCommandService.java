@@ -92,6 +92,16 @@ public class ReportCommandService {
     }
 
     /**
+     * 결함 보고서 본문 생성 요청(<b>내부 전용</b> — 결함 적재 완료가 부른다).
+     * 호출측 트랜잭션에 참여해 이벤트를 발행하고, 파이프라인은 그 트랜잭션이 커밋된 뒤 돈다(AFTER_COMMIT) —
+     * 커밋 전 결함 데이터로 에이전트가 생성하는 것을 막는다.
+     */
+    @Transactional
+    public void requestDefectGeneration(Long reportId) {
+        eventPublisher.publishEvent(new ReportGenerationRequested(reportId));
+    }
+
+    /**
      * 본문 직접 수정.
      * <p>
      * 상태를 검사하지 않는다 — 생성에 실패해 PROCESSING 에 남은 보고서도 손댈 수 있어야 한다.

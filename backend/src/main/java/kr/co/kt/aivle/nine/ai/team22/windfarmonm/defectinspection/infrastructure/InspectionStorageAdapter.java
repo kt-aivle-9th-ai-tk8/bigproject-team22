@@ -53,6 +53,27 @@ public class InspectionStorageAdapter implements InspectionStoragePort {
                 .toList();
     }
 
+    @Override
+    public String presignImageView(String imageKey) {
+        return storage.presignGet(imageKey);
+    }
+
+    @Override
+    public String imageS3Uri(String imageKey) {
+        return "s3://%s/%s".formatted(properties.s3().bucket(), imageKey);
+    }
+
+    @Override
+    public String readJson(String s3Uri) {
+        // outputLocation 은 항상 우리 데이터 버킷을 가리킨다 — 접두를 벗겨 키로 만든다.
+        String expectedPrefix = "s3://" + properties.s3().bucket() + "/";
+        if (!s3Uri.startsWith(expectedPrefix)) {
+            // 다른 버킷의 결과는 우리 파이프라인 산출물이 아니다(설정 어긋남) — 조용히 읽지 않고 실패시킨다.
+            throw new IllegalStateException("설정된 버킷 밖의 결과 위치다: " + s3Uri);
+        }
+        return storage.readUtf8(s3Uri.substring(expectedPrefix.length()));
+    }
+
     private String prefix() {
         return properties.s3().prefix();
     }

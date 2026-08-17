@@ -73,13 +73,23 @@ public class OutboxEvent {
         return new OutboxEvent(aggregateType, aggregateId, eventType, payload);
     }
 
-    /** 릴레이가 발행을 마쳤다(릴레이 전용 — P4 에서는 호출처가 없다). */
+    /** 릴레이가 발행(추론 접수)을 마쳤다. */
     public void markPublished() {
         this.status = OutboxStatus.PUBLISHED;
     }
 
-    /** 재시도 소진(릴레이 전용). */
+    /** 결과 통보를 받아 처리(결함 적재)까지 끝냈다. */
+    public void markCompleted() {
+        this.status = OutboxStatus.COMPLETED;
+    }
+
+    /** 발행 불가/추론 실패. */
     public void markFailed() {
         this.status = OutboxStatus.FAILED;
+    }
+
+    /** 이미 결과 처리가 끝난 행인지(SQS at-least-once 중복 통보 멱등 처리용). */
+    public boolean isCompleted() {
+        return status == OutboxStatus.COMPLETED;
     }
 }

@@ -19,6 +19,12 @@ public class BladeQueryService {
 
     private final BladeRepository bladeRepository;
 
+    /** 블레이드 존재 여부. <b>인가를 하지 않는</b> 내부 조회(호출측 인가 선행). */
+    @Transactional(readOnly = true)
+    public boolean existsById(Long bladeId) {
+        return bladeRepository.findById(bladeId).isPresent();
+    }
+
     /**
      * 터빈의 블레이드 식별 정보(id·태그) 목록. <b>인가를 하지 않는</b> 내부 조회이므로
      * 호출측이 담당 인가를 이미 통과한 맥락에서만 쓸 것(예: 점검 생성 시 태그→id 해석).

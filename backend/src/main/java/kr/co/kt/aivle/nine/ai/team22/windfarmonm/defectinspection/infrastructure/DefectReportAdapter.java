@@ -21,4 +21,9 @@ public class DefectReportAdapter implements DefectReportPort {
                                    Long createdBy, String context) {
         return reportCommandService.createDefectDiagnosis(windFarmId, periodStart, periodEnd, createdBy, context);
     }
+
+    @Override
+    public void requestGeneration(Long reportId) {
+        reportCommandService.requestDefectGeneration(reportId);
+    }
 }
