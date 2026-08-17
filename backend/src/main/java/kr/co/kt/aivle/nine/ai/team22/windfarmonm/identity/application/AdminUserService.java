@@ -9,6 +9,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserStatus;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,6 +84,32 @@ public class AdminUserService {
             return AdminUserResult.of(user, false); // 방금 파기했으므로 비활성
         }
         return AdminUserResult.of(user, sessionManager.exists(user.getLatestSessionId()));
+    }
+
+    /**
+     * 가입 거절 — <b>승인 대기(GUEST) 계정만</b> 삭제한다.
+     * <p>
+     * 이미 승인된 계정(MANAGER/ADMIN)은 삭제하지 않는다: 그가 남긴 점검·보고서의 작성자 추적이
+     * 끊기고 되돌릴 수 없기 때문이다. 그런 계정은 정지(SUSPENDED)로 다룬다.
+     * <p>
+     * 삭제 전에 세션을 파기한다 — GUEST 는 로그인이 차단되지만(A004), 승인 후 GUEST 로 되돌린
+     * 계정에는 이전 세션이 남아 있을 수 있고, 계정이 사라진 뒤 남은 세션은 주인 없는 접근이 된다.
+     * 남긴 데이터가 있어 FK 로 막히면 {@link ErrorCode#USER_HAS_REFERENCES}(409) 로 번역한다.
+     */
+    @Transactional
+    public void rejectSignUp(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        if (user.getRole() != Role.GUEST) {
+            throw new BusinessException(ErrorCode.USER_NOT_PENDING);
+        }
+        invalidateLatestSession(user);
+        try {
+            userRepository.delete(user);
+            userRepository.flush(); // FK 위반을 이 트랜잭션 안에서 잡아 번역한다(커밋 시점이면 놓친다)
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.USER_HAS_REFERENCES);
+        }
     }
 
     /** 특정 사용자를 강제 로그아웃(세션 파기). 1인 1세션이므로 세션 id 없이 user_id 만으로 처리. */

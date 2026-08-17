@@ -24,4 +24,10 @@ public interface UserRepository {
 
     /** 특정 역할의 사용자 id 목록(알림 fan-out 의 ADMIN 수신자 조회 등). */
     List<Long> findUserIdsByRole(Role role);
+
+    /** 계정 삭제(가입 거절). 남긴 데이터가 있으면 FK 제약으로 실패한다 — 호출측이 번역한다. */
+    void delete(User user);
+
+    /** 보류된 쓰기를 DB 로 내보낸다. FK 위반을 커밋 이전에 잡아 번역하기 위해 쓴다. */
+    void flush();
 }

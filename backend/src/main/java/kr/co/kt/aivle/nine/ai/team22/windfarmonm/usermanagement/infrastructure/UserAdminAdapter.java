@@ -56,4 +56,9 @@ public class UserAdminAdapter implements UserAdminPort {
                 result.status(),
                 result.sessionActive());
     }
+
+    @Override
+    public void rejectSignUp(Long userId) {
+        adminUserService.rejectSignUp(userId);
+    }
 }

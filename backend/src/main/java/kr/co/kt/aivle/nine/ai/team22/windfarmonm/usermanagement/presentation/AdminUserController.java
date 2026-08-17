@@ -65,6 +65,20 @@ public class AdminUserController {
      * 사용자 강제 로그아웃: DELETE /api/admin/users/{userId}/session
      * 1인 1세션 정책이므로 대상은 항상 단수다(경로도 단수). 활성 세션이 없었더라도 200 으로 응답한다.
      */
+    /**
+     * 가입 거절: DELETE /api/admin/users/{userId}
+     * <p>
+     * 회원가입 대기 화면의 '거절' 버튼이 호출한다. <b>승인 대기(GUEST) 계정만</b> 삭제되고,
+     * 이미 승인된 계정이면 400(U003)으로 거부한다 — 삭제는 되돌릴 수 없고 그 계정이 남긴
+     * 점검·보고서의 작성자 추적이 끊기므로, 승인된 계정은 정지(PATCH status=SUSPENDED)로 다룬다.
+     * 남긴 데이터가 있어 참조 무결성상 지울 수 없으면 409(U004).
+     */
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<ApiResponse<Void>> rejectSignUp(@PathVariable String userId) {
+        adminUserManagementService.rejectSignUp(ApiIds.toLong(userId));
+        return ResponseEntity.ok(ApiResponse.success("가입 신청을 거절했습니다.", null));
+    }
+
     @DeleteMapping("/{userId}/session")
     public ResponseEntity<ApiResponse<Void>> forceLogout(@PathVariable String userId) {
         adminUserManagementService.forceLogout(ApiIds.toLong(userId));

@@ -25,6 +25,9 @@ public interface UserAdminPort {
     /** 강제 로그아웃(세션 파기). */
     void forceLogout(Long userId);
 
+    /** 가입 거절 — 승인 대기(GUEST) 계정만 삭제한다. 그 외에는 USER_NOT_PENDING. */
+    void rejectSignUp(Long userId);
+
     /** 사용자 계정 요약. */
     record UserAccount(
             Long id,

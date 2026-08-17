@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -101,5 +103,56 @@ class AdminUserServiceTest {
         adminUserService.forceLogout(1L);
 
         verify(sessionManager, never()).invalidate(any());
+    }
+
+    @Test
+    @DisplayName("거절: 승인 대기(GUEST) 계정은 세션 파기 후 삭제한다")
+    void rejectSignUp_deletesGuest() {
+        User guest = User.create("E2001", "hashed", "신입", "010-0000-0000", Role.GUEST);
+        guest.updateLatestSessionId("sess-1");
+        when(userRepository.findById(9L)).thenReturn(Optional.of(guest));
+
+        adminUserService.rejectSignUp(9L);
+
+        verify(sessionManager).invalidate("sess-1"); // 계정이 사라진 뒤 남은 세션은 주인 없는 접근이 된다
+        verify(userRepository).delete(guest);
+    }
+
+    @Test
+    @DisplayName("거절: 이미 승인된 계정은 400 U003 — 삭제는 되돌릴 수 없어 정지로 다뤄야 한다")
+    void rejectSignUp_rejectsApproved() {
+        User manager = User.create("E1001", "hashed", "홍길동", "010-1234-5678", Role.MANAGER);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(manager));
+
+        assertThatThrownBy(() -> adminUserService.rejectSignUp(9L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.USER_NOT_PENDING);
+        verify(userRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("거절: 남긴 데이터가 참조 중이면 409 U004 로 번역한다")
+    void rejectSignUp_translatesFkViolation() {
+        User guest = User.create("E2001", "hashed", "신입", "010-0000-0000", Role.GUEST);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(guest));
+        doThrow(new DataIntegrityViolationException("fk"))
+                .when(userRepository).flush();
+
+        assertThatThrownBy(() -> adminUserService.rejectSignUp(9L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.USER_HAS_REFERENCES);
+    }
+
+    @Test
+    @DisplayName("거절: 없는 사용자는 404 U002")
+    void rejectSignUp_notFound() {
+        when(userRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> adminUserService.rejectSignUp(404L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.USER_NOT_FOUND);
     }
 }
