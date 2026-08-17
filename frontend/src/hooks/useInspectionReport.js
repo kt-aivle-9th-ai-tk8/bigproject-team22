@@ -360,6 +360,44 @@ export const useInspectionReport = ({
         inspectionResponse
       );
 
+      inspectionResponse?.turbines?.forEach(
+        (turbine) => {
+          turbine?.blades?.forEach(
+            (blade) => {
+              console.log(
+                "업로드 URL:",
+                {
+                  turbineId:
+                    turbine.turbine_id,
+
+                  inspectionId:
+                    turbine.inspection_id,
+
+                  bladeId:
+                    blade.blade_id,
+
+                  leadingEdge:
+                    blade.leading_edge_upload_urls ||
+                    [],
+
+                  pressureSide:
+                    blade.pressure_side_upload_urls ||
+                    [],
+
+                  suctionSide:
+                    blade.suction_side_upload_urls ||
+                    [],
+
+                  trailingEdge:
+                    blade.trailing_edge_upload_urls ||
+                    [],
+                }
+              );
+            }
+          );
+        }
+      );
+
 
       /*
        * 4.
