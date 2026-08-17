@@ -51,6 +51,9 @@ public enum ErrorCode {
     // 422: RFC 9110 에서 명칭이 UNPROCESSABLE_CONTENT 로 바뀌었다(구 UNPROCESSABLE_ENTITY 는 deprecated).
     VISION_RESULT_INVALID(HttpStatus.UNPROCESSABLE_CONTENT, "D004", "결함 분석 결과를 해석할 수 없습니다."),
     WEBHOOK_UNAUTHORIZED(HttpStatus.FORBIDDEN, "D005", "웹훅 인증에 실패했습니다."),
+    // FE 가 통보한 업로드 장수와 S3 실측이 다를 때. 진실의 원천은 S3 이고 통보 값은 기대값으로만 쓴다 —
+    // 불일치를 조용히 진행하면 누락된 사진이 영원히 추론되지 않으므로, 거부해 재시도할 수 있게 한다.
+    UPLOAD_COUNT_MISMATCH(HttpStatus.BAD_REQUEST, "D006", "업로드된 이미지 수가 통보한 수와 다릅니다."),
 
     // Infrastructure — 외부 자원 미설정/장애. 앱 기동은 막지 않고 해당 엔드포인트만 실패시킨다.
     STORAGE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "S001", "파일 저장소가 설정되지 않았습니다."),
