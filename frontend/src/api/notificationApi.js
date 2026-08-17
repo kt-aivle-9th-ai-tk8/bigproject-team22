@@ -1,3 +1,5 @@
+import { apiFetch } from "./apiClient";
+
 export const fetchNotifications = async () => {
   const requestUrl = "/api/notifications";
 
