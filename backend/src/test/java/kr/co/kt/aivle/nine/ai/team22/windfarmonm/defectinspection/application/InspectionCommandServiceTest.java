@@ -199,7 +199,7 @@ class InspectionCommandServiceTest {
                 new InspectionStoragePort.UploadedImage("content/inspections/5/31/LE/1.jpg", 31L, PartSide.LE),
                 new InspectionStoragePort.UploadedImage("content/inspections/5/31/LE/2.jpg", 31L, PartSide.LE)));
 
-        int count = service.completeUpload(USER_ID, false, 5L);
+        int count = service.completeUpload(USER_ID, false, 5L, null);
 
         assertThat(count).isEqualTo(2);
         ArgumentCaptor<List<OutboxEvent>> captor = ArgumentCaptor.captor();
@@ -221,7 +221,7 @@ class InspectionCommandServiceTest {
     @DisplayName("완료: 미존재/비소유자 점검은 모두 404 D001(존재 은닉) — 완료 통보는 소유자 전용, ADMIN 도 예외 없음")
     void completeUpload_hiddenAs404() {
         when(inspectionRepository.findByIdForUpdate(404L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 404L))
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 404L, null))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND);
@@ -229,11 +229,11 @@ class InspectionCommandServiceTest {
         // 비소유자는 접근(담당) 검사 이전에 소유자 검사에서 은닉된다 — 동일 단지 담당자여도 마찬가지
         Inspection othersInspection = Inspection.request(TURBINE_ID, 99L, 90L, START, END);
         when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(othersInspection));
-        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 5L))
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 5L, null))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND);
-        assertThatThrownBy(() -> service.completeUpload(USER_ID, true, 5L)) // ADMIN 도 예외 없음
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, true, 5L, null)) // ADMIN 도 예외 없음
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND);
@@ -243,7 +243,7 @@ class InspectionCommandServiceTest {
         when(inspectionRepository.findByIdForUpdate(6L)).thenReturn(Optional.of(ownButRevoked));
         doThrow(new BusinessException(ErrorCode.TURBINE_NOT_FOUND))
                 .when(assetPort).checkTurbineAccess(USER_ID, false, TURBINE_ID);
-        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 6L))
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 6L, null))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_NOT_FOUND); // M003 이 아니라 D001 로 은닉
@@ -255,7 +255,7 @@ class InspectionCommandServiceTest {
         Inspection inspection = Inspection.request(TURBINE_ID, USER_ID, 90L, START, END);
         inspection.markInspecting(); // 이미 완료 통보됨
         when(inspectionRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(inspection));
-        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 5L))
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 5L, null))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSPECTION_STATE_CONFLICT);
@@ -263,7 +263,7 @@ class InspectionCommandServiceTest {
         Inspection fresh = Inspection.request(TURBINE_ID, USER_ID, 90L, START, END);
         when(inspectionRepository.findByIdForUpdate(6L)).thenReturn(Optional.of(fresh));
         when(storagePort.listUploadedImages(6L)).thenReturn(List.of());
-        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 6L))
+        assertThatThrownBy(() -> service.completeUpload(USER_ID, false, 6L, null))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_INPUT);

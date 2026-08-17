@@ -267,6 +267,62 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("업로드 이미지 조회: S3 원천 기준 목록 + presigned view_url, 비담당은 404(존재 은닉)")
+    void inspectionImages() {
+        String cookie = loginCookie("MGR1");
+        post("/inspections", createBody(), cookie);
+        long inspectionId = jdbc.queryForObject("SELECT inspection_id FROM inspection", Long.class);
+
+        when(storagePort.listUploadedImages(inspectionId)).thenReturn(List.of(
+                new InspectionStoragePort.UploadedImage(
+                        "content/inspections/%d/%d/LE/1.jpg".formatted(inspectionId, bladeA), bladeA, PartSide.LE),
+                new InspectionStoragePort.UploadedImage(
+                        "content/inspections/%d/%d/LE/2.jpg".formatted(inspectionId, bladeA), bladeA, PartSide.LE)));
+        when(storagePort.presignImageView(any())).thenReturn("https://view.example/img");
+
+        ResponseEntity<String> response = client.method(HttpMethod.GET)
+                .uri(baseUrl() + "/inspections/" + inspectionId + "/images")
+                .header(HttpHeaders.COOKIE, cookie)
+                .exchange((req, res) -> ResponseEntity.status(res.getStatusCode()).body(res.bodyTo(String.class)));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .contains("\"count\":2")
+                .contains("\"view_url\":\"https://view.example/img\"")
+                .contains("\"part_side\":\"LE\"")
+                .contains("\"blade_id\":\"" + bladeA + "\"");   // 문자열 id 계약
+
+        // 비담당(MGR2)은 404 은닉
+        ResponseEntity<String> hidden = client.method(HttpMethod.GET)
+                .uri(baseUrl() + "/inspections/" + inspectionId + "/images")
+                .header(HttpHeaders.COOKIE, loginCookie("MGR2"))
+                .exchange((req, res) -> ResponseEntity.status(res.getStatusCode()).body(res.bodyTo(String.class)));
+        assertThat(hidden.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("업로드 완료: 통보 장수가 S3 실측과 다르면 400(D006) + 상태·아웃박스 모두 롤백")
+    void imagesUploaded_countMismatch() {
+        String cookie = loginCookie("MGR1");
+        post("/inspections", createBody(), cookie);
+        long inspectionId = jdbc.queryForObject("SELECT inspection_id FROM inspection", Long.class);
+
+        when(storagePort.listUploadedImages(inspectionId)).thenReturn(List.of(
+                new InspectionStoragePort.UploadedImage(
+                        "content/inspections/%d/%d/LE/1.jpg".formatted(inspectionId, bladeA), bladeA, PartSide.LE)));
+
+        ResponseEntity<String> response = post("/inspections/" + inspectionId + "/images-uploaded",
+                "{\"uploaded_count\":3}", cookie); // 3장 통보, 실제 1장
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("D006");
+        // 롤백 확인 — 상태는 UPLOADING 그대로이고 아웃박스도 비어 있다
+        assertThat(jdbc.queryForObject("SELECT status FROM inspection WHERE inspection_id=?", String.class, inspectionId))
+                .isEqualTo("UPLOADING");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM outbox_event", Long.class)).isZero();
+    }
+
+    @Test
     @DisplayName("결함 이미지 조회: 이미지 단위 그룹핑 + presigned 썸네일, 비담당은 404(존재 은닉)")
     void defectImages() {
         // 점검·결함 픽스처(결과 소비까지 끝난 상태를 직접 시드)
