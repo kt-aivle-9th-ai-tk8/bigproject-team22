@@ -111,8 +111,6 @@ function PlantSideBar({
                 ...reportData,
                 plantId: selectedPlant?.id,
                 plantName,
-                turbineId: selectedTurbine?.id,
-                turbineName,
               });
             }}
           />
