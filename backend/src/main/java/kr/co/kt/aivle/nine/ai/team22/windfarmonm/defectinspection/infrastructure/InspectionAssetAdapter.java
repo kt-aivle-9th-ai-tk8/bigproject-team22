@@ -37,6 +37,16 @@ public class InspectionAssetAdapter implements InspectionAssetPort {
     }
 
     @Override
+    public void checkBladeAccess(Long userId, boolean admin, Long bladeId) {
+        accessGuard.checkBladeAccessById(userId, admin, bladeId);
+    }
+
+    @Override
+    public boolean bladeExists(Long bladeId) {
+        return bladeQueryService.existsById(bladeId);
+    }
+
+    @Override
     public List<BladeRef> bladesOf(Long turbineId) {
         return bladeQueryService.getBladeIdentities(turbineId).stream()
                 .map(blade -> new BladeRef(blade.id(), blade.tag()))

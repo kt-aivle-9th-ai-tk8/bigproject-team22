@@ -17,12 +17,14 @@ import { useTurbineDetail } from "../hooks/useTurbineDetail";
 import { useReportStatusPolling } from "../hooks/useReportStatusPolling";
 import { useInspectionReport } from "../hooks/useInspectionReport";
 import { useTurbineReports } from "../hooks/useTurbineReports";
-
+import { useReadNotification } from "../hooks/useReadNotification";
 import "./MainScreen.css";
 import "../components/Bar.css";
 
 function MainScreen() {
   const navigate = useNavigate();
+
+  const [generatedReport, setGeneratedReport] = useState(null);
 
   const [screenMode, setScreenMode] = useState(() => {
     return localStorage.getItem("screenMode") || "map";
@@ -37,6 +39,24 @@ function MainScreen() {
     const savedTurbine = localStorage.getItem("selectedTurbine");
     return savedTurbine ? JSON.parse(savedTurbine) : null;
   });
+
+  const {
+    markNotificationAsRead,
+  } = useReadNotification();
+
+  const handleReadNotification =
+    async (notificationId) => {
+      try {
+        await markNotificationAsRead(
+          notificationId
+        );
+      } catch (error) {
+        console.error(
+          "알림 읽음 처리 실패:",
+          error
+        );
+      }
+    };
 
   // 전체 발전소 페이지 api
   const {
@@ -95,11 +115,48 @@ function MainScreen() {
     refreshInterval: 5000,
 
     onGenerated: (report) => {
-      alert(
-        `${report?.title || "보고서"} 생성이 완료되었습니다.`
-      );
+      const displayTitle = String(
+        report?.title || "운영보고서"
+      )
+        .replace(
+          /\s*\d{4}-\d{2}-\d{2}\s*~\s*\d{4}-\d{2}-\d{2}\s*/g,
+          " "
+        )
+        .replace(/\s+/g, " ")
+        .trim();
+
+      setGeneratedReport({
+        ...report,
+        displayTitle,
+      });
     },
   });
+
+  const handleConfirmGeneratedReport = () => {
+    const reportId =
+      generatedReport?.id ||
+      generatedReport?.report_id;
+
+    if (!reportId) {
+      alert("보고서 ID가 없습니다.");
+      return;
+    }
+
+    const report = generatedReport;
+
+    setGeneratedReport(null);
+
+    navigate(`/reports/${reportId}/edit`, {
+      state: {
+        report,
+      },
+    });
+  };
+
+
+  const handleCancelGeneratedReport = () => {
+    setGeneratedReport(null);
+  };
 
   const isOperationReportPending =
     isReportCreating ||
@@ -360,6 +417,7 @@ function MainScreen() {
         onTitleClick={handleBackToMap}
         onMyPage={handleNavigateUser}
         alarm={notifications}
+        onReadNotification={handleReadNotification}
       />
 
       <div className="dashboard-layout">
@@ -404,6 +462,39 @@ function MainScreen() {
           onFetchPowerGeneration={fetchPowerGeneration}
         />
       </div>
+
+      {generatedReport && (
+        <div className="report-complete-overlay">
+          <div className="report-complete-popup">
+
+            <p className="report-complete-message">
+              {generatedReport.displayTitle} 보고서 생성이 완료되었습니다.
+            </p>
+
+            <p className="report-complete-question">
+              보고서를 확인하시겠습니까?
+            </p>
+
+            <div className="report-complete-actions">
+              <button
+                type="button"
+                className="report-complete-confirm"
+                onClick={handleConfirmGeneratedReport}
+              >
+                확인
+              </button>
+
+              <button
+                type="button"
+                className="report-complete-cancel"
+                onClick={handleCancelGeneratedReport}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

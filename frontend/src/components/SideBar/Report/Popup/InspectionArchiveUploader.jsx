@@ -75,7 +75,15 @@ function ImageFileSlot({
   const isValidImageFile = (file) => {
     if (!file) return false;
 
-    return file.type.startsWith("image/");
+    const fileName = file.name.toLowerCase();
+
+    return (
+      file.type === "image/jpeg" &&
+      (
+        fileName.endsWith(".jpg") ||
+        fileName.endsWith(".jpeg")
+      )
+    );
   };
 
   const createImageItem = (file) => {
@@ -97,7 +105,7 @@ function ImageFileSlot({
     const hasInvalidFile = nextFiles.some((file) => !isValidImageFile(file));
 
     if (hasInvalidFile) {
-      alert("이미지 파일만 업로드할 수 있습니다.");
+      alert("JPG 또는 JPEG 파일만 업로드할 수 있습니다.");
       return;
     }
 
@@ -213,7 +221,7 @@ function ImageFileSlot({
           ref={fileInputRef}
           className="inspection-upload-input"
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,image/jpeg"
           multiple
           onChange={handleFileInputChange}
         />

@@ -2,17 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import './AdminUserScreen.css';
 
-const PLANT_OPTIONS = [
-  '장흥 발전소', '해남 발전소', '강진 발전소', '삼천포 발전소', 
-  '여수 발전소', '광양 발전소', '태안 발전소', '당진 발전소', 
-  '평택 발전소', '보령 발전소', '서천 발전소', '제주 발전소', 
-  '서귀포 발전소', '신안 발전소', '영광 발전소', '함평 발전소'
-];
+import { useAdminUsers } from "../hooks/useAdminUsers";
+import { useForceLogoutUser } from "../hooks/useForceLogoutUser";
+import { useUpdateAdminUser } from "../hooks/useUpdateAdminUser";
+import { useApproveAdminUser } from "../hooks/useApproveAdminUser";
+import { useWindFarmOptions } from "../hooks/useWindFarmOptions";
 
 export default function AdminUserScreen() {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'list'
-  const [pendingUsers, setPendingUsers] = useState([]);
-  const [approvedUsers, setApprovedUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,55 +23,49 @@ export default function AdminUserScreen() {
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [errorMessageModal, setErrorMessageModal] = useState(null);
 
+  const {
+    users: pendingUsers,
+    loading: pendingUsersLoading,
+    error: pendingUsersError,
+    refetch: refetchPendingUsers,
+  } = useAdminUsers({
+    role: "GUEST",
+  });
+
+  const {
+    users: approvedUsers,
+    loading: adminUsersLoading,
+    error: adminUsersError,
+    refetch: refetchAdminUsers,
+  } = useAdminUsers();
+
+  const {
+    forceLogoutUser,
+    isForceLoggingOut,
+  } = useForceLogoutUser();
+
+  const {
+    updateUser,
+    isUpdatingUser,
+  } = useUpdateAdminUser();
+
+  const {
+    approveUser,
+    isApproving,
+  } = useApproveAdminUser();
+
+  const {
+    windFarms,
+    loading: windFarmsLoading,
+    error: windFarmsError,
+  } = useWindFarmOptions();
+
   // --- [공통 백엔드 에러 추출 함수] ---
   const handleApiError = (err, fallbackMsg) => {
     console.error(err);
     const serverMessage = err.response?.data?.message || err.message || fallbackMsg;
     setErrorMessageModal(serverMessage);
   };
-
-  // --- [1. 백엔드 API 목록 조회 - GET /api/admin/users] ---
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get('/api/admin/users');
-      const data = response.data?.data || response.data || [];
-
-      // BE 응답 매핑 (가입대기: PENDING, 일반: APPROVED)
-      const pending = data
-        .filter(u => u.role === 'GUEST' || u.status === 'PENDING')
-        .map(u => ({
-          id: u.id || u.user_id,
-          name: u.name || u.username,
-          employeeId: u.employee_id || u.employeeId,
-          createdAt: u.created_at || u.createdAt || '오늘'
-        }));
-
-      const approved = data
-        .filter(u => u.role !== 'GUEST' && u.status !== 'PENDING')
-        .map(u => ({
-          id: u.id || u.user_id,
-          name: u.name || u.username,
-          employeeId: u.employee_id || u.employeeId,
-          isOnline: u.is_online ?? u.isOnline ?? false,
-          plants: u.plants || u.assigned_plants || [],
-          loginFailCount: u.login_fail_count || 0,
-          isBlocked: u.is_blocked ?? (u.login_fail_count >= 5) ?? false,
-          role: u.role || 'USER'
-        }));
-
-      setPendingUsers(pending);
-      setApprovedUsers(approved);
-    } catch (err) {
-      handleApiError(err, '사용자 리스트를 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   // --- [정렬 및 필터링 계산] ---
   const processedApprovedUsers = useMemo(() => {
@@ -112,58 +103,74 @@ export default function AdminUserScreen() {
     setSelectedPlants([]);
   };
 
-  const handleTogglePlantInModal = (plantName) => {
-    setSelectedPlants(prev => 
-      prev.includes(plantName) ? prev.filter(p => p !== plantName) : [...prev, plantName]
+  const handleTogglePlantInModal = (
+    windFarmId
+  ) => {
+    setSelectedPlants((prev) =>
+      prev.includes(windFarmId)
+        ? prev.filter(
+            (id) => id !== windFarmId
+          )
+        : [...prev, windFarmId]
     );
   };
 
-  // --- [2. 승인 처리 및 권한 변경 - PATCH /api/admin/users/{user_id}] ---
   const handleConfirmApproval = async () => {
-    if (selectedPlants.length === 0) {
-      setErrorMessageModal('최소 하나 이상의 담당 발전소를 선택해 주세요.');
-      return;
-    }
-
     try {
-      await axios.patch(`/api/admin/users/${selectedUserForApproval.id}`, {
-        role: 'USER',
-        plants: selectedPlants
+      await approveUser({
+        userId: selectedUserForApproval.id,
+        windFarmIds: selectedPlants,
       });
 
-      alert(`${selectedUserForApproval.name} 님의 가입이 승인되었습니다.`);
+      alert(
+        `${selectedUserForApproval.name} 님의 가입이 승인되었습니다.`
+      );
+
       handleCloseModal();
-      fetchUsers();
+
+      refetchPendingUsers();
+      refetchAdminUsers();
     } catch (err) {
-      handleApiError(err, '승인 처리에 실패했습니다.');
+      handleApiError(
+        err,
+        "승인 처리에 실패했습니다."
+      );
     }
   };
-
+  
   // --- [3. 가입 거절 - PATCH 또는 DELETE] ---
-  const handleReject = async (id, name) => {
-    if (window.confirm(`${name} 님의 가입 신청을 거절하시겠습니까?`)) {
-      try {
-        await axios.patch(`/api/admin/users/${id}`, { role: 'REJECTED' });
-        alert('거절 처리 되었습니다.');
-        fetchUsers();
-      } catch (err) {
-        handleApiError(err, '가입 거절 처리에 실패했습니다.');
-      }
-    }
+  // const handleReject = async (id, name) => {
+  //   if (window.confirm(`${name} 님의 가입 신청을 거절하시겠습니까?`)) {
+  //     try {
+  //       await axios.patch(`/api/admin/users/${id}`, { role: 'REJECTED' });
+  //       alert('거절 처리 되었습니다.');
+  //       refetchPendingUsers();
+  //     } catch (err) {
+  //       handleApiError(err, '가입 거절 처리에 실패했습니다.');
+  //     }
+  //   }
+  // };
+  const handleReject = () => {
+    alert("가입 거절 기능은 준비 중입니다.");
   };
 
-  // --- [4. 강제 로그아웃 - DELETE /api/admin/users/{user_id}/session] ---
   const handleForceLogout = async (userId, name) => {
     try {
-      await axios.delete(`/api/admin/users/${userId}/session`);
-      alert(`${name} 님을 강제 로그아웃 시켰습니다.`);
-      fetchUsers();
+      await forceLogoutUser(userId);
+
+      alert(
+        `${name} 님을 강제 로그아웃 시켰습니다.`
+      );
+
+      refetchAdminUsers();
     } catch (err) {
-      handleApiError(err, '강제 로그아웃 처리에 실패했습니다.');
+      handleApiError(
+        err,
+        "강제 로그아웃 처리에 실패했습니다."
+      );
     }
   };
 
-  // --- [5. 차단 해제 - PATCH /api/admin/users/{user_id}] ---
   const handleUnblockUser = async (id, name) => {
     if (window.confirm(`${name} 님의 로그인 차단을 해제하시겠습니까?`)) {
       try {
@@ -172,30 +179,68 @@ export default function AdminUserScreen() {
           login_fail_count: 0
         });
         alert('차단이 해제되었습니다.');
-        fetchUsers();
+        refetchAdminUsers();
       } catch (err) {
         handleApiError(err, '차단 해제 처리에 실패했습니다.');
       }
     }
   };
 
-  // --- [6. 담당 발전소 개별 변경 - PATCH /api/admin/users/{user_id}] ---
-  const handleTogglePlantInList = async (userId, plantName) => {
-    const targetUser = approvedUsers.find(u => u.id === userId);
+  const handleTogglePlantInList = async (
+    userId,
+    plantOption
+  ) => {
+    const targetUser =
+      approvedUsers.find(
+        (user) => user.id === userId
+      );
+
     if (!targetUser) return;
 
-    const exists = targetUser.plants.includes(plantName);
-    const updatedPlants = exists 
-      ? targetUser.plants.filter(p => p !== plantName)
-      : [...targetUser.plants, plantName];
+    const windFarmId =
+      plantOption.id;
+
+    if (!windFarmId) {
+      setErrorMessageModal(
+        "발전소 ID가 없습니다."
+      );
+      return;
+    }
+
+    const currentWindFarmIds =
+      (targetUser.assignments || []).map(
+        (assignment) =>
+          assignment.wind_farm_id
+      );
+
+    const exists =
+      currentWindFarmIds.includes(
+        windFarmId
+      );
+
+    const updatedWindFarmIds = exists
+      ? currentWindFarmIds.filter(
+          (id) => id !== windFarmId
+        )
+      : [
+          ...currentWindFarmIds,
+          windFarmId,
+        ];
 
     try {
-      await axios.patch(`/api/admin/users/${userId}`, {
-        plants: updatedPlants
+      await updateUser({
+        userId: targetUser.id,
+        role: targetUser.role,
+        windFarmIds:
+          updatedWindFarmIds,
       });
-      fetchUsers();
+
+      refetchAdminUsers();
     } catch (err) {
-      handleApiError(err, '발전소 설정 변경에 실패했습니다.');
+      handleApiError(
+        err,
+        "발전소 설정 변경에 실패했습니다."
+      );
     }
   };
 
@@ -303,8 +348,13 @@ export default function AdminUserScreen() {
                   onChange={(e) => setSelectedPlantFilter(e.target.value)}
                 >
                   <option value="ALL">전체 발전소 필터</option>
-                  {PLANT_OPTIONS.map(plant => (
-                    <option key={plant} value={plant}>{plant}</option>
+                  {windFarms.map((windFarm) => (
+                    <option
+                      key={windFarm.id}
+                      value={windFarm.name}
+                    >
+                      {windFarm.name}
+                    </option>
                   ))}
                 </select>
 
@@ -368,16 +418,35 @@ export default function AdminUserScreen() {
 
                               {openDropdownId === user.id && (
                                 <div className="plant-dropdown-menu">
-                                  {PLANT_OPTIONS.map((plantOption) => (
-                                    <label key={plantOption} className="plant-checkbox-item">
-                                      <input 
-                                        type="checkbox" 
-                                        checked={user.plants.includes(plantOption)} 
-                                        onChange={() => handleTogglePlantInList(user.id, plantOption)}
-                                      />
-                                      <span>{plantOption}</span>
-                                    </label>
-                                  ))}
+                                  {windFarms.map(
+                                    (windFarm) => (
+                                      <label
+                                        key={windFarm.id}
+                                        className="plant-checkbox-item"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={(
+                                            user.assignments || []
+                                          ).some(
+                                            (assignment) =>
+                                              assignment.wind_farm_id ===
+                                              windFarm.id
+                                          )}
+                                          onChange={() =>
+                                            handleTogglePlantInList(
+                                              user.id,
+                                              windFarm
+                                            )
+                                          }
+                                        />
+
+                                        <span>
+                                          {windFarm.name}
+                                        </span>
+                                      </label>
+                                    )
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -431,16 +500,32 @@ export default function AdminUserScreen() {
             </p>
 
             <div className="modal-plant-grid">
-              {PLANT_OPTIONS.map((plant) => {
-                const checked = selectedPlants.includes(plant);
+              {windFarms.map((windFarm) => {
+                const checked =
+                  selectedPlants.includes(
+                    windFarm.id
+                  );
+
                 return (
-                  <label key={plant} className={`modal-plant-item ${checked ? 'selected' : ''}`}>
-                    <input 
-                      type="checkbox" 
-                      checked={checked} 
-                      onChange={() => handleTogglePlantInModal(plant)}
+                  <label
+                    key={windFarm.id}
+                    className={`modal-plant-item ${
+                      checked ? "selected" : ""
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() =>
+                        handleTogglePlantInModal(
+                          windFarm.id
+                        )
+                      }
                     />
-                    <span>{plant}</span>
+
+                    <span>
+                      {windFarm.name}
+                    </span>
                   </label>
                 );
               })}

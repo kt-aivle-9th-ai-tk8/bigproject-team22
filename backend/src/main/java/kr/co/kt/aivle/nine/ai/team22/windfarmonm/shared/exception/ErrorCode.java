@@ -21,6 +21,11 @@ public enum ErrorCode {
     // User
     DUPLICATE_EMPLOYEE_ID(HttpStatus.CONFLICT, "U001", "이미 존재하는 사번입니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U002", "사용자를 찾을 수 없습니다."),
+    // 거절(삭제)은 '가입 승인 대기(GUEST)' 계정에만 허용한다. 승인된 계정을 지우면 그가 남긴
+    // 점검·보고서의 작성자 추적이 끊기고 되돌릴 수 없다 — 그런 계정은 정지(SUSPENDED)로 다룬다.
+    USER_NOT_PENDING(HttpStatus.BAD_REQUEST, "U003", "가입 승인 대기 상태의 계정만 거절할 수 있습니다."),
+    // 삭제하려는 계정이 남긴 데이터(담당 배정·점검·보고서 등)가 있어 참조 무결성상 지울 수 없다.
+    USER_HAS_REFERENCES(HttpStatus.CONFLICT, "U004", "다른 데이터가 참조 중이라 계정을 삭제할 수 없습니다."),
 
     // Monitoring - WindFarm / Turbine / Blade
     // 담당이 아닌 자원은 "권한 없음"이 아니라 "없음"으로 응답한다(AssetAccessGuard 참고).
@@ -51,6 +56,9 @@ public enum ErrorCode {
     // 422: RFC 9110 에서 명칭이 UNPROCESSABLE_CONTENT 로 바뀌었다(구 UNPROCESSABLE_ENTITY 는 deprecated).
     VISION_RESULT_INVALID(HttpStatus.UNPROCESSABLE_CONTENT, "D004", "결함 분석 결과를 해석할 수 없습니다."),
     WEBHOOK_UNAUTHORIZED(HttpStatus.FORBIDDEN, "D005", "웹훅 인증에 실패했습니다."),
+    // FE 가 통보한 업로드 장수와 S3 실측이 다를 때. 진실의 원천은 S3 이고 통보 값은 기대값으로만 쓴다 —
+    // 불일치를 조용히 진행하면 누락된 사진이 영원히 추론되지 않으므로, 거부해 재시도할 수 있게 한다.
+    UPLOAD_COUNT_MISMATCH(HttpStatus.BAD_REQUEST, "D006", "업로드된 이미지 수가 통보한 수와 다릅니다."),
 
     // Infrastructure — 외부 자원 미설정/장애. 앱 기동은 막지 않고 해당 엔드포인트만 실패시킨다.
     STORAGE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "S001", "파일 저장소가 설정되지 않았습니다."),

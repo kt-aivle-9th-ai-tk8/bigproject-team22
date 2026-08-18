@@ -10,6 +10,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sagemakerruntime.SageMakerRuntimeClient;
+import software.amazon.awssdk.services.sagemakerruntime.model.InvokeEndpointAsyncRequest;
 import software.amazon.awssdk.services.sagemakerruntime.model.InvokeEndpointRequest;
 import software.amazon.awssdk.services.sagemakerruntime.model.InvokeEndpointResponse;
 
@@ -71,6 +72,40 @@ public class SageMakerInvoker {
             // 엔드포인트 이름 등 내부 정보가 응답에 새지 않도록 상세는 로그로만 남긴다.
             // '미설정'과 구분되는 코드를 쓴다 — 타임아웃·권한오류를 설정 문제로 보고하면 원인 추적이 어긋난다.
             log.error("SageMaker 추론 호출 실패 endpoint={}", endpoint, e);
+            throw new BusinessException(ErrorCode.INFERENCE_FAILURE);
+        }
+    }
+
+    /** 결함탐지(Async) 엔드포인트 설정 여부. 릴레이가 발사 전 확인해 불필요한 예외를 피한다. */
+    public boolean isDefectEndpointConfigured() {
+        return properties.hasRegion()
+                && properties.sagemaker().defectEndpoint() != null
+                && !properties.sagemaker().defectEndpoint().isBlank();
+    }
+
+    /**
+     * 결함탐지 엔드포인트를 <b>비동기(Async Inference)</b>로 호출한다. 입력은 본문이 아니라 S3 객체
+     * 위치({@code s3://...})로 전달되고, 결과는 엔드포인트가 S3 에 쓴 뒤 SNS→SQS 로 통보된다 —
+     * 이 메서드는 접수만 하고 즉시 반환한다.
+     *
+     * @param inputLocation 추론 입력 이미지의 S3 URI
+     * @param inferenceId   결과 통보와 요청을 상관시키는 키(아웃박스 행 id). 통보 본문에 그대로 돌아온다
+     */
+    public void invokeDefectEndpointAsync(String inputLocation, String inferenceId) {
+        if (!isDefectEndpointConfigured()) {
+            throw new BusinessException(ErrorCode.INFERENCE_NOT_CONFIGURED);
+        }
+        String endpoint = properties.sagemaker().defectEndpoint();
+        try {
+            client().invokeEndpointAsync(InvokeEndpointAsyncRequest.builder()
+                    .endpointName(endpoint)
+                    .inputLocation(inputLocation)
+                    .inferenceId(inferenceId)
+                    .contentType("image/jpeg") // 드론 이미지 원본 — DL input_fn 이 jpeg/png 를 받는다
+                    .build());
+        } catch (RuntimeException e) {
+            // 동기 호출과 동일 규약: 상세는 로그로만, '미설정'과 구분되는 코드로 실패를 보고한다.
+            log.error("SageMaker 비동기 추론 접수 실패 endpoint={} inferenceId={}", endpoint, inferenceId, e);
             throw new BusinessException(ErrorCode.INFERENCE_FAILURE);
         }
     }

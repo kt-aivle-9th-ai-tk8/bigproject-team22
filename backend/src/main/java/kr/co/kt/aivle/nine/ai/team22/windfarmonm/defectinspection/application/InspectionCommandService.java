@@ -121,7 +121,7 @@ public class InspectionCommandService {
      * S3 LIST 는 짧은 단건 호출이라 트랜잭션 안에서 수행한다(실패 시 전이·기록이 함께 롤백되어 재시도 가능).
      */
     @Transactional
-    public int completeUpload(Long userId, boolean admin, Long inspectionId) {
+    public int completeUpload(Long userId, boolean admin, Long inspectionId, Integer expectedCount) {
         // 쓰기 잠금으로 동시 완료 통보를 직렬화한다 — 잠금 없이는 두 요청이 모두 UPLOADING 을 읽고
         // markInspecting 을 통과해 아웃박스(추론 요청)가 중복 기록된다. 후속 요청은 잠금 해제 후
         // INSPECTING 을 보고 D002 로 거부된다.
@@ -143,8 +143,16 @@ public class InspectionCommandService {
         inspection.markInspecting(); // UPLOADING 이 아니면 D002(명세상 400)
 
         List<InspectionStoragePort.UploadedImage> images = storagePort.listUploadedImages(inspectionId);
+        // 수량 대조를 빈 목록 검사보다 먼저 한다 — "N장 통보, 실측 0장"은 입력 오류가 아니라 수량 불일치이고,
+        // FE 가 원인(일부/전부 PUT 실패)을 알아야 재시도할 수 있다.
+        if (expectedCount != null && images.size() != expectedCount) {
+            // 통보 값은 기대값일 뿐 진실은 S3 다. 다르면 일부 PUT 이 실패했거나 아직 끝나지 않은 것이므로
+            // 거부해 재시도하게 한다 — 조용히 진행하면 누락분이 영원히 추론되지 않는다(전이·기록 모두 롤백).
+            log.warn("점검 {} 업로드 수 불일치 — 통보 {}장, S3 실측 {}장", inspectionId, expectedCount, images.size());
+            throw new BusinessException(ErrorCode.UPLOAD_COUNT_MISMATCH);
+        }
         if (images.isEmpty()) {
-            // 업로드된 이미지가 하나도 없는 완료 통보는 성립하지 않는다(전이도 롤백된다).
+            // 수량 통보가 없었는데 한 장도 없는 완료 통보는 성립하지 않는다(전이도 롤백된다).
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
 

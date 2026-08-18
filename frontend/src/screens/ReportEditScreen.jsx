@@ -1,19 +1,85 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import mermaid from "mermaid";
 
 import "./ReportEditScreen.css";
 
 import { useReportDetail } from "../hooks/useReportDetail";
 import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
+import { useDeleteReport } from "../hooks/useDeleteReport";
+
+// Mermaid 전역 초기화
+mermaid.initialize({
+  startOnLoad: false,
+  theme: "default",
+  securityLevel: "loose",
+});
+
+// Mermaid 전용 차트 렌더러 컴포넌트
+const MermaidChart = ({ chartCode }) => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !chartCode) return;
+
+    const renderChart = async () => {
+      try {
+        const uniqueId = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(uniqueId, chartCode.trim());
+        if (containerRef.current) {
+          containerRef.current.innerHTML = svg;
+        }
+      } catch (err) {
+        console.error("Mermaid 렌더링 오류:", err);
+        if (containerRef.current) {
+          containerRef.current.innerHTML = `<pre style="color: #e53e3e; background: #fff5f5; padding: 12px; border-radius: 6px;">차트 렌더링 실패: \n${chartCode}</pre>`;
+        }
+      }
+    };
+
+    renderChart();
+  }, [chartCode]);
+
+  return <div ref={containerRef} className="mermaid-chart-container" style={{ margin: "20px 0", textAlign: "center" }} />;
+};
+
+// 1. 보고서 유형 영문 -> 한글 매핑 함수
+const formatReportType = (type) => {
+  if (!type) return "보고서";
+  const upperType = String(type).toUpperCase();
+  switch (upperType) {
+    case "WIND_FARM_OPERATION":
+      return "단지 운영보고서";
+    case "TURBINE_OPERATION":
+      return "터빈 운영보고서";
+    case "ANOMALY_EVENT":
+    case "ANOMALY":
+      return "이상 분석보고서";
+    case "DEFECT":
+      return "결함 보고서";
+    default:
+      return type;
+  }
+};
+
+// 2. ISO 날짜 포맷팅 함수 (yyyy-mm-dd hh:mm)
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  if (dateStr.includes("T")) {
+    const [date, time] = dateStr.split("T");
+    return `${date} ${time.slice(0, 5)}`;
+  }
+  return dateStr;
+};
 
 function ReportEditScreen() {
   const { reportId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 상단 메인 보고서 상세 데이터
   const [activeReport, setActiveReport] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -39,13 +105,37 @@ function ReportEditScreen() {
   });
 
   const { updateReport, isUpdating } = useUpdateReport();
+  const { deleteReport } = useDeleteReport();
+
+  // 보고서 삭제 처리
+  const handleDelete = async () => {
+    const currentId =
+      reportId || (activeReport && (activeReport.id || activeReport.report_id));
+
+    if (!currentId) {
+      alert("보고서 ID가 없습니다.");
+      return;
+    }
+
+    const isConfirmed = window.confirm("해당 보고서를 삭제하시겠습니까?");
+    if (!isConfirmed) return;
+
+    try {
+      await deleteReport(currentId);
+      alert("보고서가 삭제되었습니다.");
+      navigate("/reportlist");
+    } catch (error) {
+      console.error("보고서 삭제 실패:", error);
+      alert(error.message || "보고서 삭제 중 오류가 발생했습니다.");
+    }
+  };
 
   const handleCancelEdit = () => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData({
+      title: reportDetail?.title || "",
       summary: reportDetail?.context || "",
       context: reportDetail?.context || "",
-    }));
+    });
     setIsEditing(false);
   };
 
@@ -55,19 +145,20 @@ function ReportEditScreen() {
     setActiveReport(reportDetail);
 
     const plantStr =
+      reportDetail.plant_name ||
       reportDetail.plant ||
       reportDetail.wind_farm_name ||
       "발전소";
 
     const turbineStr =
-      reportDetail.turbine ||
       reportDetail.turbine_name ||
+      reportDetail.turbine ||
+      reportDetail.turbine_id ||
       "터빈";
 
-    const typeStr =
-      reportDetail.type ||
-      reportDetail.report_type ||
-      "보고서";
+    const typeStr = formatReportType(
+      reportDetail.report_type || reportDetail.type
+    );
 
     setFormData({
       title:
@@ -87,11 +178,10 @@ function ReportEditScreen() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 3. 보고서 수정 저장 처리
+  // 보고서 수정 저장 처리
   const handleSave = async () => {
     const currentId =
-      reportId ||
-      (activeReport && (activeReport.id || activeReport.report_id));
+      reportId || (activeReport && (activeReport.id || activeReport.report_id));
 
     if (!currentId) return;
 
@@ -111,7 +201,7 @@ function ReportEditScreen() {
   };
 
   const visibleReports = useMemo(() => {
-    if (!activeReport) return [];
+    if (!activeReport || !Array.isArray(allReports)) return [];
 
     const currentId = activeReport.id || activeReport.report_id;
 
@@ -134,7 +224,6 @@ function ReportEditScreen() {
     <div className="report-edit-container">
       {/* 1. 상단 헤더 */}
       <header className="edit-header">
-        <h1 className="page-title">보고서 상세 및 편집</h1>
         <div className="header-actions">
           {isEditing ? (
             <>
@@ -150,9 +239,17 @@ function ReportEditScreen() {
               </button>
             </>
           ) : (
-            <button className="btn-primary" onClick={() => setIsEditing(true)}>
-              ✏️ 보고서 수정
-            </button>
+            <>
+              <button
+                className="btn-primary"
+                onClick={() => setIsEditing(true)}
+              >
+                보고서 수정
+              </button>
+              <button className="btn-delete-text" onClick={handleDelete}>
+                보고서 삭제
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -165,14 +262,20 @@ function ReportEditScreen() {
           <>
             <div className="card-title-row">
               <h2>{formData.title}</h2>
-              <span className={`type-badge ${activeReport.type || activeReport.report_type}`}>
-                {activeReport.type || activeReport.report_type}
+              <span
+                className={`type-badge ${
+                  activeReport.report_type || activeReport.type
+                }`}
+              >
+                {formatReportType(
+                  activeReport.report_type || activeReport.type
+                )}
               </span>
             </div>
 
             <div className="edit-grid-layout">
               <div className="form-group">
-                <label className="form-label">보고서 요약 및 상세 내용</label>
+                <label className="form-label">보고서 요약</label>
                 {isEditing ? (
                   <textarea
                     name="summary"
@@ -184,7 +287,28 @@ function ReportEditScreen() {
                   />
                 ) : (
                   <div className="readonly-box">
-                    <ReactMarkdown>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        code({ node, inline, className, children, ...props }) {
+                          const codeText = String(children).replace(/\n$/, "");
+                          const isMermaid =
+                            className?.includes("language-mermaid") ||
+                            codeText.includes("xychart-beta") ||
+                            codeText.startsWith("%%{init:");
+
+                          if (!inline && isMermaid) {
+                            return <MermaidChart chartCode={codeText} />;
+                          }
+
+                          return (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
                       {formData.summary || "작성된 보고서 내용이 없습니다."}
                     </ReactMarkdown>
                   </div>
@@ -201,7 +325,10 @@ function ReportEditScreen() {
       <section className="bottom-list-section">
         <div className="bottom-list-header">
           <h3>다른 보고서 목록</h3>
-          <button className="view-all-btn" onClick={() => navigate("/reportlist")}>
+          <button
+            className="view-all-btn"
+            onClick={() => navigate("/reportlist")}
+          >
             전체글 보기 ›
           </button>
         </div>
@@ -209,29 +336,50 @@ function ReportEditScreen() {
         <div className="report-list">
           {visibleReports.map((report) => {
             const currentReportId = report.id || report.report_id;
-            const activeId = activeReport ? activeReport.id || activeReport.report_id : null;
-            const plantName = report.plant || report.wind_farm_name || "발전소";
-            const turbineName = report.turbine || report.turbine_name || "터빈";
-            const typeName = report.type || report.report_type || "보고서";
-            const dateStr = report.generated_at || report.created_at || report.date || "";
+            const activeId = activeReport
+              ? activeReport.id || activeReport.report_id
+              : null;
+
+            const plantName =
+              report.plant_name ||
+              report.plant ||
+              report.wind_farm_name ||
+              "발전소";
+            const turbineName =
+              report.turbine_name ||
+              report.turbine ||
+              report.turbine_id ||
+              "터빈";
+            const rawType = report.report_type || report.type;
+            const displayType = formatReportType(rawType);
+            const dateStr = formatDate(
+              report.generated_at || report.created_at || report.date
+            );
 
             return (
               <div
                 key={currentReportId}
-                className={`report-card ${currentReportId === activeId ? "active-card" : ""}`}
+                className={`report-card ${
+                  currentReportId === activeId ? "active-card" : ""
+                }`}
                 onClick={() => handleCardClick(report)}
                 style={{ cursor: "pointer" }}
               >
                 <div className="report-content">
                   <div className="card-main-row">
                     <h3 className="plant-name">
-                      {plantName} <span className="turbine-tag">[{turbineName}]</span>
+                      {plantName}{" "}
+                      <span className="turbine-tag">[{turbineName}]</span>
                     </h3>
-                    <span className={`type-badge ${typeName}`}>{typeName}</span>
+                    <span className={`type-badge ${rawType}`}>
+                      {displayType}
+                    </span>
                     <span className="report-date">{dateStr}</span>
                   </div>
                 </div>
-                <div className="card-arrow"><span>›</span></div>
+                <div className="card-arrow">
+                  <span>›</span>
+                </div>
               </div>
             );
           })}

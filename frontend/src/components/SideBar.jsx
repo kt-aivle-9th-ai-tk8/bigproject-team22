@@ -33,6 +33,7 @@ function SideBar({
           selectedPlant={selectedPlant}
           windFarmDetail={windFarmDetail}
           onSelectTurbine={onSelectTurbine}
+          onCreateInspectionReport={onCreateInspectionReport}
           onCreateOperationReport={onCreateOperationReport}
           isOperationReportPending={isOperationReportPending}
           isInspectionReportCreating={isInspectionReportCreating}
