@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 필요한 파일만 명시적으로 복사 (COPY . . 대신) — .dockerignore와 이중으로 방어
 COPY detection/ ./detection/
+COPY lightgbm/ ./lightgbm/   
 COPY db_client.py run_tier_a.py run_tier_b.py ./
 
 # 비root 사용자 생성 후 전환 — 컨테이너 프로세스가 root 권한으로 돌지 않게 함
