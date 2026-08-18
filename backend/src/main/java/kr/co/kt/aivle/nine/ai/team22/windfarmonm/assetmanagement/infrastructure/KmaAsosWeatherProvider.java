@@ -48,6 +48,16 @@ public class KmaAsosWeatherProvider implements WeatherProvider {
                 .baseUrl(properties.baseUrl() != null ? properties.baseUrl() : "")
                 .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
                 .build();
+
+        // 미설정이어도 기동은 시켜야 하지만(다른 관제 기능까지 죽이지 않는다) 조용히 넘어가면 안 된다.
+        // 실제로 KMA_API_KEY/KMA_BASE_URL 이 운영 태스크 정의에 한 번도 들어간 적이 없었고,
+        // 그동안 대시보드는 UNKNOWN(FE 기본값 '맑음 0°C 0m/s')을 진짜 값처럼 보여주고 있었다.
+        if (isBlank(properties.baseUrl()) || isBlank(properties.apiKey())) {
+            log.warn("KMA 설정이 비어 있다(base-url={}, api-key={}) — 대시보드 날씨는 전부 UNKNOWN 으로 나간다."
+                            + " 운영이라면 KMA_BASE_URL/KMA_API_KEY 를 주입할 것.",
+                    isBlank(properties.baseUrl()) ? "미설정" : "설정됨",
+                    isBlank(properties.apiKey()) ? "미설정" : "설정됨");
+        }
     }
 
     @Override
