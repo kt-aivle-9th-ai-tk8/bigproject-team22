@@ -152,8 +152,12 @@ def get_defects(report_id: int):
 def _image_seq(df) -> dict:
     """(blade_tag, part_side)별로 이미지에 1부터 순번 → {image_path: seq}.
 
-    보고서의 'A블레이드 앞전 2번째 사진'의 그 순번. 파일명이 아니라 컬럼 기준으로 센다
-    (파일명의 '..._A_LeadingEdge_002' 표기는 실제 blade_tag/part_side 와 일치하지 않음).
+    파일명이 아니라 컬럼 기준으로 센다 — 파일명의 '..._A_LeadingEdge_002' 표기는
+    실제 blade_tag/part_side 와 일치하지 않아 그대로 믿으면 엉뚱한 부위로 적힌다.
+
+    보고서 캡션에는 더 이상 쓰지 않는다(부위당 1장이라 항상 1이고, 이미지가 순서대로
+    렌더링되므로 글자로 반복할 필요가 없다). tool_outputs 의 images[].seq 로만 남겨
+    프론트가 자체 갤러리를 만들 때 쓸 수 있게 한다.
     """
     seq = {}
     key = df[["blade_tag", "part_side", "image_path"]].drop_duplicates()
