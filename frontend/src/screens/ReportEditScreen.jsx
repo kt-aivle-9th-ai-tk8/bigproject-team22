@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import mermaid from "mermaid";
 
 import "./ReportEditScreen.css";
 
@@ -9,6 +10,41 @@ import { useReportDetail } from "../hooks/useReportDetail";
 import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
 import { useDeleteReport } from "../hooks/useDeleteReport";
+
+// Mermaid 전역 초기화
+mermaid.initialize({
+  startOnLoad: false,
+  theme: "default",
+  securityLevel: "loose",
+});
+
+// Mermaid 전용 차트 렌더러 컴포넌트
+const MermaidChart = ({ chartCode }) => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !chartCode) return;
+
+    const renderChart = async () => {
+      try {
+        const uniqueId = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+        const { svg } = await mermaid.render(uniqueId, chartCode.trim());
+        if (containerRef.current) {
+          containerRef.current.innerHTML = svg;
+        }
+      } catch (err) {
+        console.error("Mermaid 렌더링 오류:", err);
+        if (containerRef.current) {
+          containerRef.current.innerHTML = `<pre style="color: #e53e3e; background: #fff5f5; padding: 12px; border-radius: 6px;">차트 렌더링 실패: \n${chartCode}</pre>`;
+        }
+      }
+    };
+
+    renderChart();
+  }, [chartCode]);
+
+  return <div ref={containerRef} className="mermaid-chart-container" style={{ margin: "20px 0", textAlign: "center" }} />;
+};
 
 // 1. 보고서 유형 영문 -> 한글 매핑 함수
 const formatReportType = (type) => {
@@ -69,48 +105,28 @@ function ReportEditScreen() {
   });
 
   const { updateReport, isUpdating } = useUpdateReport();
-
-  const {
-    deleteReport,
-    isDeleting,
-  } = useDeleteReport();
+  const { deleteReport } = useDeleteReport();
 
   // 보고서 삭제 처리
   const handleDelete = async () => {
     const currentId =
-      reportId ||
-      (activeReport &&
-        (activeReport.id || activeReport.report_id));
+      reportId || (activeReport && (activeReport.id || activeReport.report_id));
 
     if (!currentId) {
       alert("보고서 ID가 없습니다.");
       return;
     }
 
-    const isConfirmed = window.confirm(
-      "해당 보고서를 삭제하시겠습니까?"
-    );
-
-    if (!isConfirmed) {
-      return;
-    }
+    const isConfirmed = window.confirm("해당 보고서를 삭제하시겠습니까?");
+    if (!isConfirmed) return;
 
     try {
       await deleteReport(currentId);
-
       alert("보고서가 삭제되었습니다.");
-
       navigate("/reportlist");
     } catch (error) {
-      console.error(
-        "보고서 삭제 실패:",
-        error
-      );
-
-      alert(
-        error.message ||
-          "보고서 삭제 중 오류가 발생했습니다."
-      );
+      console.error("보고서 삭제 실패:", error);
+      alert(error.message || "보고서 삭제 중 오류가 발생했습니다.");
     }
   };
 
@@ -165,8 +181,7 @@ function ReportEditScreen() {
   // 보고서 수정 저장 처리
   const handleSave = async () => {
     const currentId =
-      reportId ||
-      (activeReport && (activeReport.id || activeReport.report_id));
+      reportId || (activeReport && (activeReport.id || activeReport.report_id));
 
     if (!currentId) return;
 
@@ -272,7 +287,28 @@ function ReportEditScreen() {
                   />
                 ) : (
                   <div className="readonly-box">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        code({ node, inline, className, children, ...props }) {
+                          const codeText = String(children).replace(/\n$/, "");
+                          const isMermaid =
+                            className?.includes("language-mermaid") ||
+                            codeText.includes("xychart-beta") ||
+                            codeText.startsWith("%%{init:");
+
+                          if (!inline && isMermaid) {
+                            return <MermaidChart chartCode={codeText} />;
+                          }
+
+                          return (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
                       {formData.summary || "작성된 보고서 내용이 없습니다."}
                     </ReactMarkdown>
                   </div>

@@ -149,4 +149,47 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
         // 새 세션은 유효(인증됨) → 권한 부족(403), 즉 세션 자체는 살아있음
         assertThat(getAdminUsers(secondCookie).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
+
+    @Test
+    @DisplayName("가입 거절: ADMIN 이 GUEST 를 삭제하면 200 + 계정이 사라진다")
+    void rejectSignUp_deletesGuest() {
+        seed("ADMIN1", Role.ADMIN);
+        seed("GUEST1", Role.GUEST);
+        String cookie = sessionCookie(login("ADMIN1"));
+        long guestId = userJpaRepository.findByEmployeeId("GUEST1").orElseThrow().getId();
+
+        ResponseEntity<String> response = send(HttpMethod.DELETE, "/admin/users/" + guestId, null, cookie);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(userJpaRepository.findByEmployeeId("GUEST1")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("가입 거절: 이미 승인된 계정은 400(U003) — 계정은 그대로 남는다")
+    void rejectSignUp_approvedUser_400() {
+        seed("ADMIN1", Role.ADMIN);
+        seed("MGR1", Role.MANAGER);
+        String cookie = sessionCookie(login("ADMIN1"));
+        long managerId = userJpaRepository.findByEmployeeId("MGR1").orElseThrow().getId();
+
+        ResponseEntity<String> response = send(HttpMethod.DELETE, "/admin/users/" + managerId, null, cookie);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("U003");
+        assertThat(userJpaRepository.findByEmployeeId("MGR1")).isPresent();
+    }
+
+    @Test
+    @DisplayName("가입 거절: ADMIN 이 아닌 사용자는 403 — 관리자 API 규약 그대로")
+    void rejectSignUp_nonAdmin_403() {
+        seed("MGR1", Role.MANAGER);
+        seed("GUEST1", Role.GUEST);
+        String cookie = sessionCookie(login("MGR1"));
+        long guestId = userJpaRepository.findByEmployeeId("GUEST1").orElseThrow().getId();
+
+        ResponseEntity<String> response = send(HttpMethod.DELETE, "/admin/users/" + guestId, null, cookie);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(userJpaRepository.findByEmployeeId("GUEST1")).isPresent();
+    }
 }
