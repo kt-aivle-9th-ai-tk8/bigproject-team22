@@ -21,6 +21,11 @@ public enum ErrorCode {
     // User
     DUPLICATE_EMPLOYEE_ID(HttpStatus.CONFLICT, "U001", "이미 존재하는 사번입니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U002", "사용자를 찾을 수 없습니다."),
+    // 거절(삭제)은 '가입 승인 대기(GUEST)' 계정에만 허용한다. 승인된 계정을 지우면 그가 남긴
+    // 점검·보고서의 작성자 추적이 끊기고 되돌릴 수 없다 — 그런 계정은 정지(SUSPENDED)로 다룬다.
+    USER_NOT_PENDING(HttpStatus.BAD_REQUEST, "U003", "가입 승인 대기 상태의 계정만 거절할 수 있습니다."),
+    // 삭제하려는 계정이 남긴 데이터(담당 배정·점검·보고서 등)가 있어 참조 무결성상 지울 수 없다.
+    USER_HAS_REFERENCES(HttpStatus.CONFLICT, "U004", "다른 데이터가 참조 중이라 계정을 삭제할 수 없습니다."),
 
     // Monitoring - WindFarm / Turbine / Blade
     // 담당이 아닌 자원은 "권한 없음"이 아니라 "없음"으로 응답한다(AssetAccessGuard 참고).

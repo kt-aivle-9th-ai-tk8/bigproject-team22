@@ -105,6 +105,14 @@ public class AdminUserManagementService {
 
     /** 강제 로그아웃(세션 파기). */
     @Transactional
+    /**
+     * 가입 거절. 승인 대기(GUEST) 계정만 삭제되며, 이미 승인된 계정은 400(U003)으로 거부된다 —
+     * 삭제는 되돌릴 수 없고 그 계정이 남긴 기록의 작성자 추적이 끊기기 때문이다(정지로 다룰 것).
+     */
+    public void rejectSignUp(Long userId) {
+        userAdminPort.rejectSignUp(userId);
+    }
+
     public void forceLogout(Long userId) {
         userAdminPort.forceLogout(userId);
     }

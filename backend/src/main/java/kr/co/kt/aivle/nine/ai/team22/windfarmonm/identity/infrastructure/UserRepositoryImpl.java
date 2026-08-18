@@ -52,4 +52,19 @@ public class UserRepositoryImpl implements UserRepository {
     public List<Long> findUserIdsByRole(Role role) {
         return userJpaRepository.findUserIdsByRole(role);
     }
+
+    @Override
+    public void delete(User user) {
+        userJpaRepository.delete(user);
+    }
+
+    @Override
+    public Optional<User> findByIdForUpdate(Long id) {
+        return userJpaRepository.findWithLockById(id);
+    }
+
+    @Override
+    public void flush() {
+        userJpaRepository.flush();
+    }
 }
