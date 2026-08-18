@@ -11,16 +11,32 @@ import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
 import { useDeleteReport } from "../hooks/useDeleteReport";
 
-// Mermaid 전역 초기화
 mermaid.initialize({
   startOnLoad: false,
   theme: "default",
   securityLevel: "loose",
 });
 
-// Mermaid 전용 차트 렌더러 컴포넌트
+// Mermaid 전용 차트 렌더러 컴포넌트 (25번째 줄 부근)
 const MermaidChart = ({ chartCode }) => {
   const containerRef = useRef(null);
+
+  // 단일 데이터 포인트 시 선(line)이 안 그려지는 문제 및 스케일 자동 보정
+  const preprocessChartCode = (code) => {
+    let processed = code;
+
+    // 1. 데이터가 단일 값([8.4], [5.5] 등)인 line을 bar 차트로 자동 변경하여 가시화
+    // (선 그래프는 점이 1개면 안 그려지지만 막대 그래프는 1개여도 정상 출력됨)
+    if (processed.includes("x-axis") && !processed.includes(",")) {
+      processed = processed.replaceAll("line [", "bar [");
+    }
+
+    // 2. y축 단위가 너무 커서 바닥에 붙는 경우(0 --> 200 등) 적절한 스케일(0 --> 10)로 완화
+    // 필요 시 아래 정규식으로 y-axis 범위를 데이터 스케일에 맞춤
+    processed = processed.replace(/y-axis\s+"([^"]*)"\s+\d+\s+-->\s+\d+/g, 'y-axis "$1" 0 --> 10');
+
+    return processed;
+  };
 
   useEffect(() => {
     if (!containerRef.current || !chartCode) return;
@@ -28,7 +44,8 @@ const MermaidChart = ({ chartCode }) => {
     const renderChart = async () => {
       try {
         const uniqueId = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg } = await mermaid.render(uniqueId, chartCode.trim());
+        const fixedCode = preprocessChartCode(chartCode.trim()); // 👈 전처리된 코드 적용
+        const { svg } = await mermaid.render(uniqueId, fixedCode);
         if (containerRef.current) {
           containerRef.current.innerHTML = svg;
         }
@@ -43,10 +60,16 @@ const MermaidChart = ({ chartCode }) => {
     renderChart();
   }, [chartCode]);
 
-  return <div ref={containerRef} className="mermaid-chart-container" style={{ margin: "20px 0", textAlign: "center" }} />;
+  return (
+    <div
+      ref={containerRef}
+      className="mermaid-chart-container"
+      style={{ margin: "20px 0", textAlign: "center" }}
+    />
+  );
 };
 
-// 1. 보고서 유형 영문 -> 한글 매핑 함수
+// 1. 보고서 유형 영문 -> 한글
 const formatReportType = (type) => {
   if (!type) return "보고서";
   const upperType = String(type).toUpperCase();
@@ -65,7 +88,7 @@ const formatReportType = (type) => {
   }
 };
 
-// 2. ISO 날짜 포맷팅 함수 (yyyy-mm-dd hh:mm)
+// 2. ISO 날짜 포맷팅 함수
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
   if (dateStr.includes("T")) {
