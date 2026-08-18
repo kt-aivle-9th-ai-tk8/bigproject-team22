@@ -215,40 +215,7 @@ jobs:
           aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
 
   # **************************************************** #
-  # SageMaker 서빙 배포 Job
-  deploy-model-serving-ml:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.serving_ml == 'true' }}
-    concurrency:
-      group: deploy-model-serving-ml-${{ github.ref }}
-      cancel-in-progress: true
-    runs-on: ubuntu-24.04
-    permissions:
-      id-token: write
-      contents: read
-    defaults:
-      run:
-        working-directory: ./serving/ml
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::336090301989:role/windfarm-onm-github-actions-role
-          aws-region: ap-northeast-2
-
-      ## 코드 패키징
-      - name: Package sourcedir
-        run: |
-          tar -czvf sourcedir.tar.gz inference.py predict.py density.py requirements.txt
-
-      - name: Upload to S3
-        run: |
-          aws s3 cp sourcedir.tar.gz s3://${{ secrets.S3_BUCKET_NAME }}/code/lightgbm/sourcedir.tar.gz
-
-    # SageMaker 모델 배포 (dl/)
+  # SageMaker 모델 배포 (dl/)
   deploy-model-serving-dl:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.serving_dl == 'true' }}
@@ -279,4 +246,4 @@ jobs:
 
       - name: Upload to S3
         run: |
-          aws s3 cp sourcedir.tar.gz s3://${{ secrets.S3_BUCKET_NAME }}/code/blade-defect-pipeline/sourcedir.tar.gz
+          aws s3 cp sourcedir.tar.gz s3://bigproject-team22-models/code/blade-defect-pipeline/sourcedir.tar.gz
