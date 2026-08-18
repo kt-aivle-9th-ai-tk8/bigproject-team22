@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./AlarmPopup.css";
@@ -20,9 +20,20 @@ function AlarmPopup({
   isOpen,
   onClose,
   onReadNotification,
+  onDeleteNotification,
 }) {
   const navigate = useNavigate();
 
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+
+  const [ selectedNotificationIds, setSelectedNotificationIds ] = useState([]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsDeleteMode(false);
+      setSelectedNotificationIds([]);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -103,6 +114,72 @@ function AlarmPopup({
     );
   };
 
+  const handleToggleNotification = (
+    notificationId
+  ) => {
+    setSelectedNotificationIds((prev) => {
+      if (prev.includes(notificationId)) {
+        return prev.filter(
+          (id) => id !== notificationId
+        );
+      }
+
+      return [
+        ...prev,
+        notificationId,
+      ];
+    });
+  };
+
+
+  const handleDeleteClick = async () => {
+    if (!isDeleteMode) {
+      setIsDeleteMode(true);
+      setSelectedNotificationIds([]);
+      return;
+    }
+
+    if (
+      selectedNotificationIds.length === 0
+    ) {
+      alert(
+        "삭제할 알림을 선택해 주세요."
+      );
+      return;
+    }
+
+    const isConfirmed = window.confirm(
+      `선택한 알림 ${selectedNotificationIds.length}개를 삭제하시겠습니까?`
+    );
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      await Promise.all(
+        selectedNotificationIds.map(
+          (notificationId) =>
+            onDeleteNotification?.(
+              notificationId
+            )
+        )
+      );
+
+      setSelectedNotificationIds([]);
+      setIsDeleteMode(false);
+    } catch (error) {
+      console.error(
+        "알림 삭제 실패:",
+        error
+      );
+
+      alert(
+        "알림 삭제에 실패했습니다."
+      );
+    }
+  };
+
 
   return (
     <div
@@ -122,20 +199,39 @@ function AlarmPopup({
             알림 보고서 리스트
           </h2>
 
-          <button
-            className="alarm-close-button"
-            type="button"
-            aria-label="알림 팝업 닫기"
-            onClick={onClose}
-          >
-            ×
-          </button>
+          <div className="alarm-popup-header-actions">
+            <button
+              className="alarm-delete-button"
+              type="button"
+              onClick={handleDeleteClick}
+            >
+              {isDeleteMode
+                ? "완료"
+                : "삭제"}
+            </button>
+
+            <button
+              className="alarm-close-button"
+              type="button"
+              aria-label="알림 팝업 닫기"
+              onClick={onClose}
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <AlarmReportList
           alarm={alarm}
           onSelectReport={
             handleReportClick
+          }
+          isDeleteMode={isDeleteMode}
+          selectedNotificationIds={
+            selectedNotificationIds
+          }
+          onToggleNotification={
+            handleToggleNotification
           }
         />
       </section>
@@ -147,6 +243,9 @@ function AlarmPopup({
 function AlarmReportList({
   alarm,
   onSelectReport,
+  isDeleteMode,
+  selectedNotificationIds,
+  onToggleNotification,
 }) {
   if (alarm.length === 0) {
     return (
@@ -159,30 +258,49 @@ function AlarmReportList({
   return (
     <div className="alarm-list">
       {alarm.map((report) => (
-        <button
-          className="alarm-list-item"
+        <div
+          className="alarm-list-row"
           key={report.id}
-          type="button"
-          onClick={() =>
-            onSelectReport(report)
-          }
         >
-          <div className="alarm-list-main">
-            <span className="alarm-title">
-              {report.report_title}
-            </span>
-          </div>
+          {isDeleteMode && (
+            <input
+              className="alarm-list-checkbox"
+              type="checkbox"
+              checked={
+                selectedNotificationIds.includes(
+                  report.id
+                )
+              }
+              onChange={() =>
+                onToggleNotification(
+                  report.id
+                )
+              }
+            />
+          )}
 
-          <div className="alarm-list-sub">
-            {formatSentAt(
-              report.sent_at
-            )}
-          </div>
-        </button>
+          <button
+            className="alarm-list-item"
+            type="button"
+            disabled={isDeleteMode}
+            onClick={() =>
+              onSelectReport(report)
+            }
+          >
+            <div className="alarm-list-main">
+              <span className="alarm-title">
+                {report.report_title}
+              </span>
+            </div>
+
+            <div className="alarm-list-sub">
+              {formatSentAt(
+                report.sent_at
+              )}
+            </div>
+          </button>
+        </div>
       ))}
     </div>
   );
 }
-
-
-export default AlarmPopup;

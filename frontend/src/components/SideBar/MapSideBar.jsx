@@ -125,7 +125,7 @@ function MapSideBar({
 
       <section className="sidebar-panel map-fault-panel">
         <SideTitle>
-          실시간 점검 알림
+          실시간 이상 알림
         </SideTitle>
 
         <FaultList items={notifications} />

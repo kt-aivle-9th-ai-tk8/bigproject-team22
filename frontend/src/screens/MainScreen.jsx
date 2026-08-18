@@ -18,6 +18,8 @@ import { useReportStatusPolling } from "../hooks/useReportStatusPolling";
 import { useInspectionReport } from "../hooks/useInspectionReport";
 import { useTurbineReports } from "../hooks/useTurbineReports";
 import { useReadNotification } from "../hooks/useReadNotification";
+import { useDeleteNotification } from "../hooks/useDeleteNotification";
+
 import "./MainScreen.css";
 import "../components/Bar.css";
 
@@ -40,9 +42,9 @@ function MainScreen() {
     return savedTurbine ? JSON.parse(savedTurbine) : null;
   });
 
-  const {
-    markNotificationAsRead,
-  } = useReadNotification();
+  const { markNotificationAsRead } = useReadNotification();
+  
+  const { removeNotification } = useDeleteNotification();
 
   const handleReadNotification =
     async (notificationId) => {
@@ -53,6 +55,27 @@ function MainScreen() {
       } catch (error) {
         console.error(
           "알림 읽음 처리 실패:",
+          error
+        );
+      }
+    };
+
+  const handleDeleteNotification =
+    async (notificationId) => {
+      try {
+        await removeNotification(
+          notificationId
+        );
+
+        console.log(
+          "알림 삭제 완료:",
+          notificationId
+        );
+
+        refetchNotifications();
+      } catch (error) {
+        console.error(
+          "알림 삭제 처리 실패:",
           error
         );
       }
@@ -418,6 +441,7 @@ function MainScreen() {
         onMyPage={handleNavigateUser}
         alarm={notifications}
         onReadNotification={handleReadNotification}
+        onDeleteNotification={handleDeleteNotification}
       />
 
       <div className="dashboard-layout">

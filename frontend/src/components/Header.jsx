@@ -6,7 +6,7 @@ import AlarmPopup from "./AlarmPopup/AlarmPopup";
 
 import "./Header.css";
 
-function Header({ onLogout, onTitleClick, onMyPage, alarm = [], onReadNotification }) {
+function Header({ onLogout, onTitleClick, onMyPage, alarm = [], onReadNotification, onDeleteNotification }) {
   const navigate = useNavigate();
   const [now, setNow] = useState(new Date());
   const [isAlarmOpen, setIsAlarmOpen] = useState(false);
@@ -109,6 +109,7 @@ function Header({ onLogout, onTitleClick, onMyPage, alarm = [], onReadNotificati
         isOpen={isAlarmOpen}
         onClose={handleCloseAlarm}
         onReadNotification={onReadNotification}
+        onDeleteNotification={onDeleteNotification}
       />
     </>
   );
