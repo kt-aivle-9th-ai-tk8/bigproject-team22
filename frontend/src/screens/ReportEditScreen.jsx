@@ -17,23 +17,43 @@ mermaid.initialize({
   securityLevel: "loose",
 });
 
-// Mermaid 전용 차트 렌더러 컴포넌트 (25번째 줄 부근)
+// Mermaid 전용 차트 렌더러 컴포넌트
 const MermaidChart = ({ chartCode }) => {
   const containerRef = useRef(null);
 
-  // 단일 데이터 포인트 시 선(line)이 안 그려지는 문제 및 스케일 자동 보정
   const preprocessChartCode = (code) => {
     let processed = code;
 
-    // 1. 데이터가 단일 값([8.4], [5.5] 등)인 line을 bar 차트로 자동 변경하여 가시화
-    // (선 그래프는 점이 1개면 안 그려지지만 막대 그래프는 1개여도 정상 출력됨)
-    if (processed.includes("x-axis") && !processed.includes(",")) {
-      processed = processed.replaceAll("line [", "bar [");
+    const numbers = [];
+    const lineOrBarMatches = processed.matchAll(/(?:line|bar)\s*\[([^\]]+)\]/g);
+    for (const match of lineOrBarMatches) {
+      const vals = match[1]
+        .split(",")
+        .map((v) => parseFloat(v.replace(/,/g, "").trim()))
+        .filter((v) => !isNaN(v));
+      numbers.push(...vals);
     }
 
-    // 2. y축 단위가 너무 커서 바닥에 붙는 경우(0 --> 200 등) 적절한 스케일(0 --> 10)로 완화
-    // 필요 시 아래 정규식으로 y-axis 범위를 데이터 스케일에 맞춤
-    processed = processed.replace(/y-axis\s+"([^"]*)"\s+\d+\s+-->\s+\d+/g, 'y-axis "$1" 0 --> 10');
+    let maxVal = numbers.length > 0 ? Math.max(...numbers) : 100;
+    if (maxVal <= 0) maxVal = 10;
+    
+    const calculatedMax = Math.ceil((maxVal * 1.2) / 10) * 10;
+
+    processed = processed.replace(
+      /y-axis\s+("([^"]*)"|[^\d\s]+)?\s*\d+\s*-->\s*\d+/g,
+      (match, unit) => {
+        const unitStr = unit ? unit.trim() : '"MWh"';
+        return `y-axis ${unitStr} 0 --> ${calculatedMax}`;
+      }
+    );
+
+    const xAxisMatch = processed.match(/x-axis\s*\[([^\]]+)\]/);
+    if (xAxisMatch) {
+      const items = xAxisMatch[1].split(",").map((s) => s.trim());
+      if (items.length <= 1) {
+        processed = processed.replaceAll("line [", "bar [");
+      }
+    }
 
     return processed;
   };
@@ -44,7 +64,7 @@ const MermaidChart = ({ chartCode }) => {
     const renderChart = async () => {
       try {
         const uniqueId = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const fixedCode = preprocessChartCode(chartCode.trim()); // 👈 전처리된 코드 적용
+        const fixedCode = preprocessChartCode(chartCode.trim());
         const { svg } = await mermaid.render(uniqueId, fixedCode);
         if (containerRef.current) {
           containerRef.current.innerHTML = svg;
