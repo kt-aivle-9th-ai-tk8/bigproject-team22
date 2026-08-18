@@ -1,170 +1,224 @@
+# -*- coding: utf-8 -*-
 """
-블레이드 결함 탐지(YOLOv11) + 심각도 분류(EfficientNet-B3) — SageMaker Async Inference 어댑터
+풍력 블레이드 결함 탐지 — SAHI + YOLO26 + EfficientNet-B3 심각도 분류
 
-* 한 컨테이너 안에서 두 모델을 순차 처리한다 (SageMaker Async Inference는 멀티 컨테이너 Serial Pipeline을 지원하지 않으므로 이 구조가 필요하다):
-    이미지 → YOLOv11 결함 탐지 → 박스별 크롭 → EfficientNet-B3 심각도 분류
+model.tar.gz 구조:
+    yolo/best.pt
+    effnet/best_efficientnet_b3_regularized_random_crop.pth
 
-* model_dir 안 기대 구조:
-    model_dir/
-    ├── yolov11.pt                                        # ultralytics 학습 가중치
-    ├── best_efficientnet_b3_regularized_random_crop.pth  # 팀원 체크포인트 (dict, class_names 내장)
-    └── postprocess_config.json                            
-
-* 주의:
-    - 결함 클래스명(defect_type)은 YOLO 모델 자체(model.names)에서 가져온다.
-    - EfficientNet의 심각도 클래스명(severity)도 체크포인트의 class_names에서 가져온다.
-    - 즉 별도 클래스 매핑 JSON(defect_classes.json / severity_classes.json)이 필요 없다
+━━━━━━━━ 학습과 반드시 일치시켜야 하는 계약 ━━━━━━━━
+  · 타일 1280×1280, overlap 0.2
+  · conf 0.15  (YOLO26 F1 최적점)
+  · perform_standard_pred=False
+  · EfficientNet: ResizeShortSideIfNeeded(300) → CenterCrop(300) → Normalize
 """
-import io
+from __future__ import annotations
+
 import json
+import os
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
 from torchvision import transforms
 from torchvision.models import efficientnet_b3
-from ultralytics import YOLO
 
-DEFAULT_POSTPROCESS_CONFIG = {
-    "confidence_threshold": 0.4,
-    "iou_threshold": 0.5,
-    "crop_padding_ratio": 0.1,  # 박스 각 변에 10%씩 여유를 두고 크롭 (분류 정확도 향상)
-}
+TILE         = int(os.getenv("SAHI_TILE", "1280"))
+OVERLAP      = float(os.getenv("SAHI_OVERLAP", "0.2"))
+CONF         = float(os.getenv("DETECT_CONF", "0.15"))
+MATCH_METRIC = os.getenv("SAHI_MATCH_METRIC", "IOS")
+MATCH_THRESH = float(os.getenv("SAHI_MATCH_THRESH", "0.5"))
+POSTPROCESS  = os.getenv("SAHI_POSTPROCESS", "GREEDYNMM")
+TILE_BATCH   = int(os.getenv("TILE_BATCH", "8"))
+DEVICE_ENV   = os.getenv("DETECT_DEVICE", "")
 
-EFFNET_IMAGE_SIZE = 300
-EFFNET_DROPOUT = 0.4  # 학습 스크립트와 동일하게 맞춰야 state_dict 로딩이 성공함
-
-
-class ResizeShortSideIfNeeded:
-    """짧은 변이 target_size보다 작을 때만 종횡비를 유지하며 확대한다.
-
-    train_efficientnet_b3_regularized_random_crop.py의 검증(valid) 전처리와
-    동일한 클래스를 그대로 옮겨왔다 — 학습 때와 추론 때 전처리가 어긋나면
-    안 되므로 원본 그대로 복제해서 쓴다.
-    """
-
-    def __init__(self, target_size: int = EFFNET_IMAGE_SIZE):
-        self.target_size = target_size
-
-    def __call__(self, image: Image.Image) -> Image.Image:
-        image = image.convert("RGB")
-        width, height = image.size
-        target = self.target_size
-        short_side = min(width, height)
-
-        if short_side < target:
-            scale = target / short_side
-            new_width = max(target, int(round(width * scale)))
-            new_height = max(target, int(round(height * scale)))
-            image = image.resize((new_width, new_height), resample=Image.Resampling.BICUBIC)
-
-        return image
+EFFNET_SIZE    = 300
+EFFNET_DROPOUT = 0.4
+SCHEMA_VERSION = "detect-1.0"
 
 
-EFFNET_TRANSFORM = transforms.Compose([
-    ResizeShortSideIfNeeded(EFFNET_IMAGE_SIZE),
-    transforms.CenterCrop(EFFNET_IMAGE_SIZE),  # 검증 때와 동일 — RandomCrop 아님
+def _resolve_device(explicit: str = "") -> str:
+    if explicit:
+        return explicit
+    try:
+        if torch.cuda.is_available():
+            return "cuda:0"
+        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            return "mps"
+    except Exception:
+        pass
+    return "cpu"
+
+
+class _ResizeShortSide:
+    def __init__(self, size: int = EFFNET_SIZE):
+        self.size = size
+
+    def __call__(self, img: Image.Image) -> Image.Image:
+        img = img.convert("RGB")
+        w, h = img.size
+        if min(w, h) < self.size:
+            scale = self.size / min(w, h)
+            img = img.resize((max(self.size, int(round(w * scale))),
+                              max(self.size, int(round(h * scale)))),
+                             resample=Image.Resampling.BICUBIC)
+        return img
+
+
+_EFFNET_TRANSFORM = transforms.Compose([
+    _ResizeShortSide(EFFNET_SIZE),
+    transforms.CenterCrop(EFFNET_SIZE),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 
-def _build_efficientnet(num_classes: int) -> nn.Module:
-    """학습 스크립트와 동일한 구조로 재구성 — 안 맞추면 load_state_dict가 실패한다."""
-    model = efficientnet_b3(weights=None)
-    in_features = model.classifier[1].in_features
-    model.classifier[0] = nn.Dropout(p=EFFNET_DROPOUT)
-    model.classifier[1] = nn.Linear(in_features, num_classes)
-    return model
+def _build_effnet(num_classes: int) -> nn.Module:
+    m = efficientnet_b3(weights=None)
+    in_f = m.classifier[1].in_features
+    m.classifier[0] = nn.Dropout(p=EFFNET_DROPOUT)
+    m.classifier[1] = nn.Linear(in_f, num_classes)
+    return m
 
 
-def model_fn(model_dir):
+def _classify_crop(crop_bgr: np.ndarray, effnet: nn.Module, device: str) -> int:
+    import cv2
+    rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
+    t = _EFFNET_TRANSFORM(Image.fromarray(rgb)).unsqueeze(0).to(device)
+    with torch.no_grad():
+        return int(effnet(t).argmax(dim=1).item())
+
+
+def model_fn(model_dir: str):
+    device = _resolve_device(DEVICE_ENV)
     model_dir = Path(model_dir)
 
-    yolo_model = YOLO(str(model_dir / "yolov11.pt"))
+    from sahi import AutoDetectionModel
+    yolo_path = model_dir / "yolo" / "best.pt"
+    if not yolo_path.exists():
+        cands = list(model_dir.glob("*.pt"))
+        if not cands:
+            raise FileNotFoundError(f"model_dir에 .pt가 없습니다: {model_dir}")
+        yolo_path = cands[0]
 
-    checkpoint = torch.load(
-        model_dir / "best_efficientnet_b3_regularized_random_crop.pth",
-        map_location="cpu",
-        weights_only=False,  # 체크포인트가 class_names 등 메타데이터를 함께 담고 있어서 필요
+    detector = AutoDetectionModel.from_pretrained(
+        model_type="ultralytics",
+        model_path=str(yolo_path),
+        confidence_threshold=CONF,
+        device=device,
+        image_size=TILE,
     )
-    class_names = checkpoint["class_names"]
-    effnet_model = _build_efficientnet(num_classes=len(class_names))
-    effnet_model.load_state_dict(checkpoint["model_state_dict"])
-    effnet_model.eval()
 
-    config_path = model_dir / "postprocess_config.json"
-    postprocess_config = DEFAULT_POSTPROCESS_CONFIG.copy()
-    if config_path.exists():
-        postprocess_config.update(json.loads(config_path.read_text(encoding="utf-8")))
+    effnet_path = model_dir / "effnet" / "best_efficientnet_b3_regularized_random_crop.pth"
+    ckpt = torch.load(effnet_path, map_location="cpu", weights_only=False)
+    class_names = ckpt["class_names"]
+    effnet = _build_effnet(num_classes=len(class_names))
+    effnet.load_state_dict(ckpt["model_state_dict"])
+    effnet.eval().to(device)
 
+    return {"detector": detector, "effnet": effnet, "severity_classes": class_names, "device": device}
+
+
+def input_fn(request_body: bytes, content_type: str = "application/octet-stream") -> dict:
+    import cv2
+    if content_type in ("image/jpeg", "image/png", "application/octet-stream", "application/x-image"):
+        arr = np.frombuffer(request_body if isinstance(request_body, (bytes, bytearray))
+                            else request_body.read(), np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise ValueError("이미지 디코드 실패")
+        return {"image": img, "image_id": None}
+    if content_type == "application/json":
+        import base64
+        payload = json.loads(request_body)
+        img = cv2.imdecode(np.frombuffer(base64.b64decode(payload["image_b64"]), np.uint8), cv2.IMREAD_COLOR)
+        return {"image": img, "image_id": payload.get("image_id")}
+    raise ValueError(f"지원하지 않는 content_type: {content_type}")
+
+
+def predict_fn(data: dict, model: dict) -> dict:
+    from sahi.predict import get_sliced_prediction
+
+    image = data["image"]
+    h, w = image.shape[:2]
+
+    result = get_sliced_prediction(
+        image, model["detector"],
+        slice_height=TILE, slice_width=TILE,
+        overlap_height_ratio=OVERLAP, overlap_width_ratio=OVERLAP,
+        perform_standard_pred=False,
+        postprocess_type=POSTPROCESS,
+        postprocess_match_metric=MATCH_METRIC,
+        postprocess_match_threshold=MATCH_THRESH,
+        postprocess_class_agnostic=False,
+        batch_size=TILE_BATCH,
+        verbose=0,
+    )
+
+    defects = []
+    for op in result.object_prediction_list:
+        x1, y1, x2, y2 = op.bbox.minx, op.bbox.miny, op.bbox.maxx, op.bbox.maxy
+        bw, bh = int(round(x2 - x1)), int(round(y2 - y1))
+        if bw <= 0 or bh <= 0:
+            continue
+        x0c = max(0, int(round(x1))); y0c = max(0, int(round(y1)))
+        crop = image[y0c:min(h, y0c+bh), x0c:min(w, x0c+bw)]
+        severity_idx = _classify_crop(crop, model["effnet"], model["device"])
+        defects.append({
+            "class_id":   int(op.category.id),
+            "class_name": op.category.name,
+            "confidence": round(float(op.score.value), 4),
+            "bbox": {"x": x0c, "y": y0c, "w": bw, "h": bh},
+            "severity": model["severity_classes"][severity_idx],
+        })
+
+    defects.sort(key=lambda d: d["confidence"], reverse=True)
     return {
-        "yolo": yolo_model,
-        "effnet": effnet_model,
-        "severity_classes": class_names,
-        "postprocess_config": postprocess_config,
+        "schema": SCHEMA_VERSION,
+        "image_id": data.get("image_id"),
+        "width": w, "height": h,
+        "conf_threshold": CONF,
+        "num_defects": len(defects),
+        "defects": defects,
     }
 
 
-def input_fn(request_body, content_type):
-    if content_type not in ("image/jpeg", "image/png", "application/octet-stream"):
-        raise ValueError(f"지원하지 않는 content type입니다: {content_type}")
-    return Image.open(io.BytesIO(request_body)).convert("RGB")
+def output_fn(prediction: dict, accept: str = "application/json") -> tuple[str, str]:
+    return json.dumps(prediction, ensure_ascii=False), "application/json"
 
 
-def _crop_with_padding(image: Image.Image, bbox, padding_ratio: float) -> Image.Image:
-    x1, y1, x2, y2 = bbox
-    w, h = x2 - x1, y2 - y1
-    pad_x, pad_y = w * padding_ratio, h * padding_ratio
+if __name__ == "__main__":
+    import argparse, glob, time, shutil, tempfile, cv2
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--weights", required=True)
+    ap.add_argument("--effnet", required=True)
+    ap.add_argument("--image"); ap.add_argument("--image-dir")
+    ap.add_argument("--out", default="detections.json")
+    ap.add_argument("--device", default="")
+    args = ap.parse_args()
 
-    img_w, img_h = image.size
-    left = max(0, int(x1 - pad_x))
-    top = max(0, int(y1 - pad_y))
-    right = min(img_w, int(x2 + pad_x))
-    bottom = min(img_h, int(y2 + pad_y))
+    tmp = Path(tempfile.mkdtemp())
+    (tmp / "yolo").mkdir(); (tmp / "effnet").mkdir()
+    shutil.copy(args.weights, tmp / "yolo" / "best.pt")
+    shutil.copy(args.effnet, tmp / "effnet" / "best_efficientnet_b3_regularized_random_crop.pth")
+    if args.device:
+        os.environ["DETECT_DEVICE"] = args.device
 
-    return image.crop((left, top, right, bottom))
-
-
-def predict_fn(image: Image.Image, model):
-    yolo_model = model["yolo"]
-    effnet_model = model["effnet"]
-    severity_classes = model["severity_classes"]
-    config = model["postprocess_config"]
-
-    # 1. YOLOv11 결함 탐지 (NMS는 ultralytics 내부에서 conf/iou 기준으로 처리됨)
-    results = yolo_model.predict(
-        image,
-        conf=config["confidence_threshold"],
-        iou=config["iou_threshold"],
-        verbose=False,
-    )[0]
-
-    defects = []
-    for box in results.boxes:
-        bbox = box.xyxy[0].tolist()  # [x1, y1, x2, y2]
-        confidence = float(box.conf[0])
-        class_id = int(box.cls[0])
-        defect_type = yolo_model.names[class_id]  # YOLO 모델 자체에 내장된 클래스명
-
-        # 2. 박스 크롭 → EfficientNet-B3 심각도 분류
-        crop = _crop_with_padding(image, bbox, config["crop_padding_ratio"])
-        crop_tensor = EFFNET_TRANSFORM(crop).unsqueeze(0)
-
-        with torch.no_grad():
-            logits = effnet_model(crop_tensor)
-            severity_idx = logits.argmax(dim=1).item()
-
-        defects.append({
-            "bbox": [round(v, 1) for v in bbox],
-            "defect_type": defect_type,
-            "confidence": round(confidence, 4),
-            "severity": severity_classes[severity_idx],
-        })
-
-    return defects
-
-
-def output_fn(prediction, accept):
-    return json.dumps(prediction), "application/json"
+    mdl = model_fn(str(tmp))
+    targets = ([args.image] if args.image else
+               sorted(p for p in glob.glob(os.path.join(args.image_dir, "*"))
+                      if p.lower().endswith((".jpg", ".jpeg", ".png"))))
+    all_out = []
+    for i, path in enumerate(targets, 1):
+        img = cv2.imread(path)
+        if img is None:
+            continue
+        t = time.time()
+        res = predict_fn({"image": img, "image_id": os.path.basename(path)}, mdl)
+        all_out.append(res)
+        print(f"[{i}] {res['image_id']}: 결함 {res['num_defects']}건 ({time.time()-t:.1f}s)")
+    with open(args.out, "w", encoding="utf-8") as f:
+        json.dump(all_out, f, ensure_ascii=False, indent=2)
+    shutil.rmtree(tmp, ignore_errors=True)
