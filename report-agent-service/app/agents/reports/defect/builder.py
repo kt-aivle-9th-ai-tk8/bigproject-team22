@@ -390,16 +390,18 @@ def _md_safe(url: str) -> str:
 
 
 def _image_caption(img, turbine_code: str) -> str:
-    """'U1 · A블레이드 · 앞전(LE) · 2번째 사진' — 이미지 식별자. alt 텍스트로도 쓴다."""
+    """'U1 · A블레이드 · 앞전(LE)' — 이미지 식별자. alt 텍스트로도 쓴다.
+
+    'N번째 사진' 순번은 붙이지 않는다. 현장에서 부위당 1장만 올려 항상 1이라 정보가 없고,
+    여러 장이 되더라도 캡션 바로 아래에 이미지가 순서대로 렌더링되므로 글자로 반복할 필요가 없다.
+    (순번 자체는 tool_outputs 의 images[].seq 에 남아 있어 프론트가 필요하면 쓸 수 있다.)
+    """
     side = img.get("part_side")
-    return (
-        f"{turbine_code} · {img.get('blade_tag')}블레이드 · "
-        f"{PART_SIDE_KO.get(side, side)}({side}) · {img.get('seq')}번째 사진"
-    )
+    return f"{turbine_code} · {img.get('blade_tag')}블레이드 · {PART_SIDE_KO.get(side, side)}({side})"
 
 
 def _image_line(img, turbine_code: str) -> str:
-    """'- U1 · A블레이드 · 앞전(LE) · 2번째 사진 — 도장 손상 심각(4) 2건 · 신뢰도 0.900~0.970'."""
+    """'- U1 · A블레이드 · 앞전(LE) — 도장 손상 심각(4) 2건 · 신뢰도 0.900~0.970'."""
     found = ", ".join(
         f"{DEFECT_TYPE_KO.get(x['defect_type'], x['defect_type'])} {_sev(x['severity'])} {x['n']:,}건"
         for x in img.get("types_by_severity", [])
