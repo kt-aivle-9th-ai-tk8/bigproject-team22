@@ -47,6 +47,10 @@
           "value": "http://report-agent.windfarm.local:8000"
         },
         {
+          "name": "KMA_BASE_URL",
+          "value": "https://apihub.kma.go.kr/api/typ01/url"
+        },
+        {
           "name": "AWS_REGION",
           "value": "ap-northeast-2"
         },
@@ -75,6 +79,10 @@
         {
           "name": "REDIS_PASSWORD",
           "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarm/prod/redis-password-U3WQZ1:password::"
+        },
+        {
+          "name": "KMA_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarmonm/prod/kma-api-key-3Pp9Nb"
         }
       ],
       "environmentFiles": [],

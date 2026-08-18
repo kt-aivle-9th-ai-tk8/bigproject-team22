@@ -31,7 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 추론 결과 통보 처리의 분기를 검증한다: 결함 적재(bbox 변환·severity 파싱), 멱등(중복 통보 skip),
+ * 추론 결과 통보 처리의 분기를 검증한다: detect-1.0 결과 적재(bbox·severity 파싱), 멱등(중복 통보 skip),
  * 실패 통보(FAILED), 마지막 이미지 완료 시 INSPECTED 전이 + 보고서 생성 요청.
  */
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +39,11 @@ class DefectResultServiceTest {
 
     private static final LocalDateTime START = LocalDateTime.of(2026, 8, 1, 0, 0);
     private static final LocalDateTime END = LocalDateTime.of(2026, 8, 2, 0, 0);
+
+    /** 결함 0건(정상 이미지)의 정상 결과. */
+    private static final String EMPTY_RESULT =
+            """
+            {"schema":"detect-1.0","width":8256,"height":5504,"num_defects":0,"defects":[]}""";
 
     private static final String PAYLOAD = """
             {"inspection_id":5,"image_key":"content/inspections/5/31/LE/1.jpg","blade_id":31,"part_side":"LE"}""";
@@ -74,12 +79,18 @@ class DefectResultServiceTest {
     }
 
     @Test
-    @DisplayName("Completed: 결함을 적재(bbox x1y1x2y2→xywh, severity 정수)하고 행을 COMPLETED 로 종결한다")
+    @DisplayName("Completed: detect-1.0 결함을 적재(bbox 그대로, severity_N → N)하고 행을 COMPLETED 로 종결한다")
     void completed_loadsDefects() {
         when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
+        // 실제 모델 출력 형태 그대로(detect-1.0).
         when(storagePort.readJson("s3://bucket/async-out/abc.json")).thenReturn("""
-                [{"bbox":[10.0,20.0,50.0,80.0],"defect_type":"Paint Damage","confidence":0.97,"severity":"3"},
-                 {"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.5,"severity":"high"}]""");
+                {"schema":"detect-1.0","image_id":null,"width":8256,"height":5504,
+                 "conf_threshold":0.15,"num_defects":2,
+                 "defects":[
+                   {"class_id":2,"class_name":"Paint Damage","confidence":0.7199,
+                    "bbox":{"x":3905,"y":2049,"w":447,"h":1279},"severity":"severity_3"},
+                   {"class_id":4,"class_name":"La Damage","confidence":0.4969,
+                    "bbox":{"x":4575,"y":5061,"w":115,"h":443},"severity":"unclassified"}]}""");
         // 종료 판정은 점검 행을 먼저 잠근 뒤 미완료를 조회한다 — 잠금 스텁이 없으면 그 경로에 닿지 않는다.
         Inspection inspecting = Inspection.request(7L, 10L, 90L, START, END);
         inspecting.markInspecting();
@@ -97,15 +108,17 @@ class DefectResultServiceTest {
         Defect first = defects.getFirst();
         assertThat(first.getInspectionId()).isEqualTo(5L);
         assertThat(first.getBladeId()).isEqualTo(31L);
-        assertThat(first.getDefectType()).isEqualTo("Paint Damage");
-        assertThat(first.getSeverity()).isEqualTo(3);
+        assertThat(first.getDefectType()).isEqualTo("Paint Damage"); // class_name 을 그대로 쓴다
+        assertThat(first.getSeverity()).isEqualTo(3);                 // "severity_3" → 3
         assertThat(first.getPartSide()).isEqualTo("LE");
-        assertThat(first.getBboxX()).isEqualTo(10.0);
-        assertThat(first.getBboxY()).isEqualTo(20.0);
-        assertThat(first.getBboxW()).isEqualTo(40.0); // x2-x1
-        assertThat(first.getBboxH()).isEqualTo(60.0); // y2-y1
+        // bbox 는 (x,y,w,h) 픽셀 좌표라 변환 없이 그대로 들어간다.
+        assertThat(first.getBboxX()).isEqualTo(3905.0);
+        assertThat(first.getBboxY()).isEqualTo(2049.0);
+        assertThat(first.getBboxW()).isEqualTo(447.0);
+        assertThat(first.getBboxH()).isEqualTo(1279.0);
+        assertThat(first.getConfidence()).isEqualTo(0.7199);
         assertThat(first.getImagePath()).isEqualTo("content/inspections/5/31/LE/1.jpg");
-        assertThat(defects.get(1).getSeverity()).isNull(); // 비숫자 클래스명 → null
+        assertThat(defects.get(1).getSeverity()).isNull(); // 숫자로 못 읽는 클래스명 → null
         // 아직 미완 이미지가 남아 전이/생성은 없다
         assertThat(inspecting.getStatus()).isEqualTo(InspectionStatus.INSPECTING);
         verify(reportPort, never()).requestGeneration(any());
@@ -115,7 +128,7 @@ class DefectResultServiceTest {
     @DisplayName("마지막 이미지 완료: INSPECTED 전이 + 보고서 생성 요청")
     void lastImage_finishesInspection() {
         when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
-        when(storagePort.readJson(any())).thenReturn("[]"); // 결함 0건도 정상 종결
+        when(storagePort.readJson(any())).thenReturn(EMPTY_RESULT); // 결함 0건도 정상 종결
         when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(false);
         when(outboxEventRepository.existsCompletedByAggregate("Inspection", "5")).thenReturn(true);
         Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
@@ -134,7 +147,7 @@ class DefectResultServiceTest {
     @DisplayName("잠금 대기 중 다른 소비자가 이미 종결했으면 조용히 물러난다(재전이 예외 방지)")
     void alreadyFinished_backsOff() {
         when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
-        when(storagePort.readJson(any())).thenReturn("[]");
+        when(storagePort.readJson(any())).thenReturn(EMPTY_RESULT);
         when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(false);
         Inspection inspection = Inspection.request(7L, 10L, 90L, START, END);
         inspection.markInspecting();
@@ -214,9 +227,10 @@ class DefectResultServiceTest {
     void severityOutOfRange_storedAsNull() {
         when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
         when(storagePort.readJson(any())).thenReturn("""
-                [{"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"9"},
-                 {"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"0"},
-                 {"bbox":[1.0,2.0,3.0,4.0],"defect_type":"Crack","confidence":0.9,"severity":"4"}]""");
+                {"schema":"detect-1.0","num_defects":3,"defects":[
+                   {"class_name":"Crack","confidence":0.9,"bbox":{"x":1,"y":2,"w":3,"h":4},"severity":"severity_9"},
+                   {"class_name":"Crack","confidence":0.9,"bbox":{"x":1,"y":2,"w":3,"h":4},"severity":"severity_0"},
+                   {"class_name":"Crack","confidence":0.9,"bbox":{"x":1,"y":2,"w":3,"h":4},"severity":"severity_4"}]}""");
         lenient().when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(true);
 
         service.process(completedNotification());
@@ -227,6 +241,22 @@ class DefectResultServiceTest {
         assertThat(defects.get(0).getSeverity()).isNull(); // 9 = 범위 초과
         assertThat(defects.get(1).getSeverity()).isNull(); // 0 = 범위 미만
         assertThat(defects.get(2).getSeverity()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("접두어 없는 숫자 severity(\"2\")도 받아들인다 — 계약은 severity_N 이지만 관용한다")
+    void bareNumericSeverity_accepted() {
+        when(outboxEventRepository.findById(77L)).thenReturn(Optional.of(event));
+        when(storagePort.readJson(any())).thenReturn("""
+                {"schema":"detect-1.0","num_defects":1,"defects":[
+                   {"class_name":"Crack","confidence":0.9,"bbox":{"x":1,"y":2,"w":3,"h":4},"severity":"2"}]}""");
+        lenient().when(outboxEventRepository.existsUnfinishedByAggregate("Inspection", "5")).thenReturn(true);
+
+        service.process(completedNotification());
+
+        ArgumentCaptor<List<Defect>> captor = ArgumentCaptor.captor();
+        verify(defectRepository).saveAll(captor.capture());
+        assertThat(captor.getValue().getFirst().getSeverity()).isEqualTo(2);
     }
 
     @Test
