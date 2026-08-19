@@ -44,11 +44,6 @@ export const useDefectImages = ({
             bladeId
           );
 
-        console.log(
-          "결함 이미지 API 응답:",
-          responseBody
-        );
-
         const rawImages =
           Array.isArray(responseBody?.data)
             ? responseBody.data
@@ -56,14 +51,24 @@ export const useDefectImages = ({
               ? responseBody
               : [];
 
+        console.log(
+          "image_path 확인:",
+          rawImages.map((item) => ({
+            image_path: item.image_path,
+            thumbnail_url: item.thumbnail_url,
+          }))
+        );
+
         const mappedImages =
           rawImages.map((item) => ({
             ...item,
 
-            id:
+            id: item.image_path,
+
+            imagePath:
               item.image_path,
 
-            imageUrl:
+            thumbnailUrl:
               item.thumbnail_url,
 
             bladePosition:
@@ -74,15 +79,15 @@ export const useDefectImages = ({
                 ? item.defects.length
                 : 0,
 
+            defects:
+              item.defects || [],
+
             maxSeverity:
               item.max_severity,
 
             inspectedAt:
               item.created_at
-                ? item.created_at.slice(
-                    0,
-                    10
-                  )
+                ? item.created_at.slice(0, 10)
                 : "",
           }));
 

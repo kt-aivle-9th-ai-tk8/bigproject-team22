@@ -79,6 +79,7 @@ function BladeInfoPopup({
   const [endDate, setEndDate] = useState(getTodayString());
   const [selectedPosition, setSelectedPosition] = useState("ALL");
   const [page, setPage] = useState(1);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const filteredHistories =
     useMemo(() => {
@@ -145,10 +146,21 @@ function BladeInfoPopup({
     });
   };
 
-  const handleHistoryClick = (historyItem) => {
-    console.log("블레이드 점검 이력 클릭:", historyItem);
+  const handleHistoryClick = (
+    historyItem
+  ) => {
+    console.log(
+      "블레이드 점검 이력 클릭:",
+      historyItem
+    );
 
-    onSelectHistory?.(historyItem);
+    setSelectedImage(
+      historyItem
+    );
+
+    onSelectHistory?.(
+      historyItem
+    );
   };
 
   const handlePrevPage = () => {
@@ -269,7 +281,7 @@ function BladeInfoPopup({
                 >
                   <div className="blade-history-image">
                     <img
-                      src={item.imageUrl}
+                      src={item.thumbnailUrl}
                       alt={`${selectedBladeName} ${item.bladePosition}`}
                       onError={(event) => {
                         event.currentTarget.style.display = "none";
@@ -346,6 +358,54 @@ function BladeInfoPopup({
             </button>
           </div>
         </div>
+
+        {selectedImage && (
+          <div
+            className="blade-image-preview-overlay"
+            onClick={() =>
+              setSelectedImage(null)
+            }
+          >
+            <div
+              className="blade-image-preview"
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+            >
+              <button
+                className="blade-image-preview-close"
+                type="button"
+                onClick={() =>
+                  setSelectedImage(null)
+                }
+                aria-label="이미지 확대 닫기"
+              >
+                ×
+              </button>
+
+              <img
+                src={
+                  selectedImage.thumbnailUrl
+                }
+                alt={`${selectedBladeName} ${selectedImage.bladePosition}`}
+              />
+
+              <div className="blade-image-preview-info">
+                <span>
+                  {
+                    selectedImage.bladePosition
+                  }
+                </span>
+
+                <span>
+                  {
+                    selectedImage.inspectedAt
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
