@@ -490,6 +490,7 @@ function MainScreen() {
           turbines={turbines}
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
+          turbineDetail={turbineDetail}
           isPlantsLoading={isPlantsLoading}
           plantsError={plantsError}
           isWindFarmDetailLoading={isWindFarmDetailLoading}

@@ -160,9 +160,19 @@ function getDateStringBefore(days) {
 
 function BladeInfoPopup({
   selectedBladeName,
+  bladeId,
+  bladeTag,
   onClose,
   onSelectHistory,
 }) {
+  console.log(
+    "BladeInfoPopup 블레이드 정보:",
+    {
+      bladeId,
+      bladeTag,
+      selectedBladeName,
+    }
+  );
   const [startDate, setStartDate] = useState(getDateStringBefore(30));
   const [endDate, setEndDate] = useState(getTodayString());
   const [selectedPosition, setSelectedPosition] = useState("ALL");
