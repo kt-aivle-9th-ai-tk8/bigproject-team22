@@ -109,13 +109,23 @@ const formatReportType = (type) => {
 };
 
 // 2. ISO 날짜 포맷팅 함수
-const formatDate = (dateStr) => {
+const formatGeneratedAt = (dateStr) => {
   if (!dateStr) return "";
-  if (dateStr.includes("T")) {
-    const [date, time] = dateStr.split("T");
-    return `${date} ${time.slice(0, 5)}`;
-  }
-  return dateStr;
+
+  const [date, time] = dateStr.split("T");
+
+  return `${date.replaceAll("-", ".")} ${
+    time?.slice(0, 5) || ""
+  }`;
+};
+
+const formatReportTitle = (title) => {
+  if (!title) return "보고서";
+
+  return title.replace(
+    /(\d{4}-\d{2}-\d{2})\s*~\s*\1/g,
+    "$1"
+  );
 };
 
 function ReportEditScreen() {
@@ -378,48 +388,39 @@ function ReportEditScreen() {
 
         <div className="report-list">
           {visibleReports.map((report) => {
-            const currentReportId = report.id || report.report_id;
-            const activeId = activeReport
-              ? activeReport.id || activeReport.report_id
-              : null;
+            const currentReportId =
+              report.id || report.report_id;
 
-            const plantName =
-              report.plant_name ||
-              report.plant ||
-              report.wind_farm_name ||
-              "발전소";
-            const turbineName =
-              report.turbine_name ||
-              report.turbine ||
-              report.turbine_id ||
-              "터빈";
-            const rawType = report.report_type || report.type;
-            const displayType = formatReportType(rawType);
-            const dateStr = formatDate(
-              report.generated_at || report.created_at || report.date
-            );
+            const dateStr =
+              formatGeneratedAt(
+                report.generated_at
+              );
 
             return (
               <div
                 key={currentReportId}
-                className={`report-card ${
-                  currentReportId === activeId ? "active-card" : ""
-                }`}
-                onClick={() => handleCardClick(report)}
-                style={{ cursor: "pointer" }}
+                className="report-card"
+                onClick={() =>
+                  handleCardClick(report)
+                }
+                style={{
+                  cursor: "pointer",
+                }}
               >
                 <div className="report-content">
                   <div className="card-main-row">
                     <h3 className="plant-name">
-                      {plantName}{" "}
-                      <span className="turbine-tag">[{turbineName}]</span>
+                      {formatReportTitle(
+                        report.title
+                      )}
                     </h3>
-                    <span className={`type-badge ${rawType}`}>
-                      {displayType}
+
+                    <span className="report-date">
+                      {dateStr}
                     </span>
-                    <span className="report-date">{dateStr}</span>
                   </div>
                 </div>
+
                 <div className="card-arrow">
                   <span>›</span>
                 </div>
