@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import {useDefectImages} from "../../../../hooks/useDefectImages";
 import "./BladeInfoPopup.css";
 
 const PAGE_SIZE = 10;
@@ -47,105 +48,6 @@ const SEVERITY_CLASS = {
   4: "critical",
 };
 
-const DUMMY_BLADE_HISTORY = [
-  {
-    id: 1,
-    imageUrl: "/images/blade-dummy-1.png",
-    bladePosition: "LE",
-    defectCount: 3,
-    maxSeverity: 3,
-    inspectedAt: "2026-07-28",
-  },
-  {
-    id: 2,
-    imageUrl: "/images/blade-dummy-2.png",
-    bladePosition: "PS",
-    defectCount: 1,
-    maxSeverity: 1,
-    inspectedAt: "2026-07-27",
-  },
-  {
-    id: 3,
-    imageUrl: "/images/blade-dummy-3.png",
-    bladePosition: "SS",
-    defectCount: 5,
-    maxSeverity: 4,
-    inspectedAt: "2026-07-26",
-  },
-  {
-    id: 4,
-    imageUrl: "/images/blade-dummy-4.png",
-    bladePosition: "TE",
-    defectCount: 2,
-    maxSeverity: 2,
-    inspectedAt: "2026-07-25",
-  },
-  {
-    id: 5,
-    imageUrl: "/images/blade-dummy-5.png",
-    bladePosition: "LE",
-    defectCount: 0,
-    maxSeverity: 1,
-    inspectedAt: "2026-07-24",
-  },
-  {
-    id: 6,
-    imageUrl: "/images/blade-dummy-6.png",
-    bladePosition: "PS",
-    defectCount: 4,
-    maxSeverity: 3,
-    inspectedAt: "2026-07-23",
-  },
-  {
-    id: 7,
-    imageUrl: "/images/blade-dummy-7.png",
-    bladePosition: "SS",
-    defectCount: 2,
-    maxSeverity: 2,
-    inspectedAt: "2026-07-22",
-  },
-  {
-    id: 8,
-    imageUrl: "/images/blade-dummy-8.png",
-    bladePosition: "TE",
-    defectCount: 6,
-    maxSeverity: 4,
-    inspectedAt: "2026-07-21",
-  },
-  {
-    id: 9,
-    imageUrl: "/images/blade-dummy-9.png",
-    bladePosition: "LE",
-    defectCount: 1,
-    maxSeverity: 1,
-    inspectedAt: "2026-07-20",
-  },
-  {
-    id: 10,
-    imageUrl: "/images/blade-dummy-10.png",
-    bladePosition: "PS",
-    defectCount: 3,
-    maxSeverity: 2,
-    inspectedAt: "2026-07-19",
-  },
-  {
-    id: 11,
-    imageUrl: "/images/blade-dummy-11.png",
-    bladePosition: "SS",
-    defectCount: 7,
-    maxSeverity: 4,
-    inspectedAt: "2026-07-18",
-  },
-  {
-    id: 12,
-    imageUrl: "/images/blade-dummy-12.png",
-    bladePosition: "TE",
-    defectCount: 2,
-    maxSeverity: 2,
-    inspectedAt: "2026-07-17",
-  },
-];
-
 function getTodayString() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -165,32 +67,47 @@ function BladeInfoPopup({
   onClose,
   onSelectHistory,
 }) {
-  console.log(
-    "BladeInfoPopup 블레이드 정보:",
-    {
-      bladeId,
-      bladeTag,
-      selectedBladeName,
-    }
-  );
+  const {
+    defectImages,
+    isDefectImagesLoading,
+    defectImagesError,
+  } = useDefectImages({
+    bladeId,
+  });
+
   const [startDate, setStartDate] = useState(getDateStringBefore(30));
   const [endDate, setEndDate] = useState(getTodayString());
   const [selectedPosition, setSelectedPosition] = useState("ALL");
   const [page, setPage] = useState(1);
 
-  const filteredHistories = useMemo(() => {
-    return DUMMY_BLADE_HISTORY.filter((item) => {
-      const isInDateRange =
-        item.inspectedAt >= startDate &&
-        item.inspectedAt <= endDate;
+  const filteredHistories =
+    useMemo(() => {
+      return defectImages.filter(
+        (item) => {
+          const isInDateRange =
+            item.inspectedAt >=
+              startDate &&
+            item.inspectedAt <=
+              endDate;
 
-      const isMatchedPosition =
-        selectedPosition === "ALL" ||
-        item.bladePosition === selectedPosition;
+          const isMatchedPosition =
+            selectedPosition ===
+              "ALL" ||
+            item.bladePosition ===
+              selectedPosition;
 
-      return isInDateRange && isMatchedPosition;
-    });
-  }, [startDate, endDate, selectedPosition]);
+          return (
+            isInDateRange &&
+            isMatchedPosition
+          );
+        }
+      );
+    }, [
+      defectImages,
+      startDate,
+      endDate,
+      selectedPosition,
+    ]);
 
   const totalPage = Math.max(
     1,
@@ -323,7 +240,15 @@ function BladeInfoPopup({
         </div>
 
         <div className="blade-info-popup-body">
-          {pagedHistories.length === 0 ? (
+          {isDefectImagesLoading ? (
+            <div className="blade-history-empty">
+              점검 이력을 불러오는 중입니다.
+            </div>
+          ) : defectImagesError ? (
+            <div className="blade-history-empty">
+              {defectImagesError}
+            </div>
+          ) : pagedHistories.length === 0 ? (
             <div className="blade-history-empty">
               조회된 점검 이력이 없습니다.
             </div>
@@ -410,15 +335,6 @@ function BladeInfoPopup({
                 {pageNumber}
               </button>
             ))}
-
-            <button
-              className="blade-page-arrow"
-              type="button"
-              onClick={handleNextPage}
-              disabled={page >= totalPage}
-            >
-              {">"}
-            </button>
           </div>
         </div>
       </div>

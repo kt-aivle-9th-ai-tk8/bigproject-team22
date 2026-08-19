@@ -11,20 +11,20 @@ import {
 
 export const useDefectImages = ({
   bladeId,
-}) => {
+} = {}) => {
   const [
     defectImages,
     setDefectImages,
   ] = useState([]);
 
   const [
-    loading,
-    setLoading,
+    isDefectImagesLoading,
+    setIsDefectImagesLoading,
   ] = useState(false);
 
   const [
-    error,
-    setError,
+    defectImagesError,
+    setDefectImagesError,
   ] = useState(null);
 
 
@@ -36,8 +36,8 @@ export const useDefectImages = ({
       }
 
       try {
-        setLoading(true);
-        setError(null);
+        setIsDefectImagesLoading(true);
+        setDefectImagesError(null);
 
         const responseBody =
           await fetchDefectImages(
@@ -45,33 +45,68 @@ export const useDefectImages = ({
           );
 
         console.log(
-            "결함 이미지 API 응답:",
-        responseBody
+          "결함 이미지 API 응답:",
+          responseBody
         );
 
-        const images =
+        const rawImages =
           Array.isArray(responseBody?.data)
             ? responseBody.data
             : Array.isArray(responseBody)
               ? responseBody
               : [];
 
+        const mappedImages =
+          rawImages.map((item) => ({
+            ...item,
+
+            id:
+              item.image_path,
+
+            imageUrl:
+              item.thumbnail_url,
+
+            bladePosition:
+              item.part_side,
+
+            defectCount:
+              Array.isArray(item.defects)
+                ? item.defects.length
+                : 0,
+
+            maxSeverity:
+              item.max_severity,
+
+            inspectedAt:
+              item.created_at
+                ? item.created_at.slice(
+                    0,
+                    10
+                  )
+                : "",
+          }));
+
         console.log(
-          "블레이드 결함 이미지 조회:",
-          images
+          "결함 이미지 가공 결과:",
+          mappedImages
         );
 
-        setDefectImages(images);
+        setDefectImages(
+          mappedImages
+        );
       } catch (error) {
         console.error(
           "블레이드 결함 이미지 조회 오류:",
           error
         );
 
-        setError(error.message);
+        setDefectImagesError(
+          error.message
+        );
+
         setDefectImages([]);
       } finally {
-        setLoading(false);
+        setIsDefectImagesLoading(false);
       }
     }, [bladeId]);
 
@@ -83,8 +118,9 @@ export const useDefectImages = ({
 
   return {
     defectImages,
-    loading,
-    error,
-    refetch: loadDefectImages,
+    isDefectImagesLoading,
+    defectImagesError,
+    refetchDefectImages:
+      loadDefectImages,
   };
 };
