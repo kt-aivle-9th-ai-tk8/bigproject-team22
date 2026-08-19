@@ -199,7 +199,6 @@ function ReportListScreen() {
       <header className="report-header">
         <div className="report-title-group">
           <h1>보고서 목록</h1>
-          <span className="current-date">{todayString}</span>
         </div>
         <div className="header-btn-group">
           <button
