@@ -68,7 +68,7 @@
         },
         {
           "name": "AWS_SAGEMAKER_DEFECT_ENDPOINT",
-          "value": ""
+          "value": "blade-defect-pipeline-endpoint"
         }
       ],
       "secrets": [
