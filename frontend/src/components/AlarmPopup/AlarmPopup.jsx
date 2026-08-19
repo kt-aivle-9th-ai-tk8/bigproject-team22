@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import AlarmReportList from "./AlarmReportList";
 
@@ -13,7 +12,6 @@ function AlarmPopup({
   onReadNotification,
   onDeleteNotification,
 }) {
-  const navigate = useNavigate();
 
   const [isDeleteMode, setIsDeleteMode] =
     useState(false);
@@ -90,6 +88,15 @@ function AlarmPopup({
       report?.report_id ||
       report?.id;
 
+    if (!notificationId) {
+      console.error(
+        "알림 ID가 없습니다.",
+        report
+      );
+
+      return;
+    }
+
     if (!reportId) {
       console.error(
         "이동할 보고서 ID가 없습니다.",
@@ -99,23 +106,11 @@ function AlarmPopup({
       return;
     }
 
-    if (notificationId) {
-      try {
-        await onReadNotification?.(
-          notificationId
-        );
-      } catch (error) {
-        console.error(
-          "알림 읽음 처리 실패:",
-          error
-        );
-      }
-    }
-
     onClose();
 
-    navigate(
-      `/reports/${reportId}/edit`
+    await onReadNotification?.(
+      notificationId,
+      reportId
     );
   };
 
