@@ -335,6 +335,15 @@ function BladeInfoPopup({
                 {pageNumber}
               </button>
             ))}
+
+            <button
+              className="blade-page-arrow" 
+              type="button" 
+              onClick={handleNextPage} 
+              disabled={page >= totalPage}
+            >
+              {">"} 
+            </button>
           </div>
         </div>
       </div>
