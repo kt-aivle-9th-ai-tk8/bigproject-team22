@@ -1,18 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import AlarmReportList from "./AlarmReportList";
+
 import "./AlarmPopup.css";
-
-
-const formatSentAt = (sentAt) => {
-  if (!sentAt) {
-    return "";
-  }
-
-  const [date, time] = sentAt.split("T");
-
-  return `${date.replaceAll("-", ".")}  ${time?.slice(0, 5) || ""}`;
-};
 
 
 function AlarmPopup({
@@ -24,13 +15,22 @@ function AlarmPopup({
 }) {
   const navigate = useNavigate();
 
-  const [isDeleteMode, setIsDeleteMode] = useState(false);
-  const [ selectedNotificationIds, setSelectedNotificationIds ] = useState([]);
-  const [displayAlarm, setDisplayAlarm] = useState(alarm);
-  
+  const [isDeleteMode, setIsDeleteMode] =
+    useState(false);
+
+  const [
+    selectedNotificationIds,
+    setSelectedNotificationIds,
+  ] = useState([]);
+
+  const [displayAlarm, setDisplayAlarm] =
+    useState(alarm);
+
+
   useEffect(() => {
     setDisplayAlarm(alarm);
   }, [alarm]);
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -38,6 +38,7 @@ function AlarmPopup({
       setSelectedNotificationIds([]);
     }
   }, [isOpen]);
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -118,13 +119,17 @@ function AlarmPopup({
     );
   };
 
+
   const handleToggleNotification = (
     notificationId
   ) => {
     setSelectedNotificationIds((prev) => {
-      if (prev.includes(notificationId)) {
+      if (
+        prev.includes(notificationId)
+      ) {
         return prev.filter(
-          (id) => id !== notificationId
+          (id) =>
+            id !== notificationId
         );
       }
 
@@ -149,6 +154,7 @@ function AlarmPopup({
       alert(
         "삭제할 알림을 선택해 주세요."
       );
+
       return;
     }
 
@@ -239,7 +245,9 @@ function AlarmPopup({
           onSelectReport={
             handleReportClick
           }
-          isDeleteMode={isDeleteMode}
+          isDeleteMode={
+            isDeleteMode
+          }
           selectedNotificationIds={
             selectedNotificationIds
           }
@@ -252,95 +260,5 @@ function AlarmPopup({
   );
 }
 
-function AlarmReportList({
-  alarm,
-  onSelectReport,
-  isDeleteMode,
-  selectedNotificationIds,
-  onToggleNotification,
-}) {
-  if (alarm.length === 0) {
-    return (
-      <div className="alarm-empty">
-        등록된 알림이 없습니다.
-      </div>
-    );
-  }
-
-  return (
-    <div className="alarm-list">
-      {alarm.map((report) => {
-        const isChecked =
-          selectedNotificationIds.includes(
-            report.id
-          );
-
-        const handleItemClick = () => {
-          if (isDeleteMode) {
-            onToggleNotification(
-              report.id
-            );
-
-            return;
-          }
-
-          onSelectReport(report);
-        };
-
-        return (
-          <div
-            className={`alarm-list-item ${
-              isDeleteMode
-                ? "delete-mode"
-                : ""
-            }`}
-            key={report.id}
-            role="button"
-            tabIndex={0}
-            onClick={handleItemClick}
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" ||
-                event.key === " "
-              ) {
-                handleItemClick();
-              }
-            }}
-          >
-            {isDeleteMode && (
-              <input
-                className="alarm-list-checkbox"
-                type="checkbox"
-                checked={isChecked}
-                onChange={() => {}}
-                onClick={(event) => {
-                  event.stopPropagation();
-
-                  onToggleNotification(
-                    report.id
-                  );
-                }}
-              />
-            )}
-
-            <div className="alarm-list-content">
-              <div className="alarm-list-main">
-                <span className="alarm-title">
-                  {report.report_title}
-                </span>
-              </div>
-
-              <div className="alarm-list-sub">
-                {formatSentAt(
-                  report.sent_at
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export default AlarmPopup;
