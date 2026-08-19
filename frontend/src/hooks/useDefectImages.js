@@ -71,6 +71,14 @@ export const useDefectImages = ({
             thumbnailUrl:
               item.thumbnail_url,
 
+            imageUrl:
+              item.image_url,
+
+            defects:
+              Array.isArray(item.defects)
+                ? item.defects
+                : [],
+
             bladePosition:
               item.part_side,
 
@@ -78,9 +86,6 @@ export const useDefectImages = ({
               Array.isArray(item.defects)
                 ? item.defects.length
                 : 0,
-
-            defects:
-              item.defects || [],
 
             maxSeverity:
               item.max_severity,
@@ -90,11 +95,6 @@ export const useDefectImages = ({
                 ? item.created_at.slice(0, 10)
                 : "",
           }));
-
-        console.log(
-          "결함 이미지 가공 결과:",
-          mappedImages
-        );
 
         setDefectImages(
           mappedImages

@@ -383,12 +383,31 @@ function BladeInfoPopup({
                 ×
               </button>
 
-              <img
-                src={
-                  selectedImage.thumbnailUrl
-                }
-                alt={`${selectedBladeName} ${selectedImage.bladePosition}`}
-              />
+              <div className="blade-image-preview-canvas">
+                <img
+                  src={selectedImage.thumbnail_url}
+                  alt={`${selectedBladeName} ${selectedImage.bladePosition}`}
+                />
+
+                <svg
+                  className="blade-defect-overlay"
+                  viewBox="0 0 1 1"
+                  preserveAspectRatio="none"
+                >
+                  {selectedImage.defects?.map(
+                    (defect, index) => (
+                      <rect
+                        key={defect.id ?? index}
+                        x={Number(defect.bbox_x)}
+                        y={Number(defect.bbox_y)}
+                        width={Number(defect.bbox_w)}
+                        height={Number(defect.bbox_h)}
+                        className="blade-defect-bbox"
+                      />
+                    )
+                  )}
+                </svg>
+              </div>
 
               <div className="blade-image-preview-info">
                 <span>
