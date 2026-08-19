@@ -42,12 +42,14 @@ class ProdEnvironmentContractTest {
      * 실제로 KMA 두 변수는 한 번도 태스크 정의에 들어간 적이 없었고, 그동안 대시보드는 UNKNOWN 날씨를
      * FE 기본값(맑음 0도 0m/s)으로 그려 아무도 고장을 눈치채지 못했다.
      * <p>
-     * 의도적으로 비워 두는 변수는 여기 넣지 말 것(예: {@code AWS_SAGEMAKER_DEFECT_ENDPOINT} 는
-     * 엔드포인트 생성 전까지 빈 값이 정상이다 — 폴러만 휴면하고 요청은 큐에 남는다).
+     * 의도적으로 비워 두는 변수는 여기 넣지 말 것.
      */
     private static final Set<String> MANDATORY_IN_PROD_DESPITE_DEFAULT = Set.of(
-            "KMA_BASE_URL",  // 미설정 시 대시보드 날씨가 전 발전소 UNKNOWN
-            "KMA_API_KEY"    // 위와 동일 (평문 금지 — 이 저장소는 public 이라 Secrets Manager 로만)
+            "KMA_BASE_URL",                   // 미설정 시 대시보드 날씨가 전 발전소 UNKNOWN
+            "KMA_API_KEY",                    // 위와 동일 (평문 금지 — 이 저장소는 public 이라 Secrets Manager 로만)
+            // 엔드포인트가 생기기 전에는 빈 값이 정상이었다(폴러만 휴면). 이제 실재하므로 비면 발사 폴러가
+            // 조용히 자고 요청이 큐에 무한정 쌓인다 — 정확히 이 목록이 막으려는 종류의 고장이다.
+            "AWS_SAGEMAKER_DEFECT_ENDPOINT"
     );
 
     @Test
