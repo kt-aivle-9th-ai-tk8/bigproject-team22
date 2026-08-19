@@ -20,10 +20,35 @@ import { useTurbineReports } from "../hooks/useTurbineReports";
 import { useReadNotification } from "../hooks/useReadNotification";
 import { useDeleteNotification } from "../hooks/useDeleteNotification";
 
+import { useDefectImages } from "../hooks/useDefectImages";
+
 import "./MainScreen.css";
 import "../components/Bar.css";
 
 function MainScreen() {
+
+  const {
+    defectImages: testDefectImages,
+    loading: testDefectImagesLoading,
+    error: testDefectImagesError,
+  } = useDefectImages({
+    bladeId: "1",
+  });
+  useEffect(() => {
+    console.log(
+      "bladeId 1 결함 이미지 응답:",
+      {
+        loading: testDefectImagesLoading,
+        error: testDefectImagesError,
+        data: testDefectImages,
+      }
+    );
+  }, [
+    testDefectImages,
+    testDefectImagesLoading,
+    testDefectImagesError,
+  ]);
+
   const navigate = useNavigate();
 
   const [generatedReport, setGeneratedReport] = useState(null);
