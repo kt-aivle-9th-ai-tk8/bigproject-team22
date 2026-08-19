@@ -1,0 +1,31 @@
+{
+  "family": "windfarm-onm-anomaly-detection-task",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "windfarm-onm-anomaly-detection-container",
+      "image": "336090301989.dkr.ecr.ap-northeast-2.amazonaws.com/windfarm-onm-anomaly-detection:latest",
+      "essential": true,
+      "command": ["python", "run_tier_a.py"],
+      "secrets": [
+        {
+          "name": "DB_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarmonm/prod/detection-db-url"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/windfarm-onm-anomaly-detection",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "anomaly-detection"
+        }
+      }
+    }
+  ]
+}

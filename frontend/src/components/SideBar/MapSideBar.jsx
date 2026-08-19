@@ -13,6 +13,7 @@ function MapSideBar({
   plants = [],
   notifications = [],
   onSelectPlant,
+  onSelectNotification
 }) {
   const [isWeatherHelpOpen, setIsWeatherHelpOpen] = useState(false);
   /*
@@ -128,7 +129,10 @@ function MapSideBar({
           실시간 이상 알림
         </SideTitle>
 
-        <FaultList items={notifications} />
+        <FaultList 
+          items={notifications}
+          onSelectNotification = {onSelectNotification}
+        />
       </section>
     </div>
   );

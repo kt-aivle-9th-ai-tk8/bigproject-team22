@@ -13,6 +13,7 @@ function SideBar({
   notifications,
   onSelectPlant,
   onSelectTurbine,
+  onSelectNotification,
   onCreateInspectionReport,
   onCreateOperationReport,
   isOperationReportPending,
@@ -25,6 +26,7 @@ function SideBar({
           plants={plants}
           notifications={notifications}
           onSelectPlant={onSelectPlant}
+          onSelectNotification={onSelectNotification}
         />
       )}
 

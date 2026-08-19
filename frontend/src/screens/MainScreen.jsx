@@ -47,7 +47,17 @@ function MainScreen() {
   const { removeNotification } = useDeleteNotification();
 
   const handleReadNotification =
-    async (notificationId) => {
+    async (
+      notificationId,
+      reportId
+    ) => {
+      if (!reportId) {
+        console.error(
+          "이동할 보고서 ID가 없습니다."
+        );
+        return;
+      }
+
       try {
         await markNotificationAsRead(
           notificationId
@@ -58,6 +68,10 @@ function MainScreen() {
           error
         );
       }
+
+      navigate(
+        `/reports/${reportId}/edit`
+      );
     };
 
   const handleDeleteNotification =
@@ -470,6 +484,7 @@ function MainScreen() {
           notifications={notifications}
           onSelectPlant={handleSelectPlant}
           onSelectTurbine={handleSelectTurbine}
+          onSelectNotification={handleReadNotification}
           onCreateInspectionReport={handleCreateInspectionReport}
           onCreateOperationReport={handleCreateOperationReport}
           isOperationReportPending={isOperationReportPending}
@@ -492,7 +507,7 @@ function MainScreen() {
           <div className="report-complete-popup">
 
             <p className="report-complete-message">
-              {generatedReport.displayTitle} 보고서 생성이 완료되었습니다.
+              {generatedReport.displayTitle} 생성이 완료되었습니다.
             </p>
 
             <p className="report-complete-question">

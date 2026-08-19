@@ -1,0 +1,95 @@
+.alarm-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.alarm-list-item {
+  width: 100%;
+  min-height: 68px;
+
+  padding: 10px 16px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+
+  border: none;
+  border-bottom: 1px solid var(--color-divider);
+  background-color: #ffffff;
+
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.alarm-list-item:hover {
+  background-color: var(--color-point-bright);
+}
+
+.alarm-list-item:focus-visible {
+  outline: 2px solid var(--color-text-point-dark);
+  outline-offset: -2px;
+}
+
+.alarm-list-item.delete-mode {
+  cursor: pointer;
+}
+
+.alarm-list-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.alarm-list-checkbox {
+  width: 16px;
+  height: 16px;
+
+  margin-right: 12px;
+  flex-shrink: 0;
+
+  cursor: pointer;
+}
+
+.alarm-list-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 6px;
+}
+
+.alarm-title {
+  overflow: hidden;
+
+  color: #000000;
+  font-size: 15px;
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alarm-list-sub {
+  overflow: hidden;
+
+  color: var(--color-dark-gray);
+  font-size: 12px;
+  font-weight: 500;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alarm-empty {
+  padding: 40px 20px;
+
+  color: var(--color-dark-gray);
+  font-size: 14px;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .alarm-list {
+    max-height: calc(100vh - 96px);
+  }
+}

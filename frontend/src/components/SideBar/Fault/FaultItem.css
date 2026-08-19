@@ -11,27 +11,47 @@
   background-color: #eef4ff;
   border: 1px solid var(--color-text-point-dark);
   border-radius: 4px;
+
+  cursor: pointer;
 }
 
 .fault-item-left {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  min-width: 0;
 }
 
 .fault-item-icon {
+  flex-shrink: 0;
+
   font-size: 13px;
   line-height: 1;
 }
 
 .fault-item-name {
+  overflow: hidden;
+
   font-size: 15px;
   font-weight: 700;
   color: #000;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fault-item-time {
+  flex-shrink: 0;
+
+  margin-left: 12px;
+  align-self: flex-end;
+  margin-bottom: 5px;
+
   font-size: 12px;
-  font-weight: 700;
-  color: #000;
+  font-weight: 500;
+
+  color: #555;
+
+  text-align: right;
 }

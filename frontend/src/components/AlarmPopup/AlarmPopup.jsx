@@ -1,18 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import AlarmReportList from "./AlarmReportList";
 
 import "./AlarmPopup.css";
-
-
-const formatSentAt = (sentAt) => {
-  if (!sentAt) {
-    return "";
-  }
-
-  const [date, time] = sentAt.split("T");
-
-  return `${date.replaceAll("-", ".")}  ${time?.slice(0, 5) || ""}`;
-};
 
 
 function AlarmPopup({
@@ -22,11 +12,23 @@ function AlarmPopup({
   onReadNotification,
   onDeleteNotification,
 }) {
-  const navigate = useNavigate();
 
-  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [isDeleteMode, setIsDeleteMode] =
+    useState(false);
 
-  const [ selectedNotificationIds, setSelectedNotificationIds ] = useState([]);
+  const [
+    selectedNotificationIds,
+    setSelectedNotificationIds,
+  ] = useState([]);
+
+  const [displayAlarm, setDisplayAlarm] =
+    useState(alarm);
+
+
+  useEffect(() => {
+    setDisplayAlarm(alarm);
+  }, [alarm]);
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -34,6 +36,7 @@ function AlarmPopup({
       setSelectedNotificationIds([]);
     }
   }, [isOpen]);
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -85,6 +88,15 @@ function AlarmPopup({
       report?.report_id ||
       report?.id;
 
+    if (!notificationId) {
+      console.error(
+        "알림 ID가 없습니다.",
+        report
+      );
+
+      return;
+    }
+
     if (!reportId) {
       console.error(
         "이동할 보고서 ID가 없습니다.",
@@ -94,33 +106,25 @@ function AlarmPopup({
       return;
     }
 
-    if (notificationId) {
-      try {
-        await onReadNotification?.(
-          notificationId
-        );
-      } catch (error) {
-        console.error(
-          "알림 읽음 처리 실패:",
-          error
-        );
-      }
-    }
-
     onClose();
 
-    navigate(
-      `/reports/${reportId}/edit`
+    await onReadNotification?.(
+      notificationId,
+      reportId
     );
   };
+
 
   const handleToggleNotification = (
     notificationId
   ) => {
     setSelectedNotificationIds((prev) => {
-      if (prev.includes(notificationId)) {
+      if (
+        prev.includes(notificationId)
+      ) {
         return prev.filter(
-          (id) => id !== notificationId
+          (id) =>
+            id !== notificationId
         );
       }
 
@@ -145,6 +149,7 @@ function AlarmPopup({
       alert(
         "삭제할 알림을 선택해 주세요."
       );
+
       return;
     }
 
@@ -162,6 +167,15 @@ function AlarmPopup({
           (notificationId) =>
             onDeleteNotification?.(
               notificationId
+            )
+        )
+      );
+
+      setDisplayAlarm((prev) =>
+        prev.filter(
+          (report) =>
+            !selectedNotificationIds.includes(
+              report.id
             )
         )
       );
@@ -222,11 +236,13 @@ function AlarmPopup({
         </div>
 
         <AlarmReportList
-          alarm={alarm}
+          alarm={displayAlarm}
           onSelectReport={
             handleReportClick
           }
-          isDeleteMode={isDeleteMode}
+          isDeleteMode={
+            isDeleteMode
+          }
           selectedNotificationIds={
             selectedNotificationIds
           }
@@ -239,70 +255,5 @@ function AlarmPopup({
   );
 }
 
-
-function AlarmReportList({
-  alarm,
-  onSelectReport,
-  isDeleteMode,
-  selectedNotificationIds,
-  onToggleNotification,
-}) {
-  if (alarm.length === 0) {
-    return (
-      <div className="alarm-empty">
-        등록된 알림이 없습니다.
-      </div>
-    );
-  }
-
-  return (
-    <div className="alarm-list">
-      {alarm.map((report) => (
-        <div
-          className="alarm-list-row"
-          key={report.id}
-        >
-          {isDeleteMode && (
-            <input
-              className="alarm-list-checkbox"
-              type="checkbox"
-              checked={
-                selectedNotificationIds.includes(
-                  report.id
-                )
-              }
-              onChange={() =>
-                onToggleNotification(
-                  report.id
-                )
-              }
-            />
-          )}
-
-          <button
-            className="alarm-list-item"
-            type="button"
-            disabled={isDeleteMode}
-            onClick={() =>
-              onSelectReport(report)
-            }
-          >
-            <div className="alarm-list-main">
-              <span className="alarm-title">
-                {report.report_title}
-              </span>
-            </div>
-
-            <div className="alarm-list-sub">
-              {formatSentAt(
-                report.sent_at
-              )}
-            </div>
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default AlarmPopup;

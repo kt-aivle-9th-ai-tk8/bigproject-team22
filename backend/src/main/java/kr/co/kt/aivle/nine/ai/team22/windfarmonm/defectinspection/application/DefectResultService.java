@@ -39,6 +39,10 @@ public class DefectResultService {
     private static final int MIN_SEVERITY = 1;
     private static final int MAX_SEVERITY = 4;
 
+
+    /** 심각도 클래스명 접두어("severity_3" → 3). */
+    private static final String SEVERITY_PREFIX = "severity_";
+
     private final OutboxEventRepository outboxEventRepository;
     private final InspectionRepository inspectionRepository;
     private final DefectRepository defectRepository;
@@ -93,7 +97,19 @@ public class DefectResultService {
         }
     }
 
-    /** 결과 JSON([{bbox,defect_type,confidence,severity}])을 읽어 결함 행으로 적재하고 행을 종결한다. */
+    /**
+     * 결과 JSON(detect-1.0)을 읽어 결함 행으로 적재하고 아웃박스 행을 종결한다.
+     * <pre>
+     * {"schema":"detect-1.0","width":8256,"height":5504,"conf_threshold":0.15,"num_defects":1,
+     *  "defects":[{"class_id":2,"class_name":"Paint Damage","confidence":0.7199,
+     *              "bbox":{"x":3905,"y":2049,"w":447,"h":1279},"severity":"severity_1"}]}
+     * </pre>
+     * bbox 는 원본 이미지의 픽셀 좌표 (x,y,w,h) 라 DB 컬럼과 그대로 대응한다(변환 없음).
+     * width/height 는 저장하지 않는다 — FE 는 이미지를 직접 로드하므로 원본 크기를 스스로 안다.
+     * <p>
+     * 계약이 바뀌어 {@code defects} 가 없어지면 결함 0건으로 읽혀 정상 종결된다 — 계약 검증은
+     * 여기 두지 않기로 했다(계약 변경은 AI 팀과의 합의로 관리한다).
+     */
     private void applyResult(OutboxEvent event, JsonNode notification) {
         String outputLocation = notification.path("responseParameters").path("outputLocation").asString(null);
         if (outputLocation == null) {
@@ -107,23 +123,18 @@ public class DefectResultService {
         PartSide partSide = parsePartSide(payload.path("part_side").asString(null));
         String imageKey = payload.path("image_key").asString(null);
 
-        JsonNode detections = objectMapper.readTree(storagePort.readJson(outputLocation));
+        JsonNode result = objectMapper.readTree(storagePort.readJson(outputLocation));
+        JsonNode detections = result.path("defects");
         List<Defect> defects = new ArrayList<>();
         for (JsonNode detection : detections) {
-            // bbox 는 [x1,y1,x2,y2] — DB 는 (x,y,w,h) 로 저장한다.
             JsonNode bbox = detection.path("bbox");
-            Double x1 = doubleOrNull(bbox, 0);
-            Double y1 = doubleOrNull(bbox, 1);
-            Double x2 = doubleOrNull(bbox, 2);
-            Double y2 = doubleOrNull(bbox, 3);
             defects.add(Defect.detected(
                     inspectionId, bladeId,
-                    detection.path("defect_type").asString("UNKNOWN"),
+                    detection.path("class_name").asString("UNKNOWN"),
                     parseSeverity(detection.path("severity").asString(null)),
                     partSide,
-                    x1, y1,
-                    (x1 != null && x2 != null) ? x2 - x1 : null,
-                    (y1 != null && y2 != null) ? y2 - y1 : null,
+                    doubleOrNull(bbox, "x"), doubleOrNull(bbox, "y"),
+                    doubleOrNull(bbox, "w"), doubleOrNull(bbox, "h"),
                     detection.path("confidence").isNumber() ? detection.path("confidence").asDouble() : null,
                     imageKey));
         }
@@ -198,16 +209,22 @@ public class DefectResultService {
     }
 
     /**
-     * CNN 심각도. 모델은 체크포인트의 class_names 값을 그대로 내보내므로 숫자가 아닐 수 있다
-     * (inference.py 확인 — AI 팀과 계약 정렬 중). 숫자가 아니거나 계약 범위(1~4) 밖이면
-     * null 로 두고 흔적을 남긴다 — 범위 밖 값을 그대로 넣으면 이미지 그룹의 max_severity 가 오염된다.
+     * CNN 심각도. 계약은 {@code "severity_1"}~{@code "severity_4"} 문자열이다(모델 체크포인트의 클래스명).
+     * 접두어를 떼고 읽되, 접두어 없는 순수 숫자도 받아들인다.
+     * <p>
+     * 숫자가 아니거나 계약 범위(1~4) 밖이면 null 로 두고 흔적을 남긴다 — 범위 밖 값을 그대로 넣으면
+     * 이미지 그룹의 max_severity 가 오염된다.
      */
     private static Integer parseSeverity(String raw) {
         if (raw == null) {
             return null;
         }
+        String value = raw.trim();
+        if (value.startsWith(SEVERITY_PREFIX)) {
+            value = value.substring(SEVERITY_PREFIX.length());
+        }
         try {
-            int severity = Integer.parseInt(raw.trim());
+            int severity = Integer.parseInt(value);
             if (severity < MIN_SEVERITY || severity > MAX_SEVERITY) {
                 log.warn("계약 범위({}~{}) 밖 severity: {} — null 로 적재", MIN_SEVERITY, MAX_SEVERITY, raw);
                 return null;
@@ -219,8 +236,8 @@ public class DefectResultService {
         }
     }
 
-    private static Double doubleOrNull(JsonNode array, int index) {
-        JsonNode node = array.path(index);
+    private static Double doubleOrNull(JsonNode object, String field) {
+        JsonNode node = object.path(field);
         return node.isNumber() ? node.asDouble() : null;
     }
 

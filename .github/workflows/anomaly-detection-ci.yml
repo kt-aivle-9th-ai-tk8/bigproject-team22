@@ -1,0 +1,33 @@
+name: Anomaly Detection CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'anomaly-detection-service/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ./anomaly-detection-service
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies and validate syntax
+        run: |
+          pip install -r requirements.txt --quiet
+          python -m py_compile db_client.py run_tier_a.py run_tier_b.py
