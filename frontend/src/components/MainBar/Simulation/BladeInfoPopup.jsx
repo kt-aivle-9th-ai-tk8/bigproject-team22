@@ -385,8 +385,19 @@ function BladeInfoPopup({
 
               <div className="blade-image-preview-canvas">
                 <img
-                  src={selectedImage.thumbnail_url}
+                  src={selectedImage.imageUrl}
                   alt={`${selectedBladeName} ${selectedImage.bladePosition}`}
+                  onLoad={(event) => {
+                    console.log(
+                      "확대 이미지 원본 크기:",
+                      {
+                        width:
+                          event.currentTarget.naturalWidth,
+                        height:
+                          event.currentTarget.naturalHeight,
+                      }
+                    );
+                  }}
                 />
 
                 <svg
