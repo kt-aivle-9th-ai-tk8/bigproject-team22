@@ -7,10 +7,13 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.AuthServic
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.LoginResult;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.auth.LoginMember;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.global.auth.SessionConst;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditAction;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditEvent;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.response.ApiResponse;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.presentation.dto.LoginRequest;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.presentation.dto.LoginResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 로그인: POST /api/auth/login
@@ -70,6 +74,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest httpRequest) {
         HttpSession session = httpRequest.getSession(false);
         if (session != null) {
+            // 파기 '전에' 남긴다 — 감사 기록이 주체를 세션에서 읽으므로 순서가 바뀌면 주체를 잃는다.
+            // 세션이 이미 없는 요청(중복 로그아웃)은 남길 주체가 없어 기록하지 않는다.
+            eventPublisher.publishEvent(AuditEvent.of(AuditAction.LOGOUT, null, null));
             session.invalidate();
         }
         return ResponseEntity.ok(ApiResponse.success("로그아웃되었습니다.", null));
