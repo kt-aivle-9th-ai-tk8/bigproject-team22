@@ -35,6 +35,21 @@ class ProdEnvironmentContractTest {
     private static final Path PROD_YAML = Path.of("src/main/resources/application-prod.yaml");
     private static final Path TASK_DEFINITION = Path.of("task-definition.json");
 
+    /**
+     * 기본값이 있어({@code ${VAR:}}) 위 검사에는 걸리지 않지만, <b>운영에서는 값이 반드시 있어야</b> 하는 변수.
+     * <p>
+     * 이런 변수는 미설정이어도 기동에 성공하고 해당 기능만 조용히 폴백한다 — 그 조용함이 위험이다.
+     * 실제로 KMA 두 변수는 한 번도 태스크 정의에 들어간 적이 없었고, 그동안 대시보드는 UNKNOWN 날씨를
+     * FE 기본값(맑음 0도 0m/s)으로 그려 아무도 고장을 눈치채지 못했다.
+     * <p>
+     * 의도적으로 비워 두는 변수는 여기 넣지 말 것(예: {@code AWS_SAGEMAKER_DEFECT_ENDPOINT} 는
+     * 엔드포인트 생성 전까지 빈 값이 정상이다 — 폴러만 휴면하고 요청은 큐에 남는다).
+     */
+    private static final Set<String> MANDATORY_IN_PROD_DESPITE_DEFAULT = Set.of(
+            "KMA_BASE_URL",  // 미설정 시 대시보드 날씨가 전 발전소 UNKNOWN
+            "KMA_API_KEY"    // 위와 동일 (평문 금지 — 이 저장소는 public 이라 Secrets Manager 로만)
+    );
+
     @Test
     @DisplayName("운영 프로파일이 기본값 없이 요구하는 환경변수는 모두 태스크 정의에 있어야 한다")
     void everyRequiredProdVariableIsProvidedByTaskDefinition() throws IOException {
@@ -48,6 +63,15 @@ class ProdEnvironmentContractTest {
                         태스크 정의의 environment(평문) 또는 secrets(비밀값)에 추가할 것."""
                         .formatted(PROD_YAML, TASK_DEFINITION))
                 .isSubsetOf(provided);
+    }
+
+    @Test
+    @DisplayName("기본값이 있어도 운영에서 필수인 변수는 빈 값으로 두면 안 된다")
+    void mandatoryProdVariablesAreNotLeftBlank() {
+        assertThat(nonBlankVariables())
+                .as("기능이 조용히 죽는 변수다. %s 의 environment 에 값이 있거나(평문)"
+                        + " secrets 에 등록되어(비밀값) 있어야 한다.", TASK_DEFINITION)
+                .containsAll(MANDATORY_IN_PROD_DESPITE_DEFAULT);
     }
 
     @Test
@@ -71,15 +95,32 @@ class ProdEnvironmentContractTest {
 
     /** 태스크 정의가 컨테이너에 주입하는 이름(평문 environment + Secrets Manager secrets). */
     private static Set<String> providedVariables() {
-        JsonNode container = JsonMapper.builder().build()
-                .readTree(read(TASK_DEFINITION))
-                .path("containerDefinitions")
-                .path(0);
+        JsonNode container = container();
 
         Set<String> names = new LinkedHashSet<>();
         container.path("environment").forEach(node -> names.add(node.path("name").asString()));
         container.path("secrets").forEach(node -> names.add(node.path("name").asString()));
         return names;
+    }
+
+    /** 실제로 값이 주입되는 이름만. environment 는 빈 문자열이면 제외하고, secrets 는 등록 자체가 값이다. */
+    private static Set<String> nonBlankVariables() {
+        JsonNode container = container();
+        Set<String> names = new LinkedHashSet<>();
+        container.path("environment").forEach(node -> {
+            if (!node.path("value").asString("").isBlank()) {
+                names.add(node.path("name").asString());
+            }
+        });
+        container.path("secrets").forEach(node -> names.add(node.path("name").asString()));
+        return names;
+    }
+
+    private static JsonNode container() {
+        return JsonMapper.builder().build()
+                .readTree(read(TASK_DEFINITION))
+                .path("containerDefinitions")
+                .path(0);
     }
 
     private static String read(Path path) {

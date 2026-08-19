@@ -11,7 +11,6 @@ import { useReportList } from "../hooks/useReportList";
 import { useUpdateReport } from "../hooks/useUpdateReport";
 import { useDeleteReport } from "../hooks/useDeleteReport";
 
-// Mermaid 전역 초기화
 mermaid.initialize({
   startOnLoad: false,
   theme: "default",
@@ -22,13 +21,51 @@ mermaid.initialize({
 const MermaidChart = ({ chartCode }) => {
   const containerRef = useRef(null);
 
+  const preprocessChartCode = (code) => {
+    let processed = code;
+
+    const numbers = [];
+    const lineOrBarMatches = processed.matchAll(/(?:line|bar)\s*\[([^\]]+)\]/g);
+    for (const match of lineOrBarMatches) {
+      const vals = match[1]
+        .split(",")
+        .map((v) => parseFloat(v.replace(/,/g, "").trim()))
+        .filter((v) => !isNaN(v));
+      numbers.push(...vals);
+    }
+
+    let maxVal = numbers.length > 0 ? Math.max(...numbers) : 100;
+    if (maxVal <= 0) maxVal = 10;
+    
+    const calculatedMax = Math.ceil((maxVal * 1.2) / 10) * 10;
+
+    processed = processed.replace(
+      /y-axis\s+("([^"]*)"|[^\d\s]+)?\s*\d+\s*-->\s*\d+/g,
+      (match, unit) => {
+        const unitStr = unit ? unit.trim() : '"MWh"';
+        return `y-axis ${unitStr} 0 --> ${calculatedMax}`;
+      }
+    );
+
+    const xAxisMatch = processed.match(/x-axis\s*\[([^\]]+)\]/);
+    if (xAxisMatch) {
+      const items = xAxisMatch[1].split(",").map((s) => s.trim());
+      if (items.length <= 1) {
+        processed = processed.replaceAll("line [", "bar [");
+      }
+    }
+
+    return processed;
+  };
+
   useEffect(() => {
     if (!containerRef.current || !chartCode) return;
 
     const renderChart = async () => {
       try {
         const uniqueId = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg } = await mermaid.render(uniqueId, chartCode.trim());
+        const fixedCode = preprocessChartCode(chartCode.trim());
+        const { svg } = await mermaid.render(uniqueId, fixedCode);
         if (containerRef.current) {
           containerRef.current.innerHTML = svg;
         }
@@ -43,10 +80,16 @@ const MermaidChart = ({ chartCode }) => {
     renderChart();
   }, [chartCode]);
 
-  return <div ref={containerRef} className="mermaid-chart-container" style={{ margin: "20px 0", textAlign: "center" }} />;
+  return (
+    <div
+      ref={containerRef}
+      className="mermaid-chart-container"
+      style={{ margin: "20px 0", textAlign: "center" }}
+    />
+  );
 };
 
-// 1. 보고서 유형 영문 -> 한글 매핑 함수
+// 1. 보고서 유형 영문 -> 한글
 const formatReportType = (type) => {
   if (!type) return "보고서";
   const upperType = String(type).toUpperCase();
@@ -65,7 +108,7 @@ const formatReportType = (type) => {
   }
 };
 
-// 2. ISO 날짜 포맷팅 함수 (yyyy-mm-dd hh:mm)
+// 2. ISO 날짜 포맷팅 함수
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
   if (dateStr.includes("T")) {
