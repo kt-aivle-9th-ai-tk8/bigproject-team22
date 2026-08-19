@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import {useDefectImages} from "../../../../hooks/useDefectImages";
+import {useDefectImages} from "../../../hooks/useDefectImages";
 import "./BladeInfoPopup.css";
 
 const PAGE_SIZE = 10;
