@@ -20,22 +20,39 @@ function FaultItem({
     };
   };
 
-  const { date, time } = formatSentAt(sent_at);
+  const formatReportTitle = (title) => {
+    if (!title) {
+      return "알림 보고서";
+    }
+
+    return title
+      .replace(
+        /\s*\d{4}-\d{2}-\d{2}.*$/,
+        ""
+      )
+      .trim();
+  };
+
+  const { date, time } =
+    formatSentAt(sent_at);
+
+  const displayTitle =
+    formatReportTitle(report_title);
 
   return (
     <div className="fault-item">
-      <div className="fault-item-icon">
-        🚨
+      <div className="fault-item-left">
+        <div className="fault-item-icon">
+          🚨
+        </div>
+
+        <div className="fault-item-name">
+          {displayTitle}
+        </div>
       </div>
 
-      <div className="fault-item-content">
-        <div className="fault-item-plant-name">
-          {report_title}
-        </div>
-
-        <div className="fault-item-time">
-          {date}, {time}
-        </div>
+      <div className="fault-item-time">
+        {date}, {time}
       </div>
     </div>
   );
