@@ -25,8 +25,12 @@ function AlarmPopup({
   const navigate = useNavigate();
 
   const [isDeleteMode, setIsDeleteMode] = useState(false);
-
   const [ selectedNotificationIds, setSelectedNotificationIds ] = useState([]);
+  const [displayAlarm, setDisplayAlarm] = useState(alarm);
+  
+  useEffect(() => {
+    setDisplayAlarm(alarm);
+  }, [alarm]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -166,6 +170,15 @@ function AlarmPopup({
         )
       );
 
+      setDisplayAlarm((prev) =>
+        prev.filter(
+          (report) =>
+            !selectedNotificationIds.includes(
+              report.id
+            )
+        )
+      );
+
       setSelectedNotificationIds([]);
       setIsDeleteMode(false);
     } catch (error) {
@@ -222,7 +235,7 @@ function AlarmPopup({
         </div>
 
         <AlarmReportList
-          alarm={alarm}
+          alarm={displayAlarm}
           onSelectReport={
             handleReportClick
           }
@@ -238,7 +251,6 @@ function AlarmPopup({
     </div>
   );
 }
-
 
 function AlarmReportList({
   alarm,
@@ -257,50 +269,76 @@ function AlarmReportList({
 
   return (
     <div className="alarm-list">
-      {alarm.map((report) => (
-        <div
-          className="alarm-list-row"
-          key={report.id}
-        >
-          {isDeleteMode && (
-            <input
-              className="alarm-list-checkbox"
-              type="checkbox"
-              checked={
-                selectedNotificationIds.includes(
-                  report.id
-                )
-              }
-              onChange={() =>
-                onToggleNotification(
-                  report.id
-                )
-              }
-            />
-          )}
+      {alarm.map((report) => {
+        const isChecked =
+          selectedNotificationIds.includes(
+            report.id
+          );
 
-          <button
-            className="alarm-list-item"
-            type="button"
-            disabled={isDeleteMode}
-            onClick={() =>
-              onSelectReport(report)
-            }
+        const handleItemClick = () => {
+          if (isDeleteMode) {
+            onToggleNotification(
+              report.id
+            );
+
+            return;
+          }
+
+          onSelectReport(report);
+        };
+
+        return (
+          <div
+            className={`alarm-list-item ${
+              isDeleteMode
+                ? "delete-mode"
+                : ""
+            }`}
+            key={report.id}
+            role="button"
+            tabIndex={0}
+            onClick={handleItemClick}
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" ||
+                event.key === " "
+              ) {
+                handleItemClick();
+              }
+            }}
           >
-            <div className="alarm-list-main">
-              <span className="alarm-title">
-                {report.report_title}
-              </span>
-            </div>
+            {isDeleteMode && (
+              <input
+                className="alarm-list-checkbox"
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => {}}
+                onClick={(event) => {
+                  event.stopPropagation();
 
-            <div className="alarm-list-sub">
-              {formatSentAt(
-                report.sent_at
-              )}
+                  onToggleNotification(
+                    report.id
+                  );
+                }}
+              />
+            )}
+
+            <div className="alarm-list-content">
+              <div className="alarm-list-main">
+                <span className="alarm-title">
+                  {report.report_title}
+                </span>
+              </div>
+
+              <div className="alarm-list-sub">
+                {formatSentAt(
+                  report.sent_at
+                )}
+              </div>
             </div>
-          </button>
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
