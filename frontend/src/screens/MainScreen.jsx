@@ -507,7 +507,7 @@ function MainScreen() {
           <div className="report-complete-popup">
 
             <p className="report-complete-message">
-              {generatedReport.displayTitle} 보고서 생성이 완료되었습니다.
+              {generatedReport.displayTitle} 생성이 완료되었습니다.
             </p>
 
             <p className="report-complete-question">
