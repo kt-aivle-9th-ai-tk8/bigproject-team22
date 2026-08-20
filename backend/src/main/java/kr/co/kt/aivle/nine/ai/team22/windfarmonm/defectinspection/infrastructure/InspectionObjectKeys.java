@@ -20,6 +20,29 @@ public final class InspectionObjectKeys {
         return "%s/%s/%d/%d/%s/%d.jpg".formatted(prefix, SEGMENT, inspectionId, bladeId, partSide.name(), seq);
     }
 
+    /** 썸네일 세그먼트. 원본과 같은 부위 폴더 아래 한 단계 더 들어간다. */
+    public static final String THUMBNAIL_SEGMENT = "thumb";
+
+    /**
+     * 원본 키에서 썸네일 키를 유도한다: {@code .../{partSide}/{seq}.jpg} → {@code .../{partSide}/thumb/{seq}.jpg}.
+     * <p>
+     * 별도 루트가 아니라 부위 폴더 아래에 두는 이유는 점검 삭제·수명주기 정책에서 프리픽스 하나만 다루면
+     * 되기 때문이다(두 곳으로 나누면 한쪽만 지웠을 때 고아 객체가 남는다). 세그먼트가 하나 늘어 5개가
+     * 되므로 {@link #parse(String)} 가 썸네일을 <b>의도적으로</b> 걸러 낸다 — 추론 대상에 섞이지 않는다.
+     */
+    public static String thumbnailKey(String imageKey) {
+        int lastSlash = imageKey.lastIndexOf('/');
+        if (lastSlash < 0) {
+            throw new IllegalArgumentException("규약 밖 이미지 키다: " + imageKey);
+        }
+        return imageKey.substring(0, lastSlash) + "/" + THUMBNAIL_SEGMENT + imageKey.substring(lastSlash);
+    }
+
+    /** 키가 썸네일인지. LIST 결과에서 원본과 파생물을 가르는 데 쓴다. */
+    public static boolean isThumbnail(String key) {
+        return key.contains("/" + THUMBNAIL_SEGMENT + "/");
+    }
+
     /** 점검 1건의 모든 이미지가 놓이는 프리픽스(S3 LIST 용). 끝의 '/' 로 다른 점검 id 와의 접두 충돌을 막는다. */
     public static String inspectionPrefix(String prefix, long inspectionId) {
         return "%s/%s/%d/".formatted(prefix, SEGMENT, inspectionId);

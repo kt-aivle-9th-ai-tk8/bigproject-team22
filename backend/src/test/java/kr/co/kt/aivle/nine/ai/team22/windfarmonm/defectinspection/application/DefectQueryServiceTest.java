@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -71,6 +72,29 @@ class DefectQueryServiceTest {
         // 썸네일이 생기기 전까지는 원본과 같은 URL 이다(이슈 #131 에서 갈라진다).
         assertThat(first.thumbnailUrl()).isEqualTo("https://presigned");
         assertThat(results.get(1).maxSeverity()).isNull(); // 전부 null 이면 null
+    }
+
+    @Test
+    @DisplayName("썸네일이 있으면 thumbnail_url 은 썸네일 키로, 없으면 원본으로 폴백한다")
+    void thumbnailUrlPrefersThumbnailAndFallsBackToOriginal() {
+        when(defectRepository.findByBladeId(BLADE_ID)).thenReturn(List.of(
+                defect("img/1.jpg", "Crack", 2),
+                defect("img/2.jpg", "Contamination", 1)));
+        // 1번만 썸네일이 만들어진 상태(생성 지연·실패로 흔히 생긴다).
+        when(storagePort.findThumbnailKeys(any())).thenReturn(Map.of("img/1.jpg", "img/thumb/1.jpg"));
+        when(storagePort.presignImageView("img/1.jpg")).thenReturn("https://origin-1");
+        when(storagePort.presignImageView("img/thumb/1.jpg")).thenReturn("https://thumb-1");
+        when(storagePort.presignImageView("img/2.jpg")).thenReturn("https://origin-2");
+
+        List<DefectImageResult> results = service.getDefectImages(USER_ID, false, BLADE_ID);
+
+        DefectImageResult withThumbnail = results.getFirst();
+        assertThat(withThumbnail.imageUrl()).isEqualTo("https://origin-1");   // 확대 보기는 언제나 원본
+        assertThat(withThumbnail.thumbnailUrl()).isEqualTo("https://thumb-1");
+
+        DefectImageResult withoutThumbnail = results.get(1);
+        assertThat(withoutThumbnail.imageUrl()).isEqualTo("https://origin-2");
+        assertThat(withoutThumbnail.thumbnailUrl()).isEqualTo("https://origin-2"); // 폴백 — 화면이 깨지지 않는다
     }
 
     @Test
