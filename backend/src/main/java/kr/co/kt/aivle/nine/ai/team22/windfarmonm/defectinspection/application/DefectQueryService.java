@@ -17,6 +17,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 결함탐지 분석 결과 조회(이미지 단위 그룹핑). 사진 열람은 담당 기반 인가 뒤에만 presigned URL 을
@@ -42,24 +44,35 @@ public class DefectQueryService {
         }
 
         // 이미지(image_path) 단위로 그룹핑한다. 조회 순서(최신 적재 순)를 유지하려고 LinkedHashMap 을 쓴다.
+        List<Defect> found = defectRepository.findByBladeId(bladeId);
         Map<String, List<Defect>> byImage = new LinkedHashMap<>();
-        for (Defect defect : defectRepository.findByBladeId(bladeId)) {
+        for (Defect defect : found) {
             byImage.computeIfAbsent(defect.getImagePath(), key -> new ArrayList<>()).add(defect);
         }
+
+        // 어떤 원본에 썸네일이 있는지 점검 프리픽스 LIST 로 한 번에 판정한다(장마다 존재를 묻지 않는다).
+        Set<Long> inspectionIds = found.stream()
+                .map(Defect::getInspectionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, String> thumbnailKeys = inspectionIds.isEmpty()
+                ? Map.of()
+                : storagePort.findThumbnailKeys(inspectionIds);
 
         List<DefectImageResult> results = new ArrayList<>(byImage.size());
         for (Map.Entry<String, List<Defect>> entry : byImage.entrySet()) {
             List<Defect> defects = entry.getValue();
             Defect first = defects.getFirst();
-            // 썸네일이 아직 없어 원본 URL 을 두 자리에 함께 준다. 썸네일은 원본을 줄인 것이 아니라
-            // 별도 경로({partSide}/thumb/{seq}.jpg)의 다른 객체가 되므로(이슈 #131), 그때는 여기서
-            // 키를 따로 만들어 각각 서명하게 된다 — 두 필드를 미리 나눠 둔 이유다.
-            // 지금은 같은 키라 서명을 한 번만 한다(같은 키에 두 번 서명해도 같은 접근이 둘 생길 뿐이다).
-            String presignedUrl = entry.getKey() == null ? null : storagePort.presignImageView(entry.getKey());
+            // 썸네일은 원본을 줄인 것이 아니라 별도 경로({partSide}/thumb/{seq}.jpg)의 다른 객체다.
+            // 아직 만들어지지 않았으면(생성 지연·실패) 원본 URL 로 폴백한다 — 화면이 깨지는 것보다 낫다.
+            String imageKey = entry.getKey();
+            String imageUrl = imageKey == null ? null : storagePort.presignImageView(imageKey);
+            String thumbnailKey = imageKey == null ? null : thumbnailKeys.get(imageKey);
+            String thumbnailUrl = thumbnailKey == null ? imageUrl : storagePort.presignImageView(thumbnailKey);
             results.add(new DefectImageResult(
-                    entry.getKey(),
-                    presignedUrl,
-                    presignedUrl,
+                    imageKey,
+                    imageUrl,
+                    thumbnailUrl,
                     defects.stream()
                             .map(d -> new DefectImageResult.DefectItem(d.getId(), d.getDefectType(), d.getSeverity(),
                                     d.getBboxX(), d.getBboxY(), d.getBboxW(), d.getBboxH(), d.getConfidence()))

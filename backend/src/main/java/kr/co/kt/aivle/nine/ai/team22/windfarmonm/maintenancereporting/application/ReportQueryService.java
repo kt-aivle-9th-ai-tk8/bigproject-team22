@@ -27,6 +27,7 @@ public class ReportQueryService {
 
     private final ReportRepository reportRepository;
     private final ReportAssetPort assetPort;
+    private final ReportImageRewriter imageRewriter;
 
     /** 목록 조회. 선택 조건은 null 이면 미적용. 페이징은 두지 않는다(MVP 계약). */
     @Transactional(readOnly = true)
@@ -39,7 +40,9 @@ public class ReportQueryService {
     /** 단건 조회. 열람 범위 밖이면 404. */
     @Transactional(readOnly = true)
     public ReportResult getReport(Long userId, boolean admin, Long reportId) {
-        return ReportResult.from(readViewable(userId, admin, reportId));
+        // 담당 인가를 통과한 뒤에만 서명한다 — 본문 속 이미지도 보고서와 같은 인가 입자를 따른다.
+        ReportResult result = ReportResult.from(readViewable(userId, admin, reportId));
+        return result.withContext(imageRewriter.rewrite(result.context()));
     }
 
     /**

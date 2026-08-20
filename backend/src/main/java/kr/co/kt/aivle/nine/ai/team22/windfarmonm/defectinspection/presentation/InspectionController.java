@@ -71,6 +71,25 @@ public class InspectionController {
     }
 
     /**
+     * 썸네일 생성 요청: POST /api/inspections/{inspection_id}/thumbnails
+     * <p>
+     * 업로드 완료 통보를 받으면 자동으로 돌지만, ① 그 기능이 없던 시절의 <b>기존 점검</b>과
+     * ② 재배포로 대기 큐가 날아간 경우를 위한 재실행 창구다. 이미 있는 썸네일은 건너뛰므로
+     * 몇 번을 불러도 안전하다(멱등).
+     * <p>
+     * 생성은 비동기라 접수만 하고 202 로 답한다 — 80장이면 수십 초가 걸려 동기로는 응답이 끊긴다.
+     * 완료 여부는 결함 이미지 조회의 {@code thumbnail_url} 이 썸네일 키로 바뀌는 것으로 확인한다.
+     */
+    @PostMapping("/{inspectionId}/thumbnails")
+    public ResponseEntity<ApiResponse<Void>> generateThumbnails(
+            @PathVariable String inspectionId,
+            @Login LoginMember member) {
+        inspectionCommandService.requestThumbnailGeneration(
+                member.userId(), member.isAdmin(), ApiIds.toLong(inspectionId));
+        return ResponseEntity.accepted().body(ApiResponse.success("썸네일 생성을 시작했습니다.", null));
+    }
+
+    /**
      * 업로드된 이미지 조회: GET /api/inspections/{inspection_id}/images
      * <p>
      * <b>S3 원천 기준</b>이라 추론 전에도 실제 업로드 결과가 그대로 보인다 — FE 가 업로드 성공을

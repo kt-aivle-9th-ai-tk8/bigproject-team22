@@ -12,6 +12,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.OutboxE
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.PartSide;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,10 @@ class InspectionCommandServiceTest {
     DefectReportPort reportPort;
     @Mock
     InspectionStoragePort storagePort;
+    @Mock
+    ThumbnailService thumbnailService;
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     InspectionCommandService service;
 
@@ -73,7 +78,8 @@ class InspectionCommandServiceTest {
                 .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
                 .build();
         service = new InspectionCommandService(
-                inspectionRepository, outboxEventRepository, assetPort, reportPort, storagePort, mapper);
+                inspectionRepository, outboxEventRepository, assetPort, reportPort, storagePort, mapper,
+                thumbnailService, eventPublisher);
     }
 
     private CreateInspectionCommand.BladeSpec blade(long bladeId, int le, int ps, int ss, int te) {
