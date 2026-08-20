@@ -365,11 +365,13 @@ def image_url(image_path: str) -> str:
 
     IMAGE_BASE_URL 미설정이면 ''를 돌려주고, 렌더러는 캡션 텍스트만 남긴다
     (이미지 링크가 전부 깨져 보이는 것보다 낫다).
-    RDS 전환 후 image_path 에 전체 URL이 들어오는 경우도 그대로 통과시킨다.
+    image_path 가 이미 완전한 주소면 그대로 통과시킨다. s3:// 를 포함하는 이유는,
+    BE 가 보고서 본문의 s3:// 를 파싱해 presigned URL 로 바꿔 내려주기 때문이다
+    (report-agent 는 presigned 를 만들지 않는다 — 만료가 있어 본문에 박아둘 수 없다).
     """
     if not image_path:
         return ""
-    if image_path.startswith(("http://", "https://", "file://")):
+    if image_path.startswith(("http://", "https://", "file://", "s3://")):
         return image_path
     if not IMAGE_BASE_URL:
         return ""
