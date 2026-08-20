@@ -4,6 +4,7 @@ import "./TurbineMainBar.css";
 function TurbineMainBar({
   selectedPlant,
   selectedTurbine,
+  turbineDetail,
   onRunSimulation,
 }) {
   const plantName = selectedPlant?.title || selectedPlant?.name || "장흥 발전소";
@@ -14,6 +15,7 @@ function TurbineMainBar({
       <Turbine3DSimulation
         plantName={plantName}
         turbineName={turbineName}
+        turbineDetail={turbineDetail}
         onRunSimulation={onRunSimulation}
       />
     </div>

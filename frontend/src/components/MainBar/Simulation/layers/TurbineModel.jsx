@@ -10,7 +10,7 @@ function TurbineModel({
   isRunning,
   bladeSpeed,
   bladeGroupName = "Plane",
-  bladeMeshNames = ["Blade_01001", "Blade_02001", "Blade_03001"],
+  blades = [],
   position = [0, -3.6, 0],
   scale = 2,
   stopSpeed = 0.025,
@@ -50,19 +50,53 @@ function TurbineModel({
         console.log("회전 대상 Plane 찾음:", object.name, object.type);
       }
 
-      if (object.isMesh && bladeMeshNames.includes(object.name)) {
+      if (object.isMesh && object.name.startsWith("Blade_")) {
         bladeMeshRefs.current.push(object);
-        console.log("클릭 대상 블레이드 찾음:", object.name);
       }
     });
+    
+    bladeMeshRefs.current.sort(
+      (a, b) =>
+        a.name.localeCompare(b.name)
+    );
+
+    const sortedBlades = [...blades].sort(
+      (a, b) =>
+        String(a.tag).localeCompare(
+          String(b.tag)
+        )
+    );
+
+    bladeMeshRefs.current.forEach(
+      (mesh, index) => {
+        const blade = sortedBlades[index];
+
+        if (!blade) {
+          return;
+        }
+
+        mesh.userData.bladeId =
+          blade.id;
+
+        mesh.userData.bladeTag =
+          blade.tag;
+
+        console.log(
+          "3D 블레이드 연결:",
+          {
+            mesh: mesh.name,
+            bladeId: blade.id,
+            tag: blade.tag,
+          }
+        );
+      }
+    );
 
     console.log(
       "클릭 가능한 블레이드:",
       bladeMeshRefs.current.map((mesh) => mesh.name)
     );
-    const zeroBlade = bladeMeshRefs.current.find(
-      (mesh) => mesh.name === bladeMeshNames[0]
-    );
+    const zeroBlade = bladeMeshRefs.current[0];
 
     if (bladeGroupRef.current && zeroBlade) {
       scene.updateMatrixWorld(true);
@@ -93,7 +127,7 @@ function TurbineModel({
     }
 
     console.log("============================================");
-  }, [scene, bladeGroupName]);
+  }, [ scene, bladeGroupName, blades ])
 
   const restoreInitialBladeGroup = () => {
     if (!bladeGroupRef.current) return;
@@ -189,7 +223,10 @@ function TurbineModel({
     bladeBox.getCenter(bladeCenter);
 
     onBladeClick?.({
-      name: event.object.name,
+      bladeId:
+        event.object.userData.bladeId,
+      tag:
+        event.object.userData.bladeTag,
       position: bladeCenter,
     });
   };

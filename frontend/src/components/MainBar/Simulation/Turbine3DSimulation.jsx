@@ -97,6 +97,7 @@ function calculateTurbineStatus(windSpeed, isRunning) {
 function Turbine3DSimulation({
   plantName = "장흥 발전소",
   turbineName = "터빈 A",
+  turbineDetail,
   onRunSimulation,
 }) {
   /*
@@ -111,6 +112,11 @@ function Turbine3DSimulation({
   const [bladeZoomTarget, setBladeZoomTarget] = useState(null);
   const [selectedBladeName, setSelectedBladeName] = useState("");
   const [isBladePopupOpen, setIsBladePopupOpen] = useState(false);
+
+  const [
+    selectedBladeId,
+    setSelectedBladeId,
+  ] = useState(null);
 
   const controlsRef = useRef(null);
 
@@ -177,6 +183,7 @@ function Turbine3DSimulation({
         setIsBladeZoomed(false);
         setBladeZoomTarget(null);
         setSelectedBladeName("");
+        setSelectedBladeId(null);
         setIsBladePopupOpen(false);
       }
 
@@ -269,26 +276,23 @@ function Turbine3DSimulation({
 
           <TurbineModel
             modelPath="/models/turbine_fix.glb"
-            /*
-             * 수동 정지뿐 아니라 시동 풍속 미달 및
-             * 차단 풍속에서도 회전하지 않도록 처리합니다.
-             */
-            isRunning={isRunning && bladeSpeed > 0}
+            isRunning={
+              isRunning && bladeSpeed > 0
+            }
             bladeSpeed={bladeSpeed}
             bladeGroupName="Plane"
-            bladeMeshNames={[
-              "Blade_01001",
-              "Blade_02001",
-              "Blade_03001",
-            ]}
+            blades={
+              turbineDetail?.blades || []
+            }
             position={[0, -3.6, 0]}
             scale={2}
             stopSpeed={0.1}
             onBladeClick={(bladeData) => {
-              console.log("클릭한 블레이드:", bladeData.name);
+              console.log( "클릭한 블레이드:", bladeData);
 
               setBladeZoomTarget(bladeData.position);
-              setSelectedBladeName(bladeData.name);
+              setSelectedBladeName(bladeData.tag);
+              setSelectedBladeId(bladeData.bladeId);
               setIsBladePopupOpen(false);
               setIsBladeZoomed(true);
             }}
@@ -337,6 +341,7 @@ function Turbine3DSimulation({
               setIsBladeZoomed(false);
               setBladeZoomTarget(null);
               setSelectedBladeName("");
+              setSelectedBladeId(null);
               setIsBladePopupOpen(false);
             }}
             aria-label="블레이드 확대 닫기"
@@ -347,8 +352,14 @@ function Turbine3DSimulation({
 
         {isBladePopupOpen && (
           <BladeInfoPopup
-            selectedBladeName={selectedBladeName}
-            onClose={() => setIsBladePopupOpen(false)}
+            bladeId={selectedBladeId}
+            bladeTag={selectedBladeName}
+            selectedBladeName={
+              selectedBladeName
+            }
+            onClose={() =>
+              setIsBladePopupOpen(false)
+            }
           />
         )}
 

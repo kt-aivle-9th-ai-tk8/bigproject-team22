@@ -8,6 +8,7 @@ function MainBar({
   turbines = [],
   selectedPlant,
   selectedTurbine,
+  turbineDetail,
   isPlantsLoading,
   plantsError,
   isWindFarmDetailLoading,
@@ -39,6 +40,7 @@ function MainBar({
         <TurbineMainBar
           selectedPlant={selectedPlant}
           selectedTurbine={selectedTurbine}
+          turbineDetail={turbineDetail}
         />
       )}
     </aside>
