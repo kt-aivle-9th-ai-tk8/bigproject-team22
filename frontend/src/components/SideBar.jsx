@@ -1,6 +1,7 @@
 import MapSideBar from "./SideBar/MapSideBar";
 import PlantSideBar from "./SideBar/PlantSideBar";
 import TurbineSideBar from "./SideBar/TurbineSideBar";
+import InfoFooter from "./SideBar/InfoFooter/InfoFooter";
 
 function SideBar({
   mode,
@@ -54,6 +55,8 @@ function SideBar({
           isInspectionReportCreating={isInspectionReportCreating}
         />
       )}
+
+      <InfoFooter />
     </aside>
   );
 }

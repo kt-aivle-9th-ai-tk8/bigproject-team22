@@ -50,6 +50,16 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    /**
+     * 소속 부서(ERD 의 users.department, V6 에서 추가된 컬럼).
+     * <p>
+     * 가입 시 <b>선택</b>으로 받는다 — 보내지 않았거나 공백이면 null 이다(값을 지어내지 않는다).
+     * 이 컬럼이 생긴 뒤 한동안 가입 경로에 연결되지 않아, 그 시기에 만들어진 계정은 모두 null 이다.
+     * 마이페이지가 이 값을 그대로 보여준다.
+     */
+    @Column(length = 50)
+    private String department;
+
     // @JdbcTypeCode(VARCHAR): Hibernate 6.3+ 가 MySQL 네이티브 ENUM 컬럼을 생성하지 않도록 강제.
     // 표준 VARCHAR 로 저장해 DB 이식성(PostgreSQL 등)·구버전 호환·enum 값 추가 시 무마이그레이션 확보.
     @Enumerated(EnumType.STRING)
@@ -101,7 +111,18 @@ public class User {
     }
 
     public static User create(String employeeId, String encodedPassword, String userName, String phone, Role role) {
-        return new User(employeeId, encodedPassword, userName, phone, role);
+        return create(employeeId, encodedPassword, userName, phone, role, null);
+    }
+
+    /**
+     * 부서까지 받아 만든다. 부서는 선택값이라 인자를 <b>맨 뒤</b>에 둔다 — 기존 5-인자 호출과 자리를
+     * 다투지 않아 인자 순서를 헷갈릴 여지가 없다.
+     */
+    public static User create(String employeeId, String encodedPassword, String userName, String phone,
+                              Role role, String department) {
+        User user = new User(employeeId, encodedPassword, userName, phone, role);
+        user.department = department;
+        return user;
     }
 
     /** 로그인 차단 여부. 자동 잠금과 관리자 차단을 구분하지 않고 상태 하나로 판단한다. */

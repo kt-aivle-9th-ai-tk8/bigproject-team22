@@ -10,7 +10,6 @@ function SignupScreen() {
     username: "",
     department: "",
     phone: "",
-    email: "",
   });
 
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -72,9 +71,9 @@ function SignupScreen() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { employeeId, password, confirmPassword, username, department, phone, email } = formData;
+    const { employeeId, password, confirmPassword, username, department, phone } = formData;
 
-    if (!employeeId || !password || !confirmPassword || !username || !department || !phone || !email) {
+    if (!employeeId || !password || !confirmPassword || !username || !department || !phone) {
       alert("모든 정보를 입력해주세요.");
       return;
     }
@@ -93,6 +92,7 @@ function SignupScreen() {
       employee_id: employeeId,
       password: password,
       user_name: username,
+      department: department,
       phone: phone,
     };
 
@@ -192,16 +192,6 @@ function SignupScreen() {
             />
           </div>
 
-          <div className="signup-input-group">
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="이메일"
-            />
-          </div>
-
           {/* 규제 가이드 준수: 필수 약관 스크롤 동의 영역 */}
           <div className="terms-accordion-container">
             <div
@@ -231,7 +221,7 @@ function SignupScreen() {
                     <tbody>
                       <tr>
                         <td>회원가입 및 서비스 제공</td>
-                        <td>사번, 비밀번호, 성명, 부서, 연락처, 이메일</td>
+                        <td>사번, 비밀번호, 성명, 부서, 연락처</td>
                         <td>회원 탈퇴 시까지</td>
                       </tr>
                     </tbody>
