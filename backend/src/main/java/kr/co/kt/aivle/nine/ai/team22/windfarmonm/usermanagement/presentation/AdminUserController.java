@@ -1,6 +1,8 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.presentation;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditAction;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditEvent;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.response.ApiResponse;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.web.ApiIds;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.AdminUserManagementService;
@@ -9,6 +11,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.presentation.dto
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.presentation.dto.AdminUsersResponse;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.presentation.dto.UpdateUserRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,6 +36,7 @@ import java.util.List;
 public class AdminUserController {
 
     private final AdminUserManagementService adminUserManagementService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 사용자 목록 조회: GET /api/admin/users (role 로 필터링, q 로 사번·이름 검색)
@@ -45,6 +49,10 @@ public class AdminUserController {
             @RequestParam(name = "role", required = false) Role role,
             @RequestParam(name = "q", required = false) String keyword) {
         List<AdminUserDetail> users = adminUserManagementService.getUsers(role, keyword);
+        // 조회는 개인정보 '처리'라 접속기록 대상이다. 서비스가 아니라 여기서 남기는 이유는
+        // getUsers 가 readOnly 트랜잭션이라 그 안에서는 감사 행이 flush 되지 않기 때문이다.
+        // 읽기라 업무 변경과 원자적으로 묶일 것도 없어, 트랜잭션 밖이 오히려 맞다.
+        eventPublisher.publishEvent(AuditEvent.of(AuditAction.USER_LIST_VIEW, "user", null));
         return ResponseEntity.ok(ApiResponse.success(AdminUsersResponse.from(users)));
     }
 

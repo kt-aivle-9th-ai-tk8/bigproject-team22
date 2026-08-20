@@ -6,9 +6,12 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.port.Sessi
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.User;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.UserRepository;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditAction;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditEvent;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +23,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final SessionManager sessionManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 사번/비밀번호 확인 후 로그인. 실패 시 실패 카운트를 누적하고, 임계치 도달 시 계정이 정지된다.
@@ -31,6 +35,11 @@ public class AuthService {
      * {@code noRollbackFor}: 비밀번호 불일치 시 던지는 {@link BusinessException}(런타임 예외)이
      * 트랜잭션을 롤백시키면 {@code increaseLoginFailCount()} 증가분과 그에 따른 상태 전이가 사라져
      * 계정 잠금이 동작하지 않는다. 따라서 이 예외에 한해 롤백하지 않고 커밋한다.
+     * 감사 기록도 이 트랜잭션에 실려 함께 커밋된다(실패 기록이 사라지지 않는다).
+     * <p>
+     * 접속기록의 주체는 아직 세션이 없으므로 사용자 id 를 직접 실어 발행한다. <b>사번이 실재하지 않는
+     * 시도는 남기지 않는다</b> — audit_log.user_id 가 NOT NULL 이고 존재하지 않는 계정에 붙일 주체가
+     * 없기 때문이다(그런 시도의 탐지는 접속기록이 아니라 WAF/액세스 로그의 몫이다).
      */
     @Transactional(noRollbackFor = BusinessException.class)
     public LoginResult login(LoginCommand command) {
@@ -40,11 +49,13 @@ public class AuthService {
         // 잠김을 별도 코드(A003)로 알리는 것은 FE 요구사항이다(사용자에게 관리자 문의를 안내해야 함).
         // 계정 열거 관점에서는 미존재/불일치와 구분되지 않는 편이 안전하지만, 화면 요구가 우선한다.
         if (user.isLocked()) {
+            publishLoginFailed(user);
             throw new BusinessException(ErrorCode.ACCOUNT_LOCKED);
         }
 
         if (!passwordEncoder.matches(command.password(), user.getPassword())) {
             user.increaseLoginFailCount();
+            publishLoginFailed(user);
             throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
         }
 
@@ -56,10 +67,16 @@ public class AuthService {
         //  ② 그래야 A004(403)가 '신원은 확인됐으나 아직 미승인'이라는 의미로 정확해진다.
         // 승인되면 changeRole 로 MANAGER/ADMIN 으로 승격된다(status 축과 별개).
         if (user.getRole() == Role.GUEST) {
+            publishLoginFailed(user); // 신원은 맞지만 접근이 거부된 시도다 — 기록 대상이다
             throw new BusinessException(ErrorCode.ACCOUNT_PENDING);
         }
 
+        eventPublisher.publishEvent(AuditEvent.by(user.getId(), AuditAction.LOGIN, null, null));
         return LoginResult.from(user);
+    }
+
+    private void publishLoginFailed(User user) {
+        eventPublisher.publishEvent(AuditEvent.by(user.getId(), AuditAction.LOGIN_FAILED, null, null));
     }
 
     /**

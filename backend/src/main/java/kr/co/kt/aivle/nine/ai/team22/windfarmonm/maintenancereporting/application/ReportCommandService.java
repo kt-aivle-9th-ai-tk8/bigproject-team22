@@ -7,6 +7,8 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.applicatio
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.Report;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.ReportRepository;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.maintenancereporting.domain.ReportType;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditAction;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditEvent;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,9 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ReportCommandService {
+
+    /** audit_log.target_table 에 남길 대상 테이블명. */
+    private static final String TARGET_REPORT = "report";
 
     private final ReportRepository reportRepository;
     private final ReportQueryService reportQueryService;
@@ -61,6 +66,7 @@ public class ReportCommandService {
                 userId);
         try {
             Long reportId = reportRepository.save(report).getId();
+            eventPublisher.publishEvent(AuditEvent.by(userId, AuditAction.REPORT_CREATE, TARGET_REPORT, reportId));
             // 커밋 후 리스너가 생성 파이프라인을 돈다(AFTER_COMMIT). 커밋 전이면 콜백이 행보다 먼저 도착한다.
             eventPublisher.publishEvent(new ReportGenerationRequested(reportId));
             return reportId;
@@ -88,7 +94,10 @@ public class ReportCommandService {
         if (context != null && !context.isBlank()) {
             report.editContext(context);
         }
-        return reportRepository.save(report).getId();
+        Long reportId = reportRepository.save(report).getId();
+        // 점검 생성에 딸린 자리 잡기지만 보고서 행이 생긴 것은 사실이라 이력에 남긴다(주체는 점검을 만든 사람).
+        eventPublisher.publishEvent(AuditEvent.by(createdBy, AuditAction.REPORT_CREATE, TARGET_REPORT, reportId));
+        return reportId;
     }
 
     /**
@@ -110,6 +119,7 @@ public class ReportCommandService {
     public ReportResult updateContext(Long userId, boolean admin, Long reportId, String context) {
         Report report = reportQueryService.readViewable(userId, admin, reportId);
         report.editContext(context);
+        eventPublisher.publishEvent(AuditEvent.by(userId, AuditAction.REPORT_UPDATE, TARGET_REPORT, reportId));
         return ReportResult.from(report);
     }
 
@@ -117,6 +127,7 @@ public class ReportCommandService {
     public void delete(Long userId, boolean admin, Long reportId) {
         Report report = reportQueryService.readViewable(userId, admin, reportId);
         reportRepository.delete(report);
+        eventPublisher.publishEvent(AuditEvent.by(userId, AuditAction.REPORT_DELETE, TARGET_REPORT, reportId));
     }
 
     private void validatePeriod(CreateReportCommand command) {
