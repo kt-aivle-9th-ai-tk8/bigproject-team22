@@ -104,7 +104,8 @@ export const useTurbineReports = ({
           : Array.isArray(responseData?.content)
             ? responseData.content
             : [];
-
+        
+        console.log("reports: ", reports)
 
         const nextReportItems = reports
           .filter((report) => {
@@ -172,12 +173,6 @@ export const useTurbineReports = ({
 
 
         setReportItems(
-          nextReportItems
-        );
-
-
-        console.log(
-          "터빈 보고서 목록:",
           nextReportItems
         );
       } catch (error) {

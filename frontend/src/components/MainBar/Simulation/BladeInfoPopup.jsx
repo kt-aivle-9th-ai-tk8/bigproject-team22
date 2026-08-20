@@ -393,7 +393,7 @@ function BladeInfoPopup({
 
               <div className="blade-image-preview-canvas">
                 <img
-                  src={selectedImage.thumbnailUrl}
+                  src={selectedImage.imageUrl}
                   alt={`${selectedBladeName} ${selectedImage.bladePosition}`}
                   onLoad={(event) => {
                     const {
