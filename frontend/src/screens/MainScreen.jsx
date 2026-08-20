@@ -233,9 +233,16 @@ function MainScreen() {
     refreshInterval: 5000,
 
     onGenerated: (report) => {
-      alert(
-        `${report?.title || "점검 보고서"} 생성이 완료되었습니다.`
-      );
+      const displayTitle = String(
+        report?.title || "점검 보고서"
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+
+      setGeneratedReport({
+        ...report,
+        displayTitle,
+      });
     },
   });
 
