@@ -15,16 +15,17 @@ ERD상 각 테이블은 코드값을 직접 갖지 않고 FK만 갖는다 → _l
   defect.blade_id       → blade.blade_tag / blade.turbine_id → turbine.turbine_code
 점검 대상 터빈은 inspection.turbine_id 로 확정되므로 결함 0건이어도 알 수 있다.
 
-배포(RDS) 전환: 어디서 읽어오는지는 app.core.datasource 가 테이블 단위로 정한다.
-DATA_SOURCE=="rds" 면 turbine·blade·wind_farm 은 RDS 에서, report·inspection·defect 는
-(아직 RDS 스키마에 없으므로) CSV 에서 온다. 어느 쪽이든 컬럼은 동일하므로 아래 집계는 불변.
+데이터 출처는 app.core.datasource 가 테이블 단위로 정한다. report·inspection·defect 는
+_RDS_TABLES 에 등록돼 있어 RDS 에서 읽는다(예전에는 CSV 였다). 참조표(turbine·blade·wind_farm)만
+캐시되고 사실 테이블은 매번 조회된다 — 여러 테이블의 시점 일관성은 service 의 snapshot()
+트랜잭션이 보장한다(operation·anomaly 도 같은 방식).
 
 (공유 계약) 반환 dict의 "event" 키는 공유 service.py 가 found 판정에 쓰는 자리다.
 defect 에서는 그 자리에 report 1건(+소속 점검 요약)이 들어간다.
 """
 import pandas as pd
 
-from app.core.datasource import cached, load_table, turbine_index
+from app.core.datasource import load_table, turbine_index
 
 # 검출 신뢰도 하한. None이면 필터 없음(현재 데이터 최저 0.684).
 # 임계 정책이 정해지면 이 값만 바꾸면 모든 집계에 일괄 반영된다.
@@ -58,15 +59,17 @@ def _load():
     defect 에는 turbine_id·turbine_code·blade_tag 가 붙는다. 아래 집계 함수들은
     이 컬럼들이 처음부터 있었던 것처럼 그대로 쓴다(조인 위치는 여기 한 곳뿐).
 
-    캐시는 datasource 가 갖는다 — 여기서 따로 들고 있으면 원본이 만료돼 새로 읽혀도
-    조인 결과는 낡은 채로 남는다(RDS 에서는 그게 곧 옛 데이터로 만든 보고서다).
+    조인 결과를 캐시하지 않는다. cached() 는 TTL 이 없어(프로세스 수명) 사실 테이블을 담으면
+    컨테이너 기동 이후에 만들어진 점검·결함이 영영 보이지 않는다 — 실제로 그 때문에 실재하는
+    보고서가 404 로 떨어졌다(#153). 시점 일관성은 캐시가 아니라 service 의 snapshot() 트랜잭션이
+    맡는다. 참조표(turbine_index)는 보고서 도중 바뀌지 않으므로 datasource 가 캐시해도 안전하다.
 
     반환: (report, inspection, defect)
     """
     return (
         load_table("report"),
-        cached("defect:inspection_joined", _join_inspection),
-        cached("defect:defect_joined", _join_defect),
+        _join_inspection(),
+        _join_defect(),
     )
 
 
