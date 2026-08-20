@@ -1,7 +1,7 @@
 import MapSideBar from "./SideBar/MapSideBar";
 import PlantSideBar from "./SideBar/PlantSideBar";
 import TurbineSideBar from "./SideBar/TurbineSideBar";
-import InfoFooter from "./InfoFooter/InfoFooter";
+import InfoFooter from "./SideBar/InfoFooter/InfoFooter";
 
 function SideBar({
   mode,
