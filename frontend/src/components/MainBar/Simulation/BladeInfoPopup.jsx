@@ -393,7 +393,7 @@ function BladeInfoPopup({
 
               <div className="blade-image-preview-canvas">
                 <img
-                  src={selectedImage.imageUrl}
+                  src={selectedImage.thumbnailUrl}
                   alt={`${selectedBladeName} ${selectedImage.bladePosition}`}
                   onLoad={(event) => {
                     const {
@@ -418,32 +418,61 @@ function BladeInfoPopup({
 
                 {imageSize.width > 0 &&
                   imageSize.height > 0 && (
-                    <svg
-                      className="blade-defect-overlay"
-                      viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}
-                      preserveAspectRatio="none"
-                    >
-                      {selectedImage.defects?.map(
-                        (defect, index) => (
-                          <rect
-                            key={defect.id ?? index}
-                            x={Number(
-                              defect.bbox_x
-                            )}
-                            y={Number(
-                              defect.bbox_y
-                            )}
-                            width={Number(
-                              defect.bbox_w
-                            )}
-                            height={Number(
-                              defect.bbox_h
-                            )}
-                            className="blade-defect-bbox"
-                          />
-                        )
-                      )}
-                    </svg>
+                    <>
+                      <svg
+                        className="blade-defect-overlay"
+                        viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}
+                        preserveAspectRatio="none"
+                      >
+                        {selectedImage.defects?.map(
+                          (defect, index) => (
+                            <rect
+                              key={defect.id ?? index}
+                              x={Number(defect.bbox_x)}
+                              y={Number(defect.bbox_y)}
+                              width={Number(defect.bbox_w)}
+                              height={Number(defect.bbox_h)}
+                              className="blade-defect-bbox"
+                            />
+                          )
+                        )}
+                      </svg>
+
+                      <div className="blade-defect-label-overlay">
+                        {selectedImage.defects?.map(
+                          (defect, index) => {
+                            const bboxRight =
+                              Number(defect.bbox_x) +
+                              Number(defect.bbox_w);
+
+                            const bboxBottom =
+                              Number(defect.bbox_y) +
+                              Number(defect.bbox_h);
+
+                            return (
+                              <div
+                                key={defect.id ?? index}
+                                className="blade-defect-label"
+                                style={{
+                                  left: `${
+                                    (bboxRight /
+                                      imageSize.width) *
+                                    100
+                                  }%`,
+                                  top: `${
+                                    (bboxBottom /
+                                      imageSize.height) *
+                                    100
+                                  }%`,
+                                }}
+                              >
+                                {defect.type}, {defect.severity}
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    </>
                   )}
               </div>
 
