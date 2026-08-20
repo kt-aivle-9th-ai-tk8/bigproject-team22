@@ -75,6 +75,14 @@ function BladeInfoPopup({
     bladeId,
   });
 
+  const [
+    imageSize,
+    setImageSize,
+  ] = useState({
+    width: 0,
+    height: 0,
+  });
+
   const [startDate, setStartDate] = useState(getDateStringBefore(30));
   const [endDate, setEndDate] = useState(getTodayString());
   const [selectedPosition, setSelectedPosition] = useState("ALL");
@@ -149,10 +157,10 @@ function BladeInfoPopup({
   const handleHistoryClick = (
     historyItem
   ) => {
-    console.log(
-      "블레이드 점검 이력 클릭:",
-      historyItem
-    );
+    setImageSize({
+      width: 0,
+      height: 0,
+    });
 
     setSelectedImage(
       historyItem
@@ -385,39 +393,58 @@ function BladeInfoPopup({
 
               <div className="blade-image-preview-canvas">
                 <img
-                  src={selectedImage.imageUrl}
+                  src={selectedImage.thumbnailUrl}
                   alt={`${selectedBladeName} ${selectedImage.bladePosition}`}
                   onLoad={(event) => {
+                    const {
+                      naturalWidth,
+                      naturalHeight,
+                    } = event.currentTarget;
+
+                    setImageSize({
+                      width: naturalWidth,
+                      height: naturalHeight,
+                    });
+
                     console.log(
-                      "확대 이미지 원본 크기:",
+                      "현재 이미지 원본 크기:",
                       {
-                        width:
-                          event.currentTarget.naturalWidth,
-                        height:
-                          event.currentTarget.naturalHeight,
+                        width: naturalWidth,
+                        height: naturalHeight,
                       }
                     );
                   }}
                 />
 
-                <svg
-                  className="blade-defect-overlay"
-                  viewBox="0 0 1 1"
-                  preserveAspectRatio="none"
-                >
-                  {selectedImage.defects?.map(
-                    (defect, index) => (
-                      <rect
-                        key={defect.id ?? index}
-                        x={Number(defect.bbox_x)}
-                        y={Number(defect.bbox_y)}
-                        width={Number(defect.bbox_w)}
-                        height={Number(defect.bbox_h)}
-                        className="blade-defect-bbox"
-                      />
-                    )
+                {imageSize.width > 0 &&
+                  imageSize.height > 0 && (
+                    <svg
+                      className="blade-defect-overlay"
+                      viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}
+                      preserveAspectRatio="none"
+                    >
+                      {selectedImage.defects?.map(
+                        (defect, index) => (
+                          <rect
+                            key={defect.id ?? index}
+                            x={Number(
+                              defect.bbox_x
+                            )}
+                            y={Number(
+                              defect.bbox_y
+                            )}
+                            width={Number(
+                              defect.bbox_w
+                            )}
+                            height={Number(
+                              defect.bbox_h
+                            )}
+                            className="blade-defect-bbox"
+                          />
+                        )
+                      )}
+                    </svg>
                   )}
-                </svg>
               </div>
 
               <div className="blade-image-preview-info">

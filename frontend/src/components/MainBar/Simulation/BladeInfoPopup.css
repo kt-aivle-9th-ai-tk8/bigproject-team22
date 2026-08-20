@@ -430,14 +430,6 @@
   border-radius: 10px;
 }
 
-.blade-image-preview img {
-  display: block;
-
-  max-width: 80vw;
-  max-height: 75vh;
-
-  object-fit: contain;
-}
 
 .blade-image-preview-close {
   position: absolute;
