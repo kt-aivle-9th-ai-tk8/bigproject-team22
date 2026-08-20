@@ -177,13 +177,13 @@ const UserScreen = ({ onClose }) => {
         <div className="user-modal-header">
           <h2 className="user-modal-title">내 정보 관리</h2>
           <div className="header-icon-group">
-            <button
+            {/* <button
               className={`icon-btn ${isEditing ? "active" : ""}`}
               onClick={handleToggleEdit}
               title={isEditing ? "수정 취소" : "정보 수정"}
             >
               ✏️
-            </button>
+            </button> */}
             <button className="icon-btn" onClick={handleCloseModal} title="닫기">
               ✕
             </button>
@@ -252,7 +252,7 @@ const UserScreen = ({ onClose }) => {
           </div>
 
           <div className="info-row">
-            <span className="info-label">이메일</span>
+            {/* <span className="info-label">이메일</span>
             {isEditing ? (
               <input
                 type="email"
@@ -264,7 +264,7 @@ const UserScreen = ({ onClose }) => {
               />
             ) : (
               <span className="info-value">{userData.email}</span>
-            )}
+            )} */}
           </div>
 
           <div className="info-row">
@@ -282,7 +282,7 @@ const UserScreen = ({ onClose }) => {
             )}
           </div>
 
-          <div
+          {/* <div
             className="info-row password-change-row"
             onClick={() => setIsPasswordModalOpen(true)}
             style={{ cursor: "pointer" }}
@@ -292,7 +292,7 @@ const UserScreen = ({ onClose }) => {
               <span className="info-value">********</span>
               <span className="chevron-icon">❯</span>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* 수정 모드 전용 저장 버튼 */}
