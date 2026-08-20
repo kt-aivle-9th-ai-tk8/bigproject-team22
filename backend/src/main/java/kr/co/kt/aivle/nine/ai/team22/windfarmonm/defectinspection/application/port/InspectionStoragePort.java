@@ -2,7 +2,9 @@ package kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.application.p
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.PartSide;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 점검 이미지 저장소(S3) 포트. 키 규약({@code {prefix}/inspections/{id}/{bladeId}/{side}/{seq}.jpg})은
@@ -25,6 +27,21 @@ public interface InspectionStoragePort {
 
     /** S3 URI 가 가리키는 JSON 객체를 읽는다(추론 결과 outputLocation). */
     String readJson(String s3Uri);
+
+    /**
+     * 점검 1건에서 썸네일이 <b>없는</b> 원본마다 썸네일을 만든다(멱등 — 이미 있으면 건너뛴다).
+     * 장당 실패는 건너뛰고 계속한다.
+     *
+     * @return 새로 만든 장수
+     */
+    int createMissingThumbnails(long inspectionId);
+
+    /**
+     * 주어진 점검들에서 <b>실재하는</b> 썸네일만 찾아 {@code 원본 키 → 썸네일 키} 로 돌려준다.
+     * 조회 시 "썸네일이 있으면 그것을, 없으면 원본을" 고르는 데 쓴다 — 장마다 존재를 묻는 대신
+     * 점검 프리픽스를 한 번씩 LIST 해서 판정한다.
+     */
+    Map<String, String> findThumbnailKeys(Collection<Long> inspectionIds);
 
     /** 발급된 업로드 대상(객체 키 + presigned URL). */
     record UploadTarget(String key, String url) {

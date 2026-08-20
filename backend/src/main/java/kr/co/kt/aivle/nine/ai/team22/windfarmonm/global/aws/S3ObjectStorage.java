@@ -130,6 +130,35 @@ public class S3ObjectStorage {
         }
     }
 
+    /** 객체를 바이트로 읽는다. 썸네일 생성이 원본 이미지를 가져올 때 쓴다. */
+    public byte[] readBytes(String key) {
+        requireConfigured();
+        try {
+            GetObjectRequest get = GetObjectRequest.builder()
+                    .bucket(properties.s3().bucket())
+                    .key(key)
+                    .build();
+            return client().getObjectAsBytes(get).asByteArray();
+        } catch (RuntimeException e) {
+            throw storageFailure("객체 읽기 실패 key={}", key, e);
+        }
+    }
+
+    /** 바이트를 객체로 저장한다(썸네일 등 파생물). */
+    public void writeBytes(String key, byte[] body, String contentType) {
+        requireConfigured();
+        try {
+            PutObjectRequest put = PutObjectRequest.builder()
+                    .bucket(properties.s3().bucket())
+                    .key(key)
+                    .contentType(contentType)
+                    .build();
+            client().putObject(put, RequestBody.fromBytes(body));
+        } catch (RuntimeException e) {
+            throw storageFailure("객체 저장 실패 key={}", key, e);
+        }
+    }
+
     /** 문자열을 객체로 저장한다(테스트 픽스처/디버깅용 경로). */
     public void writeUtf8(String key, String body, String contentType) {
         requireConfigured();
