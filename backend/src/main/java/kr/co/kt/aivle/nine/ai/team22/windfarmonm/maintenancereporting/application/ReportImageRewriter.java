@@ -30,7 +30,10 @@ public class ReportImageRewriter {
     /**
      * 본문의 S3 이미지 마커를 서명된 URL 로 바꾼 사본을 돌려준다.
      * <p>
-     * 같은 키가 여러 번 나와도 서명은 한 번만 한다(보고서 하나에 같은 사진이 반복 인용될 수 있다).
+     * 같은 키가 여러 번 나와도 포트 호출은 한 번뿐이다(보고서 하나에 같은 사진이 반복 인용될 수 있다).
+     * <b>실패(null)도 캐시한다</b> — {@code computeIfAbsent} 는 null 을 저장하지 않아, 그대로 쓰면
+     * 서명할 수 없는 URI 가 반복될 때마다 매번 다시 시도하고 경고 로그도 그만큼 쌓인다.
+     * <p>
      * 서명할 수 없는 링크(다른 버킷·저장소 미설정)는 <b>원문 그대로</b> 남긴다 — 조회를 실패시키는 대신
      * 그 이미지 한 장만 안 보이게 한다.
      */
@@ -44,7 +47,14 @@ public class ReportImageRewriter {
         while (matcher.find()) {
             String alt = matcher.group(1);
             String s3Uri = matcher.group(2);
-            String url = presignedByUri.computeIfAbsent(s3Uri, imagePort::presignS3Uri);
+            // computeIfAbsent 는 null 을 담지 않아 실패가 캐시되지 않는다 — containsKey 로 직접 다룬다.
+            String url;
+            if (presignedByUri.containsKey(s3Uri)) {
+                url = presignedByUri.get(s3Uri);
+            } else {
+                url = imagePort.presignS3Uri(s3Uri);
+                presignedByUri.put(s3Uri, url);
+            }
             String replacement = url == null ? matcher.group() : "![" + alt + "](" + url + ")";
             matcher.appendReplacement(rewritten, Matcher.quoteReplacement(replacement));
         }

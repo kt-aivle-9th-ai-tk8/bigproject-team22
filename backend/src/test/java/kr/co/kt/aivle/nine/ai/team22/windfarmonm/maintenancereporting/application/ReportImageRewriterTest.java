@@ -62,6 +62,18 @@ class ReportImageRewriterTest {
     }
 
     @Test
+    @DisplayName("서명에 실패한 URI 가 반복돼도 다시 시도하지 않는다 — 실패도 캐시한다")
+    void cachesFailedSignatureToo() {
+        given(imagePort.presignS3Uri("s3://other-bucket/a.jpg")).willReturn(null);
+
+        String result = rewriter.rewrite("![1](s3://other-bucket/a.jpg) ![2](s3://other-bucket/a.jpg)");
+
+        // 캐시하지 않으면 반복 횟수만큼 서명을 시도하고 경고 로그도 그만큼 쌓인다.
+        verify(imagePort, times(1)).presignS3Uri("s3://other-bucket/a.jpg");
+        assertThat(result).isEqualTo("![1](s3://other-bucket/a.jpg) ![2](s3://other-bucket/a.jpg)");
+    }
+
+    @Test
     @DisplayName("이미지가 아닌 링크와 다른 스킴은 건드리지 않는다")
     void leavesNonImageAndOtherSchemesAlone() {
         String source = "[문서](s3://bucket/a.pdf) 와 ![외부](https://cdn.example/a.jpg)";
