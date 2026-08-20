@@ -32,4 +32,9 @@ public record ReportResult(
                 report.getStatus(),
                 report.getGeneratedAt());
     }
+
+    /** 본문만 바꾼 사본. 조회 응답에서 이미지 마커를 presigned URL 로 치환할 때 쓴다(저장본은 불변). */
+    public ReportResult withContext(String newContext) {
+        return new ReportResult(id, windFarmId, turbineId, reportType, title, newContext, status, generatedAt);
+    }
 }
