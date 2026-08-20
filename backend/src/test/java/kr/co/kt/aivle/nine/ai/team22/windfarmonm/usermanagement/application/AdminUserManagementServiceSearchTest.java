@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,8 @@ class AdminUserManagementServiceSearchTest {
     UserAdminPort userAdminPort;
     @Mock
     UserAssignmentPort userAssignmentPort;
+    @Mock
+    ApplicationEventPublisher eventPublisher; // 감사 이벤트 발행 — 여기서는 발행 사실만 있으면 된다
     @InjectMocks
     AdminUserManagementService service;
 

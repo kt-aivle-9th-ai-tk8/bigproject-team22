@@ -1,6 +1,8 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application;
 
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditAction;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.event.AuditEvent;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessException;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.dto.AdminUserDetail;
@@ -10,6 +12,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.port
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.port.UserAssignmentPort;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.usermanagement.application.port.UserAssignmentPort.AssignedWindFarm;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,8 +30,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminUserManagementService {
 
+    /** audit_log.target_table 에 남길 대상 테이블명. */
+    private static final String TARGET_USER = "user";
+
     private final UserAdminPort userAdminPort;
     private final UserAssignmentPort userAssignmentPort;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 사용자 목록 조회. {@code role} 이 주어지면 해당 권한만, {@code keyword} 가 주어지면 사번 또는
@@ -76,6 +83,8 @@ public class AdminUserManagementService {
             }
             if (command.role() != account.role()) {
                 account = userAdminPort.changeRole(userId, command.role());
+                eventPublisher.publishEvent(
+                        AuditEvent.of(AuditAction.USER_ROLE_CHANGE, TARGET_USER, userId));
             }
         }
 
@@ -85,6 +94,8 @@ public class AdminUserManagementService {
             }
             if (command.status() != account.status()) {
                 account = userAdminPort.changeStatus(userId, command.status());
+                eventPublisher.publishEvent(
+                        AuditEvent.of(AuditAction.USER_STATUS_CHANGE, TARGET_USER, userId));
             }
         }
 
@@ -103,18 +114,24 @@ public class AdminUserManagementService {
                 account.isAdmin() ? null : userAssignmentPort.findByUserId(userId));
     }
 
-    /** 강제 로그아웃(세션 파기). */
-    @Transactional
     /**
      * 가입 거절. 승인 대기(GUEST) 계정만 삭제되며, 이미 승인된 계정은 400(U003)으로 거부된다 —
      * 삭제는 되돌릴 수 없고 그 계정이 남긴 기록의 작성자 추적이 끊기기 때문이다(정지로 다룰 것).
+     * <p>
+     * 감사 기록은 삭제 뒤에 남긴다. target_table/target_id 에는 FK 가 없어 대상 행이 사라져도 이력은
+     * 보존된다 — 지워진 계정이야말로 누가 언제 지웠는지가 남아야 한다.
      */
+    @Transactional
     public void rejectSignUp(Long userId) {
         userAdminPort.rejectSignUp(userId);
+        eventPublisher.publishEvent(AuditEvent.of(AuditAction.USER_REJECT, TARGET_USER, userId));
     }
 
+    /** 강제 로그아웃(세션 파기). 활성 세션이 없었더라도 '조치했다'는 사실은 남긴다. */
+    @Transactional
     public void forceLogout(Long userId) {
         userAdminPort.forceLogout(userId);
+        eventPublisher.publishEvent(AuditEvent.of(AuditAction.USER_FORCE_LOGOUT, TARGET_USER, userId));
     }
 
     /** 검색어 정규화. null/공백만 있는 값은 "필터 없음"(null)으로 취급한다. */

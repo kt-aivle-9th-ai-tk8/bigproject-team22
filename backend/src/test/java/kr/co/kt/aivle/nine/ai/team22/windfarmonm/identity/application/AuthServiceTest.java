@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -34,6 +35,8 @@ class AuthServiceTest {
     PasswordEncoder passwordEncoder;
     @Mock
     SessionManager sessionManager;
+    @Mock
+    ApplicationEventPublisher eventPublisher; // 감사 이벤트 발행 — 여기서는 발행 사실만 있으면 된다
     @InjectMocks
     AuthService authService;
 

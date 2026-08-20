@@ -4,6 +4,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.application.dt
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.application.dto.CreateInspectionResult;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.application.port.DefectReportPort;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.application.port.InspectionAssetPort;
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.application.event.InspectionUploadCompleted;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.application.port.InspectionStoragePort;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.Inspection;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.defectinspection.domain.InspectionRepository;
@@ -14,6 +15,7 @@ import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.BusinessExcept
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.shared.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -53,6 +55,8 @@ public class InspectionCommandService {
     private final DefectReportPort reportPort;
     private final InspectionStoragePort storagePort;
     private final ObjectMapper objectMapper;
+    private final ThumbnailService thumbnailService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 드론 점검 세션 생성: 세션당 결함 보고서 1건 + 터빈마다 점검 1행 + 블레이드·부위별 presigned PUT URL 발급.
@@ -162,8 +166,31 @@ public class InspectionCommandService {
                         payloadJson(inspectionId, image)))
                 .toList();
         outboxEventRepository.saveAll(events);
+        // 커밋 이후 썸네일 생성이 돌도록 알린다(AFTER_COMMIT). 실패해도 점검 진행에는 영향이 없다.
+        eventPublisher.publishEvent(new InspectionUploadCompleted(inspectionId));
         log.info("점검 {} 업로드 완료 — 이미지 {}건 아웃박스 기록.", inspectionId, events.size());
         return events.size();
+    }
+
+    /**
+     * 점검 1건의 썸네일 생성을 다시 건다(운영·보정용).
+     * <p>
+     * 업로드 완료 시 자동으로 돌지만, ① 그 기능이 없던 시절에 올라간 <b>기존 점검</b>과 ② 재시작으로 대기
+     * 큐가 날아간 경우를 회수할 경로가 필요하다. 이미 있는 썸네일은 건너뛰므로 <b>몇 번을 불러도 안전</b>하다.
+     * <p>
+     * 인가는 업로드 이미지 조회와 같은 규약이다 — 미담당/미존재는 404 로 은닉한다.
+     * 실제 생성은 비동기라 이 메서드는 접수만 하고 즉시 반환한다.
+     */
+    @Transactional(readOnly = true)
+    public void requestThumbnailGeneration(Long userId, boolean admin, Long inspectionId) {
+        Inspection inspection = inspectionRepository.findById(inspectionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INSPECTION_NOT_FOUND));
+        try {
+            assetPort.checkTurbineAccess(userId, admin, inspection.getTurbineId());
+        } catch (BusinessException e) {
+            throw new BusinessException(ErrorCode.INSPECTION_NOT_FOUND);
+        }
+        thumbnailService.generate(inspectionId);
     }
 
     private void validate(CreateInspectionCommand command) {
