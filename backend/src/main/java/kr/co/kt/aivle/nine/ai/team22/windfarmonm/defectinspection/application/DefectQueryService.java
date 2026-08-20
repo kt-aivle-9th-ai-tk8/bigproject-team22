@@ -51,9 +51,15 @@ public class DefectQueryService {
         for (Map.Entry<String, List<Defect>> entry : byImage.entrySet()) {
             List<Defect> defects = entry.getValue();
             Defect first = defects.getFirst();
+            // 썸네일이 아직 없어 원본 URL 을 두 자리에 함께 준다. 썸네일은 원본을 줄인 것이 아니라
+            // 별도 경로({partSide}/thumb/{seq}.jpg)의 다른 객체가 되므로(이슈 #131), 그때는 여기서
+            // 키를 따로 만들어 각각 서명하게 된다 — 두 필드를 미리 나눠 둔 이유다.
+            // 지금은 같은 키라 서명을 한 번만 한다(같은 키에 두 번 서명해도 같은 접근이 둘 생길 뿐이다).
+            String presignedUrl = entry.getKey() == null ? null : storagePort.presignImageView(entry.getKey());
             results.add(new DefectImageResult(
                     entry.getKey(),
-                    entry.getKey() == null ? null : storagePort.presignImageView(entry.getKey()),
+                    presignedUrl,
+                    presignedUrl,
                     defects.stream()
                             .map(d -> new DefectImageResult.DefectItem(d.getId(), d.getDefectType(), d.getSeverity(),
                                     d.getBboxX(), d.getBboxY(), d.getBboxW(), d.getBboxH(), d.getConfidence()))
