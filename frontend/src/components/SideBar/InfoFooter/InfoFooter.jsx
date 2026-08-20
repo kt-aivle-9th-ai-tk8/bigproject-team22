@@ -23,7 +23,7 @@ function InfoFooter() {
         </p>
       </div>
 
-      <div className="footer-links">
+      {/* <div className="footer-links">
         <span className="policy-highlight">
           이용약관
         </span>
@@ -35,7 +35,7 @@ function InfoFooter() {
         <span>
           사이트맵
         </span>
-      </div>
+      </div> */}
     </footer>
   );
 }

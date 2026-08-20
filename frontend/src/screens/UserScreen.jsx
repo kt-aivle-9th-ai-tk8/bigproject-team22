@@ -40,6 +40,7 @@ const UserScreen = ({ onClose }) => {
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem("userInfo");
+      console("유저 정보: ", storedUser);
       if (storedUser) {
         const parsed = JSON.parse(storedUser);
         const userInfo = {
