@@ -42,7 +42,7 @@ function PlantMainBar({
   if (turbines.length === 0) {
     return (
       <div className="map-main-bar">
-        등록된 터빈이 없습니다.
+        클러스터링을 보여주기 위한 더미 발전소 입니다.
       </div>
     );
   }
