@@ -27,10 +27,6 @@ function TurbineReportList({
   onSelectReport,
   onMoreClick,
 }) {
-  console.log(
-      "보고서 아이템",
-      items
-    );
   return (
     <div className="turbine-report-list">
       <div className="turbine-report-items">
