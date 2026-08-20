@@ -67,6 +67,8 @@ class DefectQueryServiceTest {
         assertThat(first.defects()).hasSize(3);
         assertThat(first.maxSeverity()).isEqualTo(4);
         assertThat(first.partSide()).isEqualTo("LE");
+        assertThat(first.imageUrl()).isEqualTo("https://presigned");
+        // 썸네일이 생기기 전까지는 원본과 같은 URL 이다(이슈 #131 에서 갈라진다).
         assertThat(first.thumbnailUrl()).isEqualTo("https://presigned");
         assertThat(results.get(1).maxSeverity()).isNull(); // 전부 null 이면 null
     }

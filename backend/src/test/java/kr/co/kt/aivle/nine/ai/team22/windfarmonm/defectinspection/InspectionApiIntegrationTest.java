@@ -346,10 +346,14 @@ class InspectionApiIntegrationTest extends IntegrationTestSupport {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody())
-                .contains("\"image_path\":\"content/inspections/1/1/LE/1.jpg\"")
+                .contains("\"image_url\":\"https://thumb.example\"")
                 .contains("\"thumbnail_url\":\"https://thumb.example\"")
                 .contains("\"max_severity\":4") // 그룹 내 최댓값
                 .contains("\"id\":\""); // 결함 id 는 문자열 계약
+        // S3 키는 응답에 나가지 않는다 — 링크가 아니라 버킷 내부 경로다.
+        assertThat(response.getBody())
+                .doesNotContain("image_path")
+                .doesNotContain("content/inspections/1/1/LE/1.jpg");
         // 이미지 1장으로 그룹핑(결함 2건이 한 항목에)
         assertThat(response.getBody().split("\"thumbnail_url\"", -1)).hasSize(2);
 
