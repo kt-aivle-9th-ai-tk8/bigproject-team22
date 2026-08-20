@@ -7,6 +7,7 @@ import { useForceLogoutUser } from "../hooks/useForceLogoutUser";
 import { useUpdateAdminUser } from "../hooks/useUpdateAdminUser";
 import { useApproveAdminUser } from "../hooks/useApproveAdminUser";
 import { useWindFarmOptions } from "../hooks/useWindFarmOptions";
+import { useDeleteAdminUser } from "../hooks/useDeleteAdminUser";
 
 export default function AdminUserScreen() {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'list'
@@ -22,6 +23,11 @@ export default function AdminUserScreen() {
   const [selectedPlants, setSelectedPlants] = useState([]);
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [errorMessageModal, setErrorMessageModal] = useState(null);
+
+  const {
+    removeUser,
+    isDeletingUser,
+  } = useDeleteAdminUser();
 
   const {
     users: pendingUsers,
@@ -138,20 +144,33 @@ export default function AdminUserScreen() {
     }
   };
   
-  // --- [3. 가입 거절 - PATCH 또는 DELETE] ---
-  // const handleReject = async (id, name) => {
-  //   if (window.confirm(`${name} 님의 가입 신청을 거절하시겠습니까?`)) {
-  //     try {
-  //       await axios.patch(`/api/admin/users/${id}`, { role: 'REJECTED' });
-  //       alert('거절 처리 되었습니다.');
-  //       refetchPendingUsers();
-  //     } catch (err) {
-  //       handleApiError(err, '가입 거절 처리에 실패했습니다.');
-  //     }
-  //   }
-  // };
-  const handleReject = () => {
-    alert("가입 거절 기능은 준비 중입니다.");
+  const handleReject = async (
+    userId,
+    name
+  ) => {
+    const isConfirmed =
+      window.confirm(
+        `${name} 님의 가입 신청을 거절하시겠습니까?`
+      );
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      await removeUser(userId);
+
+      alert(
+        `${name} 님의 가입 신청이 거절되었습니다.`
+      );
+
+      await refetchPendingUsers();
+    } catch (err) {
+      handleApiError(
+        err,
+        "가입 거절 처리에 실패했습니다."
+      );
+    }
   };
 
   const handleForceLogout = async (userId, name) => {

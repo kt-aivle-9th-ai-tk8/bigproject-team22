@@ -151,3 +151,47 @@ export const updateAdminUser = async ({
 
   return responseBody;
 };
+
+export const deleteAdminUser = async (
+  userId
+) => {
+  if (!userId) {
+    throw new Error(
+      "사용자 ID가 필요합니다."
+    );
+  }
+
+  const response = await apiFetch(
+    `/api/admin/users/${userId}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
+
+  const responseText =
+    await response.text();
+
+  let responseBody = null;
+
+  try {
+    responseBody = responseText
+      ? JSON.parse(responseText)
+      : null;
+  } catch {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      responseBody?.message ||
+        responseBody?.error ||
+        "사용자 삭제에 실패했습니다."
+    );
+  }
+
+  return responseBody;
+};
