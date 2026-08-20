@@ -104,8 +104,10 @@ def _rollup_status(values) -> str:
     return unknown[0] if unknown else min(vals, key=_STATUS_ORDER.index)
 
 
-def get_report(report_id: int) -> dict:
+def get_report(report_id: int, frames=None) -> dict:
     """report 1건 + 소속 inspection 요약 → dict. 없으면 {'found': False}.
+
+    frames 를 주면 그 프레임을 쓴다(fetch 가 get_defects 와 같은 것을 넘겨 한 번만 읽게 한다).
 
     turbine_code·wind_farm_* 는 _load()의 조인이 붙여준 값이다(원본 테이블에는 FK만 있음).
     점검이 하나도 안 달린 보고서는 렌더링할 내용이 없으므로 found=False 로 돌려준다
@@ -114,7 +116,7 @@ def get_report(report_id: int) -> dict:
     실데이터 기준 한 보고서 안에서는 발전소·상태·시작시각이 모두 동일하지만,
     아래는 그 가정에 기대지 않고 집계한다(기간은 min~max, 상태는 _rollup_status).
     """
-    rep, insp, _ = _load()
+    rep, insp, _ = frames if frames is not None else _load()
     row = rep[rep["report_id"] == report_id]
     if row.empty:
         return {"found": False}
@@ -142,9 +144,12 @@ def get_report(report_id: int) -> dict:
     }
 
 
-def get_defects(report_id: int):
-    """해당 보고서(소속 inspection 전부)의 결함 행(DataFrame). MIN_CONFIDENCE 적용."""
-    _, insp, defect = _load()
+def get_defects(report_id: int, frames=None):
+    """해당 보고서(소속 inspection 전부)의 결함 행(DataFrame). MIN_CONFIDENCE 적용.
+
+    frames 를 주면 그 프레임을 쓴다(get_report 와 같은 것을 넘겨 한 번만 읽게 한다).
+    """
+    _, insp, defect = frames if frames is not None else _load()
     ids = insp[insp["report_id"] == report_id]["inspection_id"]
     df = defect[defect["inspection_id"].isin(ids)]
     if MIN_CONFIDENCE is not None:
@@ -310,11 +315,15 @@ def fetch(event_id: int) -> dict:
         버리면 n_defects_total(=len(df))과 터빈별 합계가 어긋나고, 전부 미상이면
         터빈 집계가 하나도 안 생겨 _summarize 의 max(with_defect) 가 터진다.
     """
-    report = get_report(event_id)
+    # 한 번만 읽어 두 조회가 같은 프레임을 보게 한다. snapshot() 이 걸려 있으면 어차피 같은
+    # 시점이지만, 그 밖에서 불려도(스크립트 등) fetch 안에서는 앞뒤가 어긋나지 않는다.
+    frames = _load()
+
+    report = get_report(event_id, frames)
     if not report.get("found"):
         return {"event": report}
 
-    df = get_defects(event_id)
+    df = get_defects(event_id, frames)
     # 미상 결함도 한 그룹으로 세어야 '총 N건'과 터빈별 합계가 맞는다. 조용히 빠지면
     # 보고서에 합이 안 맞는 숫자가 실리고, critic 이 그걸 근거로 검증하게 된다.
     grouped = df["turbine_code"].fillna(UNKNOWN_TURBINE) if len(df) else df.get("turbine_code")
