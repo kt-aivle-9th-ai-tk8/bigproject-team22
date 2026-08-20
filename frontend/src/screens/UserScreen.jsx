@@ -3,6 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { fetchMyPage } from "../api/userApi";
 import "./UserScreen.css";
 
+const formatPhoneNumber = (phone) => {
+  if (!phone || phone === "-") {
+    return "-";
+  }
+
+  if (phone.includes("-")) {
+    return phone;
+  }
+
+  if (phone.length === 11) {
+    return `${phone.slice(0, 3)}-${phone.slice(3, 7)}-${phone.slice(7)}`;
+  }
+
+  return phone;
+};
+
 const UserScreen = ({ onClose }) => {
   const navigate = useNavigate();
 
@@ -165,7 +181,7 @@ const UserScreen = ({ onClose }) => {
             </span>
 
             <span className="info-value">
-              {userData.phone}
+              {formatPhoneNumber(userData.phone)}
             </span>
           </div>
 
