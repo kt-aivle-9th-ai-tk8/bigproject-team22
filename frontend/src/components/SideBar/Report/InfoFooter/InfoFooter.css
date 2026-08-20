@@ -1,0 +1,44 @@
+.login-footer {
+  width: 100%;
+  padding: 24px 31px;
+  box-sizing: border-box;
+
+  border-top: 1px solid #E5E5EA;
+}
+
+.company-info {
+  font-size: 11px;
+  color: #8E8E93;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.logo-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+.company-info p {
+  margin: 2px 0;
+}
+
+.footer-links {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #8E8E93;
+}
+
+.footer-links span {
+  cursor: pointer;
+}
+
+.policy-highlight {
+  font-weight: bold;
+  color: #000000;
+}
