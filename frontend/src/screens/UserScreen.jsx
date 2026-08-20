@@ -7,7 +7,7 @@ const UserScreen = ({ onClose }) => {
 
   // 사용자 정보 상태 관리
   const [userData, setUserData] = useState({
-    role: "일반사용자",
+    role: "사용자",
     name: "사용자",
     isAdmin: false,
     employeeId: "-",
@@ -44,7 +44,7 @@ const UserScreen = ({ onClose }) => {
       if (storedUser) {
         const parsed = JSON.parse(storedUser);
         const userInfo = {
-          role: parsed.role === "ADMIN" ? "관리자" : (parsed.role || "일반사용자"),
+          role: parsed.role === "ADMIN" ? "관리자" : (parsed.role || "사용자"),
           name: parsed.name || parsed.username || "사용자",
           isAdmin: parsed.role === "ADMIN" || parsed.isAdmin === true,
           employeeId: parsed.employee_id || parsed.employeeId || "-",
