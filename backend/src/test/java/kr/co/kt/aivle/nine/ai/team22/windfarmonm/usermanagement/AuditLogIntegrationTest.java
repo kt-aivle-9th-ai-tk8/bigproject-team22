@@ -157,7 +157,8 @@ class AuditLogIntegrationTest extends IntegrationTestSupport {
     }
 
     private String sessionCookie(ResponseEntity<String> response) {
-        return response.getHeaders().get(HttpHeaders.SET_COOKIE).stream()
+        // get() 은 헤더가 없으면 null 을 준다 — 로그인이 실패하면 원인을 알기 어려운 NPE 로 끝난다.
+        return response.getHeaders().getOrEmpty(HttpHeaders.SET_COOKIE).stream()
                 .filter(c -> c.startsWith("SESSION="))
                 .map(c -> c.split(";", 2)[0])
                 .findFirst()
