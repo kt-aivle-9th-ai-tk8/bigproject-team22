@@ -14,6 +14,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.client.RestClient;
 
@@ -31,12 +32,16 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
     PasswordEncoder passwordEncoder;
     @Autowired
     Environment environment;
+    @Autowired
+    JdbcTemplate jdbc;
 
     private final RestClient client = RestClient.create();
 
     @BeforeEach
     void setUp() {
-        userJpaRepository.deleteAll();
+        // user 만 지우면 다른 테스트가 남긴 알림·감사기록이 FK 로 삭제를 막는다(테스트 순서에 따라 깨진다).
+        // 삭제 순서는 IntegrationTestSupport 가 한 곳에서 관리한다.
+        truncateAll(jdbc);
     }
 
     private String baseUrl() {
@@ -44,7 +49,12 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
     }
 
     private void seed(String employeeId, Role role) {
-        userJpaRepository.save(User.create(employeeId, passwordEncoder.encode("pw12345!"), employeeId, "010-1234-5678", role));
+        seed(employeeId, role, null);
+    }
+
+    private void seed(String employeeId, Role role, String department) {
+        userJpaRepository.save(User.create(employeeId, passwordEncoder.encode("pw12345!"), employeeId,
+                "010-1234-5678", role, department));
     }
 
     /** exchange 로 상태코드/헤더/본문을 예외 없이 그대로 받는다. */
@@ -88,6 +98,78 @@ class IdentityAuthorizationIntegrationTest extends IntegrationTestSupport {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).contains("\"role\":\"GUEST\"");
+    }
+
+    @Test
+    @DisplayName("가입 요청의 department 가 실제로 저장된다 — FE 폼이 받고도 버리던 값이다")
+    void signUpStoresDepartment() {
+        ResponseEntity<String> signUp = send(HttpMethod.POST, "/users",
+                "{\"employee_id\":\"E2001\",\"password\":\"pw12345!\",\"user_name\":\"홍길동\","
+                        + "\"phone\":\"010-1234-5678\",\"department\":\"운영팀\"}", null);
+
+        assertThat(signUp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(userJpaRepository.findByEmployeeId("E2001").orElseThrow().getDepartment())
+                .isEqualTo("운영팀");
+    }
+
+    @Test
+    @DisplayName("빈 문자열 부서는 미입력으로 저장한다 — 공백을 넣어 두면 값이 있는 것처럼 보인다")
+    void blankDepartmentIsStoredAsNull() {
+        send(HttpMethod.POST, "/users",
+                "{\"employee_id\":\"E2003\",\"password\":\"pw12345!\",\"user_name\":\"이영희\","
+                        + "\"phone\":\"010-1234-5678\",\"department\":\"   \"}", null);
+
+        assertThat(userJpaRepository.findByEmployeeId("E2003").orElseThrow().getDepartment()).isNull();
+    }
+
+    @Test
+    @DisplayName("부서를 보내지 않아도 가입은 성공한다 — FE 가 payload 에 싣기 전까지 막지 않는다")
+    void signUpWithoutDepartmentSucceeds() {
+        ResponseEntity<String> response = send(HttpMethod.POST, "/users",
+                "{\"employee_id\":\"E2002\",\"password\":\"pw12345!\",\"user_name\":\"김철수\","
+                        + "\"phone\":\"010-1234-5678\"}", null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    @DisplayName("마이페이지: 사번·이름·전화번호가 마스킹되어 내려가고 이메일은 담기지 않는다")
+    void myProfile_isMasked() {
+        seed("MGR1", Role.MANAGER);
+        String cookie = sessionCookie(login("MGR1"));
+
+        ResponseEntity<String> response = send(HttpMethod.GET, "/users/mypage", null, cookie);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .contains("\"employee_id\":\"M**1\"")          // MGR1 → 가운데 마스킹
+                .contains("\"user_name\":\"M**1\"")
+                .contains("\"phone\":\"010-*****5678\"")       // 010-1234-5678
+                .contains("\"role\":\"MANAGER\"")
+                .contains("\"department\":null");                // 이 계정은 부서 미입력
+        // 원문이 새지 않는지 — 마스킹은 '가리는 것'이지 '추가하는 것'이 아니다.
+        assertThat(response.getBody())
+                .doesNotContain("MGR1\"")
+                .doesNotContain("010-1234-5678");
+        // 스키마에 이메일이 없으므로 필드 자체가 없어야 한다(빈 값으로라도 내보내지 않는다).
+        assertThat(response.getBody()).doesNotContain("email");
+    }
+
+    @Test
+    @DisplayName("마이페이지의 부서는 마스킹하지 않는다 — 조직 정보이지 개인 식별정보가 아니다")
+    void myProfile_showsDepartmentAsIs() {
+        seed("MGR9", Role.MANAGER, "운영팀");
+        String cookie = sessionCookie(login("MGR9"));
+
+        assertThat(send(HttpMethod.GET, "/users/mypage", null, cookie).getBody())
+                .contains("\"department\":\"운영팀\"");
+    }
+
+    @Test
+    @DisplayName("마이페이지는 로그인해야 볼 수 있다 — 회원가입 경로(/users)만 공개다")
+    void myProfile_requiresLogin() {
+        assertThat(send(HttpMethod.GET, "/users/mypage", null, null).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test

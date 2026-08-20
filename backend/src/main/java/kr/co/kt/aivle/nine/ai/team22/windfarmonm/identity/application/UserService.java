@@ -1,5 +1,6 @@
 package kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application;
 
+import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.MyProfileResult;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.SignUpCommand;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.application.dto.UserResult;
 import kr.co.kt.aivle.nine.ai.team22.windfarmonm.identity.domain.Role;
@@ -32,7 +33,8 @@ public class UserService {
         }
 
         String encodedPassword = passwordEncoder.encode(command.password());
-        User user = User.create(command.employeeId(), encodedPassword, command.userName(), command.phone(), Role.GUEST);
+        User user = User.create(command.employeeId(), encodedPassword, command.userName(), command.phone(),
+                Role.GUEST, command.department());
 
         try {
             return UserResult.from(userRepository.save(user));
@@ -41,5 +43,17 @@ public class UserService {
             // employee_id 뿐이므로 무결성 위반은 사번 중복으로 간주해 409 로 변환한다.
             throw new BusinessException(ErrorCode.DUPLICATE_EMPLOYEE_ID);
         }
+    }
+
+    /**
+     * 마이페이지용 내 계정 정보. 조회 주체가 곧 대상이라 별도 인가가 없다 —
+     * 로그인 인터셉터를 통과한 세션의 userId 만으로 대상이 결정된다.
+     * <p>
+     * 세션은 살아 있는데 계정이 지워진 경우(가입 거절 직후 등)는 {@link ErrorCode#USER_NOT_FOUND}.
+     */
+    @Transactional(readOnly = true)
+    public MyProfileResult getMyProfile(Long userId) {
+        return MyProfileResult.from(userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)));
     }
 }

@@ -35,7 +35,7 @@ class UserServiceTest {
     UserService userService;
 
     private SignUpCommand command() {
-        return new SignUpCommand("E1001", "pw12345!", "홍길동", "010-1234-5678");
+        return new SignUpCommand("E1001", "pw12345!", "홍길동", "010-1234-5678", "운영팀");
     }
 
     @Test
