@@ -3,8 +3,6 @@ import { apiFetch } from "./apiClient";
 export const fetchNotifications = async () => {
   const requestUrl = "/api/notifications";
 
-  console.log("[fetchNotifications] 요청 URL:", requestUrl);
-
   const response = await fetch(requestUrl, {
     method: "GET",
     credentials: "include",
@@ -13,27 +11,7 @@ export const fetchNotifications = async () => {
     },
   });
 
-  console.log(
-    "[fetchNotifications] 응답 상태:",
-    response.status
-  );
-
-  console.log(
-    "[fetchNotifications] 응답 OK:",
-    response.ok
-  );
-
-  console.log(
-    "[fetchNotifications] Content-Type:",
-    response.headers.get("content-type")
-  );
-
   const responseText = await response.text();
-
-  console.log(
-    "[fetchNotifications] 응답 원문:",
-    responseText
-  );
 
   let responseBody = null;
 
