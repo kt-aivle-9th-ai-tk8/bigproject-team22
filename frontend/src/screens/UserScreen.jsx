@@ -251,8 +251,8 @@ const UserScreen = ({ onClose }) => {
             )}
           </div>
 
-          <div className="info-row">
-            {/* <span className="info-label">이메일</span>
+          {/* <div className="info-row">
+            <span className="info-label">이메일</span>
             {isEditing ? (
               <input
                 type="email"
@@ -264,8 +264,8 @@ const UserScreen = ({ onClose }) => {
               />
             ) : (
               <span className="info-value">{userData.email}</span>
-            )} */}
-          </div>
+            )}
+          </div> */}
 
           <div className="info-row">
             <span className="info-label">소속 부서</span>
