@@ -54,7 +54,7 @@ const POLICY_MODAL_DATA = {
 
 제5조 (개인정보 보호책임자 및 고충처리)
 - 개인정보 보호책임자: 화성갈22니까 O&M 개발팀
-- 문의처: KT북대구지사 8층 (연락처: 1234-1234 / 평일 09:00~18:00)`,
+- 문의처: 주식회사 KT (연락처: 1588-0114 / 평일 09:00~18:00)`,
   },
   sitemap: {
     title: "사이트맵 안내",
@@ -86,10 +86,10 @@ function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   // 로그인 성공/실패 알림 모달 상태
-  const [modalType, setModalType] = useState(null); // 'success' 또는 'fail'
+  const [modalType, setModalType] = useState(null);
   const [modalMessage, setModalMessage] = useState("");
 
-  // 하단 이용약관/개인정보처리방침/사이트맵 모달 상태 (null, 'terms', 'privacy', 'sitemap')
+  // 하단 이용약관/개인정보처리방침/사이트맵 모달 상태
   const [policyModalType, setPolicyModalType] = useState(null);
 
   const handleCloseModal = () => {
