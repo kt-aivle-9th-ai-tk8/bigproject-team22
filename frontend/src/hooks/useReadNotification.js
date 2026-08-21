@@ -33,10 +33,7 @@ export const useReadNotification = () => {
           notificationId
         );
       } catch (error) {
-        console.error(
-          "알림 읽음 처리 오류:",
-          error
-        );
+        
 
         setReadNotificationError(
           error.message

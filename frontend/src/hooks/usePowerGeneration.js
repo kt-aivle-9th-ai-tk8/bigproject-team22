@@ -74,10 +74,7 @@ export const usePowerGeneration = ({
 
       setPowerData(convertedPowerData);
     } catch (error) {
-      console.error(
-        "발전량 조회 API 오류:",
-        error
-      );
+      
 
       setPowerError(error.message);
       setPowerData([]);

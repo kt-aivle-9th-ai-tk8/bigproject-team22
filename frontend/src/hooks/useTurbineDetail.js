@@ -35,10 +35,7 @@ export const useTurbineDetail = ({
           setTurbineDetail(turbine);
         }
       } catch (error) {
-        console.error(
-          "터빈 상세 조회 API 오류:",
-          error
-        );
+        
 
         if (isMounted) {
           setTurbineDetailError(error.message);
@@ -71,10 +68,7 @@ export const useTurbineDetail = ({
           });
         }
       } catch (error) {
-        console.error(
-          "터빈 출력 갱신 API 오류:",
-          error
-        );
+        
 
         if (isMounted) {
           setTurbineDetailError(error.message);

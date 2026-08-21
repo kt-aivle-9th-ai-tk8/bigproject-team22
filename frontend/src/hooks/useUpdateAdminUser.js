@@ -43,10 +43,7 @@ export const useUpdateAdminUser = () => {
 
         return response;
     } catch (error) {
-        console.error(
-        "관리자 사용자 변경 에러:",
-        error
-        );
+        
 
         setUpdateUserError(error.message);
         throw error;

@@ -144,14 +144,7 @@ function BladeInfoPopup({
     setSelectedPosition(position);
     setPage(1);
 
-    console.log("블레이드 위치 필터 변경:", {
-      selectedBladeName,
-      startDate,
-      endDate,
-      bladePosition: position,
-      page: 0,
-      size: PAGE_SIZE,
-    });
+    
   };
 
   const handleHistoryClick = (
@@ -406,13 +399,7 @@ function BladeInfoPopup({
                       height: naturalHeight,
                     });
 
-                    console.log(
-                      "현재 이미지 원본 크기:",
-                      {
-                        width: naturalWidth,
-                        height: naturalHeight,
-                      }
-                    );
+                    
                   }}
                 />
 

@@ -55,7 +55,7 @@ function InspectionReportBox({
   };
 
   const handlePopupComplete = (popupData) => {
-    console.log("점검 보고서 팝업 완료 데이터:", popupData);
+    
 
     setInspectionInfo(popupData);
     setIsPopupOpen(false);
@@ -119,22 +119,6 @@ function InspectionReportBox({
       files,
       filesBySurface: inspectionInfo.filesBySurface || {},
     };
-
-    console.log("====================================");
-    console.log("점검 보고서 생성 버튼 클릭");
-    console.log("점검 보고서 생성 최종 데이터:", reportData);
-    console.log("업로드 이미지 그룹 목록:", files);
-    console.table(
-      files.map((fileItem) => ({
-        turbineName: fileItem.turbineName,
-        bladeLabel: fileItem.bladeLabel,
-        bladeId: fileItem.bladeId,
-        surfaceLabel: fileItem.surfaceLabel,
-        surfaceId: fileItem.surfaceId,
-        imageCount: fileItem.imageCount,
-      }))
-    );
-    console.log("====================================");
 
     onCreateReport?.(reportData);
 

@@ -44,15 +44,9 @@ export const useReportWindFarms = () => {
         setWindFarms(windFarmList);
 
 
-        console.log(
-          "보고서 필터 발전소 목록:",
-          windFarmList
-        );
+        
       } catch (error) {
-        console.error(
-          "발전소 목록 조회 오류:",
-          error
-        );
+        
 
 
         if (isMounted) {

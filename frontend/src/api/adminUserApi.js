@@ -111,10 +111,7 @@ export const updateAdminUser = async ({
     wind_farm_ids: windFarmIds,
   };
 
-  console.log(
-    `PATCH /api/admin/users/${userId} 요청:`,
-    requestBody
-  );
+  
 
   const response = await apiFetch(
     `/api/admin/users/${userId}`,

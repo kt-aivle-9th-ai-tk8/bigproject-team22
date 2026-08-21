@@ -41,10 +41,7 @@ export const useApproveAdminUser = () => {
 
       return response;
     } catch (error) {
-      console.error(
-        "사용자 승인 에러:",
-        error
-      );
+      
 
       setApproveError(error.message);
 

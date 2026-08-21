@@ -168,7 +168,7 @@ function Turbine3DSimulation({
       },
     };
 
-    console.log("3D 터빈 시뮬레이션 JSON:", simulationData);
+    
     onRunSimulation?.(simulationData);
   };
 
@@ -288,7 +288,7 @@ function Turbine3DSimulation({
             scale={2}
             stopSpeed={0.1}
             onBladeClick={(bladeData) => {
-              console.log( "클릭한 블레이드:", bladeData);
+              
 
               setBladeZoomTarget(bladeData.position);
               setSelectedBladeName(bladeData.tag);

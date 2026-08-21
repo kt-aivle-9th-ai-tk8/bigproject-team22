@@ -21,10 +21,7 @@ export const useForceLogoutUser = () => {
 
       return response;
     } catch (error) {
-      console.error(
-        "사용자 강제 로그아웃 에러:",
-        error
-      );
+      
 
       setForceLogoutError(error.message);
 

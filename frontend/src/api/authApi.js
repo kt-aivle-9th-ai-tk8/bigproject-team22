@@ -1,5 +1,5 @@
 export const loginApi = async (credentials) => {
-  console.log("[loginApi] 요청 payload:", credentials);
+  
 
   const response = await fetch("/api/auth/login", {
     method: "POST",
@@ -11,16 +11,13 @@ export const loginApi = async (credentials) => {
     body: JSON.stringify(credentials),
   });
 
-  console.log("[loginApi] 응답 상태:", response.status);
-  console.log("[loginApi] 응답 OK:", response.ok);
-  console.log(
-    "[loginApi] Content-Type:",
-    response.headers.get("content-type")
-  );
+  
+  
+  
 
   const responseText = await response.text();
 
-  console.log("[loginApi] 응답 원문:", responseText);
+  
 
   let responseBody = null;
 

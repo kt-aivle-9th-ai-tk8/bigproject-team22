@@ -20,20 +20,11 @@ export const fetchNotifications = async () => {
       ? JSON.parse(responseText)
       : null;
 
-    console.log(
-      "[fetchNotifications] JSON 파싱 결과:",
-      responseBody
-    );
+    
   } catch (error) {
-    console.error(
-      "[fetchNotifications] JSON 파싱 실패:",
-      error
-    );
+    
 
-    console.error(
-      "[fetchNotifications] 응답이 HTML인지 확인:",
-      responseText.slice(0, 300)
-    );
+    
 
     throw new Error(
       "서버에서 JSON이 아닌 응답을 받았습니다."
@@ -41,10 +32,7 @@ export const fetchNotifications = async () => {
   }
 
   if (!response.ok) {
-    console.error(
-      "[fetchNotifications] API 실패 body:",
-      responseBody
-    );
+    
 
     throw new Error(
       responseBody?.message ||

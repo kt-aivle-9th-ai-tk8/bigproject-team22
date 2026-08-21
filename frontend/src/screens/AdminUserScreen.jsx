@@ -68,7 +68,7 @@ export default function AdminUserScreen() {
 
   // --- [공통 백엔드 에러 추출 함수] ---
   const handleApiError = (err, fallbackMsg) => {
-    console.error(err);
+    
     const serverMessage = err.response?.data?.message || err.message || fallbackMsg;
     setErrorMessageModal(serverMessage);
   };

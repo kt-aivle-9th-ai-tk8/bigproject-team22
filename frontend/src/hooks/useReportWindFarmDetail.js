@@ -57,15 +57,9 @@ export const useReportWindFarmDetail = ({
         );
 
 
-        console.log(
-          "보고서 필터 발전소 상세:",
-          responseData
-        );
+        
       } catch (error) {
-        console.error(
-          "발전소 상세 조회 오류:",
-          error
-        );
+        
 
 
         if (isMounted) {

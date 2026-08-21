@@ -52,10 +52,7 @@ export const useWindFarms = ({
           setPlants(convertedPlants);
         }
       } catch (error) {
-        console.error(
-          "발전소 초기 조회 API 오류:",
-          error
-        );
+        
 
         if (isMounted) {
           setPlantsError(error.message);
@@ -103,10 +100,7 @@ export const useWindFarms = ({
           );
         }
       } catch (error) {
-        console.error(
-          "발전소 갱신 API 오류:",
-          error
-        );
+        
 
         if (isMounted) {
           setPlantsError(error.message);

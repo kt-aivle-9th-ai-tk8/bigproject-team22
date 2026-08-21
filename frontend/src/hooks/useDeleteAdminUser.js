@@ -32,10 +32,7 @@ export const useDeleteAdminUser = () => {
         userId
       );
     } catch (error) {
-      console.error(
-        "사용자 삭제 API 오류:",
-        error
-      );
+      
 
       setDeleteUserError(
         error.message

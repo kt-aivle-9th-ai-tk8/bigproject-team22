@@ -50,17 +50,13 @@ function Map({
       import.meta.env.VITE_VWORLD_API_KEY;
 
     if (!apiKey) {
-      console.error(
-        "브이월드 API 키가 없습니다."
-      );
+      
 
       return undefined;
     }
 
     if (!iconSrc) {
-      console.error(
-        "Map 컴포넌트에 iconSrc가 없습니다."
-      );
+      
 
       return undefined;
     }

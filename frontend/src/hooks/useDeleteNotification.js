@@ -33,10 +33,7 @@ export const useDeleteNotification = () => {
           notificationId
         );
       } catch (error) {
-        console.error(
-          "알림 삭제 오류:",
-          error
-        );
+        
 
         setDeleteNotificationError(
           error.message

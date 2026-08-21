@@ -135,7 +135,7 @@ function InspectionReportPopup({
       filesBySurface: selectedFiles,
     };
 
-    console.log("점검 보고서 팝업 입력 JSON:", popupData);
+    
     onComplete?.(popupData);
   };
 
