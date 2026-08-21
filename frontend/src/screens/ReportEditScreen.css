@@ -161,6 +161,16 @@
   margin-bottom: 0;
 }
 
+.readonly-box img {
+  max-width: 520px;
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px 0;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
 .readonly-box ul, .readonly-box ol {
   padding-left: 20px;
   margin: 8px 0;

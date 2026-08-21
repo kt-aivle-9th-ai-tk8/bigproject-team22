@@ -236,7 +236,7 @@ def subtitle_lines(to) -> list:
     ids = e.get("inspection_ids") or []
     insp = f"점검 {len(ids)}건" + (f" (#{', #'.join(str(i) for i in ids)})" if ids else "")
     return [
-        f"`보고서 #{e.get('report_id')}` · {insp} · {STATUS_KO.get(status, status)}",
+        f"보고서 #{e.get('report_id')} · {insp} · {STATUS_KO.get(status, status)}",
         "",
         f"점검 기간 {e.get('inspection_start')} ~ {e.get('inspection_end')}",
     ]
