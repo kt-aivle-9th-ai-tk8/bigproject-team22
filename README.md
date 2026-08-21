@@ -5,7 +5,7 @@ KT AIVLE School 9기 · AI TK8 · **Team 22** 빅프로젝트
 SCADA 시계열 데이터와 드론 촬영 이미지를 함께 다루는 **풍력발전단지 O&M(Operation & Maintenance) 플랫폼**입니다.
 발전량 모니터링, 이상 감지(Anomaly Detection), 블레이드 결함 탐지(Defect Detection), 그리고 LLM 에이전트 기반 정비 보고서 자동 생성까지 하나의 파이프라인으로 연결합니다.
 
-> 대상 단지: **장흥**(U1~U6), **화순**(U1~U8)
+> 대상 단지: **장흥**(U1-U6), **화순**(U1-U8)
 
 ---
 
