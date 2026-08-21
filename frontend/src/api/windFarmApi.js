@@ -25,7 +25,7 @@ export const fetchWindFarms = async ({
     queryString ? `?${queryString}` : ""
   }`;
 
-  console.log("[fetchWindFarms] 요청 URL:", requestUrl);
+  
 
   const response = await apiFetch(requestUrl, {
     method: "GET",
@@ -35,16 +35,13 @@ export const fetchWindFarms = async ({
     },
   });
 
-  console.log("[fetchWindFarms] 응답 상태:", response.status);
-  console.log("[fetchWindFarms] 응답 OK:", response.ok);
-  console.log(
-    "[fetchWindFarms] Content-Type:",
-    response.headers.get("content-type")
-  );
+  
+  
+  
 
   const responseText = await response.text();
 
-  console.log("[fetchWindFarms] 응답 원문:", responseText);
+  
 
   let responseBody = null;
 
@@ -53,20 +50,11 @@ export const fetchWindFarms = async ({
       ? JSON.parse(responseText)
       : null;
 
-    console.log(
-      "[fetchWindFarms] JSON 파싱 결과:",
-      responseBody
-    );
+    
   } catch (error) {
-    console.error(
-      "[fetchWindFarms] JSON 파싱 실패:",
-      error
-    );
+    
 
-    console.error(
-      "[fetchWindFarms] 응답이 HTML인지 확인:",
-      responseText.slice(0, 300)
-    );
+    
 
     throw new Error(
       "서버에서 JSON이 아닌 응답을 받았습니다."
@@ -74,10 +62,7 @@ export const fetchWindFarms = async ({
   }
 
   if (!response.ok) {
-    console.error(
-      "[fetchWindFarms] API 실패 body:",
-      responseBody
-    );
+    
 
     throw new Error(
       responseBody?.message ||
@@ -96,7 +81,7 @@ export const fetchWindFarmById = async (windFarmId) => {
 
   const requestUrl = `/api/wind-farms/${windFarmId}`;
 
-  console.log("[fetchWindFarmById] 요청 URL:", requestUrl);
+  
 
   const response = await fetch(requestUrl, {
     method: "GET",
@@ -106,27 +91,15 @@ export const fetchWindFarmById = async (windFarmId) => {
     },
   });
 
-  console.log(
-    "[fetchWindFarmById] 응답 상태:",
-    response.status
-  );
+  
 
-  console.log(
-    "[fetchWindFarmById] 응답 OK:",
-    response.ok
-  );
+  
 
-  console.log(
-    "[fetchWindFarmById] Content-Type:",
-    response.headers.get("content-type")
-  );
+  
 
   const responseText = await response.text();
 
-  console.log(
-    "[fetchWindFarmById] 응답 원문:",
-    responseText
-  );
+  
 
   let responseBody = null;
 
@@ -135,20 +108,11 @@ export const fetchWindFarmById = async (windFarmId) => {
       ? JSON.parse(responseText)
       : null;
 
-    console.log(
-      "[fetchWindFarmById] JSON 파싱 결과:",
-      responseBody
-    );
+    
   } catch (error) {
-    console.error(
-      "[fetchWindFarmById] JSON 파싱 실패:",
-      error
-    );
+    
 
-    console.error(
-      "[fetchWindFarmById] 응답이 HTML인지 확인:",
-      responseText.slice(0, 300)
-    );
+    
 
     throw new Error(
       "서버에서 JSON이 아닌 응답을 받았습니다."
@@ -156,10 +120,7 @@ export const fetchWindFarmById = async (windFarmId) => {
   }
 
   if (!response.ok) {
-    console.error(
-      "[fetchWindFarmById] API 실패 body:",
-      responseBody
-    );
+    
 
     throw new Error(
       responseBody?.message ||
@@ -198,7 +159,7 @@ export const fetchWindFarmPower = async ({
   const requestUrl =
     `/api/wind-farms/${windFarmId}/power?${params.toString()}`;
 
-  console.log("[fetchWindFarmPower] 요청 URL:", requestUrl);
+  
 
   const response = await apiFetch(requestUrl, {
     method: "GET",
@@ -217,10 +178,7 @@ export const fetchWindFarmPower = async ({
       ? JSON.parse(responseText)
       : null;
   } catch (error) {
-    console.error(
-      "[fetchWindFarmPower] JSON 파싱 실패:",
-      error
-    );
+    
 
     throw new Error(
       "서버에서 JSON이 아닌 응답을 받았습니다."
@@ -265,7 +223,7 @@ export const fetchTurbinePower = async ({
   const requestUrl =
     `/api/turbines/${turbineId}/power?${params.toString()}`;
 
-  console.log("[fetchTurbinePower] 요청 URL:", requestUrl);
+  
 
   const response = await fetch(requestUrl, {
     method: "GET",
@@ -284,10 +242,7 @@ export const fetchTurbinePower = async ({
       ? JSON.parse(responseText)
       : null;
   } catch (error) {
-    console.error(
-      "[fetchTurbinePower] JSON 파싱 실패:",
-      error
-    );
+    
 
     throw new Error(
       "서버에서 JSON이 아닌 응답을 받았습니다."

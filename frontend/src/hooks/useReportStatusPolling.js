@@ -53,20 +53,14 @@ export const useReportStatusPolling = ({
         );
       }
 
-      console.log(
-        "운영 보고서 생성 성공:",
-        responseBody
-      );
+      
 
       setReportDetail(null);
       setReportId(createdReportId);
 
       return responseBody;
     } catch (error) {
-      console.error(
-        "운영 보고서 생성 API 오류:",
-        error
-      );
+      
 
       setReportStatusError(error.message);
 
@@ -103,10 +97,7 @@ export const useReportStatusPolling = ({
           report?.status || ""
         ).toLowerCase();
 
-        console.log(
-          "보고서 현재 상태:",
-          currentStatus
-        );
+        
 
         if (currentStatus === "generated") {
           onGeneratedRef.current?.(report);
@@ -119,10 +110,7 @@ export const useReportStatusPolling = ({
           }
         }
       } catch (error) {
-        console.error(
-          "보고서 상태 조회 API 오류:",
-          error
-        );
+        
 
         if (isMounted) {
           setReportStatusError(error.message);

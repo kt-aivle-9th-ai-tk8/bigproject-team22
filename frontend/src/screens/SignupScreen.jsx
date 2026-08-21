@@ -102,7 +102,7 @@ function SignupScreen() {
         setShowSuccessModal(true);
       }
     } catch (error) {
-      console.error("회원가입 요청 에러:", error);
+      
       alert(error.response?.data?.message || "회원가입 중 오류가 발생했습니다.");
     }
   };

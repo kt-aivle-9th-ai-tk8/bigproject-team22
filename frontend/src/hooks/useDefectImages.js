@@ -51,13 +51,7 @@ export const useDefectImages = ({
               ? responseBody
               : [];
 
-        console.log(
-          "image_path 확인:",
-          rawImages.map((item) => ({
-            image_path: item.image_path,
-            thumbnail_url: item.thumbnail_url,
-          }))
-        );
+        
 
         const mappedImages =
           rawImages.map((item) => ({
@@ -100,10 +94,7 @@ export const useDefectImages = ({
           mappedImages
         );
       } catch (error) {
-        console.error(
-          "블레이드 결함 이미지 조회 오류:",
-          error
-        );
+        
 
         setDefectImagesError(
           error.message

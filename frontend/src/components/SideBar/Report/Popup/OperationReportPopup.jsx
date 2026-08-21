@@ -105,7 +105,7 @@ function OperationReportPopup({
       content,
     };
 
-    console.log("운영 보고서 팝업 입력 JSON:", popupData);
+    
     onComplete?.(popupData);
   };
 

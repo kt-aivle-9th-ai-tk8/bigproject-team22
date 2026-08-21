@@ -37,10 +37,7 @@ export const useWindFarmDetail = ({
           setWindFarmDetail(convertedWindFarm);
         }
       } catch (error) {
-        console.error(
-          "발전소 상세 조회 API 오류:",
-          error
-        );
+        
 
         if (isMounted) {
           setWindFarmDetailError(error.message);
@@ -75,10 +72,7 @@ export const useWindFarmDetail = ({
           });
         }
       } catch (error) {
-        console.error(
-          "발전소 상세 갱신 API 오류:",
-          error
-        );
+        
 
         if (isMounted) {
           setWindFarmDetailError(error.message);

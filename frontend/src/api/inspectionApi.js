@@ -15,10 +15,7 @@ export const createInspection = async ({
     context: context || "",
   };
 
-  console.log(
-    "POST /api/inspections 요청:",
-    requestBody
-  );
+  
 
   const response = await apiFetch("/api/inspections", {
     method: "POST",

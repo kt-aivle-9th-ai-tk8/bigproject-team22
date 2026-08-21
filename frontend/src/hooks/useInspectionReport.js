@@ -316,14 +316,7 @@ export const useInspectionReport = ({
         );
 
 
-      console.log(
-        "점검 생성 요청:",
-        {
-          wind_farm_id: windFarmId,
-          turbines: turbinesRequest,
-          context: null,
-        }
-      );
+      
 
 
       /*
@@ -339,60 +332,20 @@ export const useInspectionReport = ({
           context: null,
         });
       
-      console.log(
-        "점검 생성 요청:",
-        {
-          wind_farm_id: windFarmId,
-          inspection_start: inspectionStart,
-          inspection_end: inspectionEnd,
-          turbines: turbinesRequest,
-          context: null,
-        }
-      );
+      
 
       const inspectionResponse =
         responseBody?.data ??
         responseBody;
 
 
-      console.log(
-        "점검 생성 성공:",
-        inspectionResponse
-      );
+      
 
       inspectionResponse?.turbines?.forEach(
         (turbine) => {
           turbine?.blades?.forEach(
             (blade) => {
-              console.log(
-                "업로드 URL:",
-                {
-                  turbineId:
-                    turbine.turbine_id,
-
-                  inspectionId:
-                    turbine.inspection_id,
-
-                  bladeId:
-                    blade.blade_id,
-
-                  leadingEdge:
-                    blade.leading_edge_upload_urls ||
-                    [],
-
-                  pressureSide:
-                    blade.pressure_side_upload_urls ||
-                    [],
-
-                  suctionSide:
-                    blade.suction_side_upload_urls ||
-                    [],
-
-                  trailingEdge:
-                    blade.trailing_edge_upload_urls ||
-                    [],
-                }
-              );
+              
             }
           );
         }
@@ -561,18 +514,12 @@ export const useInspectionReport = ({
       );
 
 
-      console.log(
-        "점검 이미지 업로드 완료 / reportId:",
-        createdReportId
-      );
+      
 
 
       return inspectionResponse;
     } catch (error) {
-      console.error(
-        "점검 보고서 생성 오류:",
-        error
-      );
+      
 
       setInspectionError(
         error.message
@@ -626,10 +573,7 @@ export const useInspectionReport = ({
             ).toLowerCase();
 
 
-          console.log(
-            "점검 보고서 현재 상태:",
-            currentStatus
-          );
+          
 
 
           /*
@@ -657,10 +601,7 @@ export const useInspectionReport = ({
             }
           }
         } catch (error) {
-          console.error(
-            "점검 보고서 상태 조회 오류:",
-            error
-          );
+          
 
           if (isMounted) {
             setInspectionError(

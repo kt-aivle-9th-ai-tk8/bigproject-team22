@@ -38,15 +38,9 @@ export const useReportDetail = ({
 
         setReportDetail(responseData);
 
-        console.log(
-          "보고서 상세:",
-          responseData
-        );
+        
       } catch (error) {
-        console.error(
-          "보고서 상세 조회 에러:",
-          error
-        );
+        
 
         if (isMounted) {
           setError(error.message);

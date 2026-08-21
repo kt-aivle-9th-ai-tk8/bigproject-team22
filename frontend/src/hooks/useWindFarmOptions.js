@@ -65,19 +65,13 @@ export const useWindFarmOptions = () => {
             })
           );
 
-        console.log(
-          "관리자용 발전소 목록:",
-          windFarmOptions
-        );
+        
 
         setWindFarms(
           windFarmOptions
         );
       } catch (error) {
-        console.error(
-          "발전소 목록 조회 에러:",
-          error
-        );
+        
 
         setError(error.message);
         setWindFarms([]);

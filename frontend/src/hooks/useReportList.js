@@ -49,15 +49,9 @@ export const useReportList = ({
           return;
         }
         setReports(reportList)
-        console.log(
-          "전체 보고서 목록:",
-          reportList
-        );
+        
       } catch (error) {
-        console.error(
-          "보고서 목록 조회 에러:",
-          error
-        );
+        
         if (isMounted) {
           setError(error.message);
           setReports([]);

@@ -89,19 +89,13 @@ function AlarmPopup({
       report?.id;
 
     if (!notificationId) {
-      console.error(
-        "알림 ID가 없습니다.",
-        report
-      );
+      
 
       return;
     }
 
     if (!reportId) {
-      console.error(
-        "이동할 보고서 ID가 없습니다.",
-        report
-      );
+      
 
       return;
     }
@@ -183,10 +177,7 @@ function AlarmPopup({
       setSelectedNotificationIds([]);
       setIsDeleteMode(false);
     } catch (error) {
-      console.error(
-        "알림 삭제 실패:",
-        error
-      );
+      
 
       alert(
         "알림 삭제에 실패했습니다."

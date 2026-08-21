@@ -34,18 +34,12 @@ export const useUpdateReport = () => {
         responseBody;
 
 
-      console.log(
-        "보고서 수정 완료:",
-        responseData
-      );
+      
 
 
       return responseData;
     } catch (error) {
-      console.error(
-        "보고서 수정 에러:",
-        error
-      );
+      
 
 
       setError(error.message);

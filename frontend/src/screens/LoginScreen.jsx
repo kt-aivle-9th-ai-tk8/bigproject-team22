@@ -71,7 +71,7 @@ function LoginScreen() {
         password,
       });
 
-      console.log("[로그인 응답]", responseBody);
+      
 
       if (responseBody.data) {
         localStorage.setItem("userInfo", JSON.stringify(responseBody.data));
@@ -83,7 +83,7 @@ function LoginScreen() {
       setModalType("success");
       setModalMessage(responseBody.message || "로그인에 성공했습니다!");
     } catch (err) {
-      console.error("로그인 실패:", err);
+      
       setModalType("fail");
 
       const serverMessage =

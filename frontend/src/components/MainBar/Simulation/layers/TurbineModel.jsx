@@ -39,7 +39,7 @@ function TurbineModel({
     bladeMeshRefs.current = [];
     bladeGroupRef.current = null;
 
-    console.log("====== turbine_fix.glb 회전/클릭 대상 확인 ======");
+    
 
     scene.traverse((object) => {
       if (object.name === bladeGroupName) {
@@ -47,7 +47,7 @@ function TurbineModel({
 
         accumulatedRotationRef.current = 0;
 
-        console.log("회전 대상 Plane 찾음:", object.name, object.type);
+        
       }
 
       if (object.isMesh && object.name.startsWith("Blade_")) {
@@ -81,21 +81,11 @@ function TurbineModel({
         mesh.userData.bladeTag =
           blade.tag;
 
-        console.log(
-          "3D 블레이드 연결:",
-          {
-            mesh: mesh.name,
-            bladeId: blade.id,
-            tag: blade.tag,
-          }
-        );
+        
       }
     );
 
-    console.log(
-      "클릭 가능한 블레이드:",
-      bladeMeshRefs.current.map((mesh) => mesh.name)
-    );
+    
     const zeroBlade = bladeMeshRefs.current[0];
 
     if (bladeGroupRef.current && zeroBlade) {
@@ -126,7 +116,7 @@ function TurbineModel({
       accumulatedRotationRef.current = 0;
     }
 
-    console.log("============================================");
+    
   }, [ scene, bladeGroupName, blades ])
 
   const restoreInitialBladeGroup = () => {

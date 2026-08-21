@@ -17,12 +17,7 @@ export const useNotifications = ({
     let isMounted = true;
 
 
-    // console.log(
-    //   "[useNotifications] polling 시작",
-    //   {
-    //     refreshInterval,
-    //   }
-    // );
+    // 
 
 
     const loadNotifications = async (isInitial = false) => {
@@ -35,22 +30,14 @@ export const useNotifications = ({
         setNotificationsError(null);
 
 
-        // console.log(
-        //   isInitial
-        //     ? "[useNotifications] 최초 알림 API 호출"
-        //     : "[useNotifications] polling 알림 API 호출",
-        //   new Date().toLocaleString()
-        // );
+        // 
 
 
         const responseBody =
           await fetchNotifications();
 
 
-        // console.log(
-        //   "[useNotifications] API 응답:",
-        //   responseBody
-        // );
+        // 
 
 
         if (isMounted) {
@@ -65,16 +52,10 @@ export const useNotifications = ({
           );
 
 
-          // console.log(
-          //   "[useNotifications] 알림 목록 갱신:",
-          //   notificationList
-          // );
+          // 
         }
       } catch (error) {
-        // console.error(
-        //   "[useNotifications] 알림 목록 조회 API 오류:",
-        //   error
-        // );
+        // 
 
 
         if (isMounted) {
@@ -109,10 +90,7 @@ export const useNotifications = ({
       }, refreshInterval);
 
 
-      // console.log(
-      //   "[useNotifications] polling 등록:",
-      //   `${refreshInterval}ms`
-      // );
+      // 
     }
 
 
@@ -125,9 +103,7 @@ export const useNotifications = ({
       }
 
 
-      // console.log(
-      //   "[useNotifications] polling 종료"
-      // );
+      // 
     };
   }, [refreshInterval]);
 

@@ -37,7 +37,7 @@ export const createReport = async ({
       ? JSON.parse(responseText)
       : null;
   } catch (error) {
-    console.error("[createReport] JSON 파싱 실패:", error);
+    
 
     throw new Error(
       "서버에서 JSON이 아닌 응답을 받았습니다."
@@ -77,7 +77,7 @@ export const fetchReportById = async (reportId) => {
       ? JSON.parse(responseText)
       : null;
   } catch (error) {
-    console.error("[fetchReportById] JSON 파싱 실패:", error);
+    
 
     throw new Error(
       "서버에서 JSON이 아닌 응답을 받았습니다."

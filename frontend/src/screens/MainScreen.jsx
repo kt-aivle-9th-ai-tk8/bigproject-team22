@@ -35,14 +35,7 @@ function MainScreen() {
     bladeId: "1",
   });
   useEffect(() => {
-    console.log(
-      "bladeId 1 결함 이미지 응답:",
-      {
-        loading: testDefectImagesLoading,
-        error: testDefectImagesError,
-        data: testDefectImages,
-      }
-    );
+    
   }, [
     testDefectImages,
     testDefectImagesLoading,
@@ -77,9 +70,7 @@ function MainScreen() {
       reportId
     ) => {
       if (!reportId) {
-        console.error(
-          "이동할 보고서 ID가 없습니다."
-        );
+        
         return;
       }
 
@@ -88,10 +79,7 @@ function MainScreen() {
           notificationId
         );
       } catch (error) {
-        console.error(
-          "알림 읽음 처리 실패:",
-          error
-        );
+        
       }
 
       navigate(
@@ -106,17 +94,11 @@ function MainScreen() {
           notificationId
         );
 
-        console.log(
-          "알림 삭제 완료:",
-          notificationId
-        );
+        
 
         refetchNotifications();
       } catch (error) {
-        console.error(
-          "알림 삭제 처리 실패:",
-          error
-        );
+        
       }
     };
 
@@ -387,10 +369,7 @@ function MainScreen() {
 
       navigate("/login");
     } catch (error) {
-      console.error(
-        "로그아웃 API 에러:",
-        error
-      );
+      
 
       alert(error.message);
     }
@@ -460,10 +439,7 @@ function MainScreen() {
     };
 
 
-    console.log(
-      "실제 보고서 생성 요청 데이터:",
-      requestData
-    );
+    
 
 
     try {

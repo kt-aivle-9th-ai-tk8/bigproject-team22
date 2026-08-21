@@ -78,15 +78,9 @@ export const useAdminUsers = ({
 
       setUsers(userList);
 
-      console.log(
-        "관리자 사용자 목록:",
-        userList
-      );
+      
     } catch (error) {
-      console.error(
-        "관리자 사용자 목록 조회 에러:",
-        error
-      );
+      
 
       setError(error.message);
       setUsers([]);

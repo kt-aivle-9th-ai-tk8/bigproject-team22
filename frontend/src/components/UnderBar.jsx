@@ -34,14 +34,7 @@ function UnderBar({
     visibleTicks,
     visibleTickCount,
   }) => {
-    console.log("현재 화면 x축 구간:", {
-      nextStartAt: nextStartAt.toISOString(),
-      nextEndAt: nextEndAt.toISOString(),
-      visibleTickCount,
-      visibleTicks: visibleTicks.map((tick) =>
-        new Date(tick).toISOString()
-      ),
-    });
+    
 
 
     lastVisibleRangeRef.current = {

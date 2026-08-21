@@ -18,10 +18,7 @@ export const useDeleteReport = () => {
 
       return response;
     } catch (error) {
-      console.error(
-        "보고서 삭제 에러:",
-        error
-      );
+      
 
       setDeleteError(error.message);
 

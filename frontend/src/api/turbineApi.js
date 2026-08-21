@@ -24,7 +24,7 @@ export const fetchTurbineById = async (turbineId) => {
       ? JSON.parse(responseText)
       : null;
   } catch (error) {
-    console.error("[fetchTurbineById] JSON 파싱 실패:", error);
+    
 
     throw new Error(
       "서버에서 JSON이 아닌 응답을 받았습니다."

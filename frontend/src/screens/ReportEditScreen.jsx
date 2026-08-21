@@ -70,7 +70,7 @@ const MermaidChart = ({ chartCode }) => {
           containerRef.current.innerHTML = svg;
         }
       } catch (err) {
-        console.error("Mermaid 렌더링 오류:", err);
+        
         if (containerRef.current) {
           containerRef.current.innerHTML = `<pre style="color: #e53e3e; background: #fff5f5; padding: 12px; border-radius: 6px;">차트 렌더링 실패: \n${chartCode}</pre>`;
         }
@@ -178,7 +178,7 @@ function ReportEditScreen() {
       alert("보고서가 삭제되었습니다.");
       navigate("/reportlist");
     } catch (error) {
-      console.error("보고서 삭제 실패:", error);
+      
       alert(error.message || "보고서 삭제 중 오류가 발생했습니다.");
     }
   };
@@ -248,7 +248,7 @@ function ReportEditScreen() {
       setIsEditing(false);
       refetchReportDetail();
     } catch (error) {
-      console.error("보고서 저장 실패:", error);
+      
       alert(error.message || "보고서 저장 중 오류가 발생했습니다.");
     }
   };
