@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { loginApi } from "../api/authApi";
 import "./LoginScreen.css";
 
-import InfoFooter from "../components/InfoFooter/InfoFooter";
+import InfoFooter from "../components/SideBar/InfoFooter/InfoFooter";
 
 // 약관, 방침, 사이트맵 텍스트 데이터 정의
 // const POLICY_MODAL_DATA = {
