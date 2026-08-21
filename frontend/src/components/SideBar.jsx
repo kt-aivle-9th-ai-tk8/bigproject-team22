@@ -56,7 +56,9 @@ function SideBar({
         />
       )}
 
-      <InfoFooter />
+      <div className="sidebar-info-footer">
+        <InfoFooter />
+      </div>
     </aside>
   );
 }

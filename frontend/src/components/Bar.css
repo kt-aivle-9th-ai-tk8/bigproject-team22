@@ -54,3 +54,8 @@
   background-color: var(--color-divider);
   border-radius: 5px;
 }
+
+.sidebar-info-footer {
+  padding-left: 26px;
+  box-sizing: border-box;
+}
