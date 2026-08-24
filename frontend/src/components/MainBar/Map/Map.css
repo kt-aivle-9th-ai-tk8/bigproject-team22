@@ -1,0 +1,15 @@
+.map-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+
+  padding: 10px 18px;
+  box-sizing: border-box;
+}
+
+.vworld-map {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}

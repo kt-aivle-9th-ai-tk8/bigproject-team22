@@ -1,0 +1,32 @@
+# 1. Python 가상환경
+.venv/
+venv/
+env/
+
+# 2. 보안 민감 정보 및 설정 파일 (매우 중요 🚨)
+.env
+.env.*
+*.secret
+
+# 3. 파이썬 캐시 및 컴파일 파일
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 5. IDE 및 에디터 설정
+.vscode/
+.idea/
+*.swp
+
+# 6. 테스트 및 커버리지 로그
+.pytest_cache/
+coverage.xml
+htmlcov/
+.coverage
+
+# 7. OS 시스템 파일
+.DS_Store
+Thumbs.db
+# ── report-agent 로컬 데이터/산출물 (각자 로컬 전용, 배포 땐 DB/S3) ──
+data/
+outputs/

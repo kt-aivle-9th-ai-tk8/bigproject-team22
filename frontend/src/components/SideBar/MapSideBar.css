@@ -1,0 +1,21 @@
+.map-sidebar-content {
+  padding-top: 8px;
+}
+
+.map-weather-panel {
+  padding-bottom: 4px;
+}
+
+.map-power-panel {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.map-fault-panel {
+  padding-top: 4px;
+  padding-bottom: 20px;
+}
+
+.map-divider {
+  padding: 15px 31px 5px 31px;
+}

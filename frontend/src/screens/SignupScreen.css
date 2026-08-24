@@ -1,0 +1,238 @@
+/* 전체 화면 옅은 연두빛 배경 */
+.signup-page-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ebf7ed;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+/* 중앙 하얀색 둥근 카드 */
+.signup-card {
+  width: 100%;
+  max-width: 480px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  padding: 40px 32px;
+  box-sizing: border-box;
+}
+
+.signup-header h2 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111111;
+  margin: 0 0 6px 0;
+  text-align: left;
+}
+
+.signup-subtitle {
+  font-size: 14px;
+  color: #888888;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signup-input-group input {
+  width: 100%;
+  height: 48px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  padding: 0 14px;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.signup-input-group input:focus {
+  border-color: #12a54d;
+}
+
+.validation-msg {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.validation-msg.valid {
+  color: #27ae60;
+}
+
+.validation-msg.invalid {
+  color: #e74c3c;
+}
+
+/* 가입 버튼 */
+.signup-button {
+  width: 100%;
+  height: 48px;
+  background-color: #1b4831;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background-color 0.2s;
+}
+
+.signup-button:hover {
+  background-color: #0052cc;
+}
+
+/* 이용약관 영역 */
+.terms-accordion-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.terms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333333;
+  font-weight: 500;
+}
+
+.terms-content {
+  border-top: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  padding: 10px;
+}
+
+.terms-scroll-box {
+  height: 100px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  padding: 8px;
+  font-size: 11px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.terms-title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.terms-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 10px;
+}
+
+.terms-table th, .terms-table td {
+  border: 1px solid #ddd;
+  padding: 4px;
+  text-align: left;
+}
+
+.terms-table th {
+  background-color: #f1f5f9;
+}
+
+.terms-scroll-notice {
+  font-size: 11px;
+  color: #e74c3c;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.terms-checkbox-wrapper {
+  padding: 10px 12px;
+  background-color: #ffffff;
+}
+
+.checkbox-container {
+  font-size: 12px;
+  color: #444;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox-container.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 로그인 이동 하단 링크 */
+.signup-footer-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #666666;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #0066ff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* 모달 */
+.signup-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.signup-modal-window {
+  background: #ffffff;
+  padding: 24px 32px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.signup-modal-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #27ae60;
+  margin-bottom: 8px;
+}
+
+.signup-modal-window p {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 16px;
+}
+
+.signup-modal-window button {
+  padding: 8px 16px;
+  background-color: #0066ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}

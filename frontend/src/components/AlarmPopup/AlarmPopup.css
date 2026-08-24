@@ -1,0 +1,105 @@
+.alarm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  background-color: rgba(0, 0, 0, 0.45);
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+
+  padding: 70px 50px 100px 50px;
+  box-sizing: border-box;
+}
+
+.alarm-popup {
+  width: 800px;
+  height: 100%;
+
+  background-color: #ffffff;
+  border: 2px solid var(--color-text-point-dark);
+  border-radius: 10px;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.alarm-popup-header {
+  height: 48px;
+  padding: 0 14px 0 18px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.alarm-popup-header h2 {
+  margin: 0;
+  overflow: hidden;
+
+  color: #000000;
+  font-size: 17px;
+  font-weight: 800;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alarm-popup-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.alarm-delete-button {
+  padding: 0;
+  border: none;
+  background: none;
+
+  font-size: 12px;
+  font-weight: 500;
+  color: #e53935;
+
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.alarm-delete-button:hover {
+  color: #c62828;
+}
+
+.alarm-close-button {
+  flex-shrink: 0;
+
+  border: none;
+  background: none;
+
+  color: var(--color-dark-gray);
+  font-size: 26px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.alarm-close-button:focus-visible {
+  outline: 2px solid var(--color-text-point-dark);
+  outline-offset: -2px;
+}
+
+@media (max-width: 600px) {
+  .alarm-overlay {
+    align-items: center;
+    justify-content: center;
+
+    padding: 16px;
+  }
+
+  .alarm-popup {
+    width: 100%;
+    max-height: calc(100vh - 32px);
+  }
+}

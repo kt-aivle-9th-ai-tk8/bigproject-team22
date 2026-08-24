@@ -1,0 +1,39 @@
+.wind-speed-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wind-speed-unit {
+  font-size: 18px;
+  color: #000;
+}
+
+#wind-speed-number {
+  width: 90px;
+  height: 36px;
+
+  padding: 0 10px;
+
+  border: 1px solid #d0d5dd;
+  border-radius: 5px;
+
+  background-color: #ffffff;
+  color: #222222;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  outline: none;
+  box-sizing: border-box;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+#wind-speed-number:focus {
+  border-color: var(--color-point);
+  box-shadow: 0 0 0 2px
+    rgba(0, 0, 0, 0.05);
+}

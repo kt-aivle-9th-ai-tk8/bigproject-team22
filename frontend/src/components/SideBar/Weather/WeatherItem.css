@@ -1,0 +1,67 @@
+.weather-item {
+  width: 100%;
+  text-align: center;
+  color: #000;
+}
+
+.weather-item-clickable {
+  cursor: pointer;
+}
+
+.weather-item-clickable:hover {
+  opacity: 0.85;
+}
+
+.weather-item-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.weather-item-temperature {
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+
+.weather-item-wind {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.weather-item-wind-emoji {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.weather-item-emoji {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 2px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 45px;
+  line-height: 1;
+  text-align: center;
+}
+
+.weather-item-emoji-multiple {
+  width: 78px;
+  font-size: 32px;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.weather-item:not(.weather-item-clickable),
+.weather-item:not(.weather-item-clickable) .weather-item-emoji,
+.weather-item:not(.weather-item-clickable) .weather-item-wind,
+.weather-item:not(.weather-item-clickable) .weather-item-wind-emoji {
+  cursor: default;
+}

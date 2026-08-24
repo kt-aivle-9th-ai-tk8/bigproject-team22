@@ -1,0 +1,57 @@
+.power-gauge-group {
+  width: 100%;
+  height: 150px;
+  display: grid;
+  grid-template-columns: repeat(var(--power-gauge-count), 1fr);
+
+  padding: 10px 20px;
+  box-sizing: border-box;
+}
+
+.power-gauge-group-item {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.power-gauge-group-content {
+  width: fit-content;
+  min-width: 90px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.power-gauge-group-label {
+  width: 100%;
+  text-align: right;
+  box-sizing: border-box;
+
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+
+  margin-bottom: 3px;
+}
+
+.power-gauge-group-value {
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  margin-top: -6px;
+  text-align: center;
+}
+
+.power-gauge-divider {
+  position: absolute;
+  top: 18px;
+  right: 0;
+
+  width: 1px;
+  height: 90px;
+  background-color: var(--color-divider);
+}

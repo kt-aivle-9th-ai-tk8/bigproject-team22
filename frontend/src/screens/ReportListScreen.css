@@ -1,0 +1,237 @@
+.report-list-container {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 40px 80px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 상단 헤더 */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 28px;
+}
+
+.report-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.report-title-group h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #111111;
+  margin: 0;
+}
+
+.current-date {
+  font-size: 14px;
+  color: #888888;
+}
+
+.header-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #666666;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.logout-btn:hover {
+  color: #111111;
+}
+
+.home-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #0066ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.home-btn:hover {
+  background-color: #0052cc;
+}
+
+/* 최우측 상단 뒤로가기 버튼 */
+.back-btn {
+  background-color: #0066ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.back-btn:hover {
+  background-color: #0052cc;
+}
+
+/* 필터 초기화 버튼 */
+.reset-btn {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #ff4d4f;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #ff4d4f;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reset-btn:hover {
+  background-color: #fff1f0;
+}
+
+/* 필터 & 정렬 상단 컨트롤 바 */
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.filter-controls,
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.select-box,
+.sort-btn {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #ffffff;
+  font-size: 14px;
+  color: #333333;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.select-box:hover,
+.sort-btn:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+/* 보고서 카드 요약 버전 (단순화) */
+.report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 20px 28px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.report-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
+}
+
+.report-content {
+  flex: 1;
+}
+
+.card-main-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.plant-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.turbine-tag {
+  font-size: 15px;
+  color: #64748b;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.type-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.type-badge.이상보고서 {
+  background-color: #fff7ed;
+  color: #ea580c;
+}
+
+.type-badge.결함보고서 {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.type-badge.운영보고서 {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+
+.report-date {
+  font-size: 14px;
+  color: #94a3b8;
+  margin-left: auto; /* 날짜를 오른쪽 끝으로 밀어 정렬 */
+}
+
+.card-arrow {
+  font-size: 22px;
+  color: #cbd5e1;
+  padding-left: 20px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 60px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  color: #94a3b8;
+  font-size: 15px;
+}

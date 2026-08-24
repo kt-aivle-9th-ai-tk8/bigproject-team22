@@ -1,0 +1,38 @@
+# Report agent Service(리포트 에이전트) 테스트
+
+name: Report Agent Service CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - 'report-agent-service/**'
+
+permissions:
+  contents: read
+
+jobs:
+  docker-build-test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ./report-agent-service
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Test Docker Build (Dry Run)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./report-agent-service
+          # push를 false로 설정하여 ECR에 올리지 않고 빌드 성공 여부만 확인
+          push: false 
+          tags: windfarm-onm-report-agent:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,5 @@
+ultralytics>=8.4.120
+Pillow>=10.4
+
+opencv-python-headless>=4.9
+sahi>=0.11.31

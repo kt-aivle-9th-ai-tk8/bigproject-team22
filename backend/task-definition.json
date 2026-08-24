@@ -1,0 +1,115 @@
+{
+  "family": "windfarm-onm-backend-task",
+  "taskRoleArn": "arn:aws:iam::336090301989:role/windfarm-onm-backend-task-role",
+  "executionRoleArn": "arn:aws:iam::336090301989:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "windfarm-onm-backend-container",
+      "image": "336090301989.dkr.ecr.ap-northeast-2.amazonaws.com/windfarm-onm-backend:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp",
+          "name": "windfarm-onm-backend-container-8080-tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "SPRING_PROFILES_ACTIVE",
+          "value": "prod"
+        },
+        {
+          "name": "DB_URL",
+          "value": "jdbc:mysql://db-windfarmonm.clicg40gq1nb.ap-northeast-2.rds.amazonaws.com:3306/db-windfarmonm?rewriteBatchedStatements=true"
+        },
+        {
+          "name": "DB_USERNAME",
+          "value": "windfarmonm_app"
+        },
+        {
+          "name": "REDIS_HOST",
+          "value": "windfarm-vk.hhxr8m.ng.0001.apn2.cache.amazonaws.com"
+        },
+        {
+          "name": "REDIS_PORT",
+          "value": "6379"
+        },
+        {
+          "name": "SCHEDULING_LOCK_KEY_PREFIX",
+          "value": "windfarmonm-prod"
+        },
+        {
+          "name": "REPORT_AGENT_BASE_URL",
+          "value": "http://report-agent.windfarm.local:8000"
+        },
+        {
+          "name": "KMA_BASE_URL",
+          "value": "https://apihub.kma.go.kr/api/typ01/url"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "ap-northeast-2"
+        },
+        {
+          "name": "AWS_S3_BUCKET",
+          "value": "bigproject-team22-models"
+        },
+        {
+          "name": "AWS_SQS_REQUEST_QUEUE_URL",
+          "value": "https://sqs.ap-northeast-2.amazonaws.com/336090301989/windfarm-diagnosis-request-sqs"
+        },
+        {
+          "name": "AWS_SQS_RESULT_QUEUE_URL",
+          "value": "https://sqs.ap-northeast-2.amazonaws.com/336090301989/windfarm-sqs"
+        },
+        {
+          "name": "AWS_SAGEMAKER_DEFECT_ENDPOINT",
+          "value": "blade-defect-pipeline-endpoint"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarmonm/prod/db-app-credentials-ozQAsD:password::"
+        },
+        {
+          "name": "REDIS_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarm/prod/redis-password-U3WQZ1:password::"
+        },
+        {
+          "name": "KMA_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:336090301989:secret:windfarmonm/prod/kma-api-key-3Pp9Nb"
+        }
+      ],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "ulimits": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/windfarm-onm-backend-task",
+          "awslogs-create-group": "true",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        },
+        "secretOptions": []
+      },
+      "systemControls": []
+    }
+  ],
+  "networkMode": "awsvpc",
+  "volumes": [],
+  "placementConstraints": [],
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "cpu": "1024",
+  "memory": "2048",
+  "tags": []
+}
