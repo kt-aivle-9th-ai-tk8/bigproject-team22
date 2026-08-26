@@ -70,3 +70,13 @@ scheduling:
 anomaly:
   scheduler:
     enabled: ${ANOMALY_SCHEDULER_ENABLED:false}
+
+# 데모(읽기 전용) 접근. 로그인 없이 /api/auth/demo 링크로 세션을 발급해 구축 기능을 조회만 시연한다.
+# 인증 우회 경로라 기본 비활성(opt-in) — 켜려는 환경에서만 DEMO_ENABLED=true 로 준다.
+# 신원은 기존 계정(employee-id)을 재사용하되 세션 role 은 MANAGER 로 스코프해 회원관리/개인정보를 막고,
+# 쓰기(비 GET)는 DemoReadOnlyInterceptor 가 403 으로 차단한다.
+demo:
+  enabled: ${DEMO_ENABLED:false}
+  employee-id: ${DEMO_EMPLOYEE_ID:a123456}
+  wind-farm-ids: ${DEMO_WIND_FARM_IDS:1,2} # 1=장흥, 2=화순 (나머지 단지는 시연 더미)
+  redirect-url: ${DEMO_REDIRECT_URL:} # FE 데모 화면 URL. 비어 있으면 리다이렉트 없이 200

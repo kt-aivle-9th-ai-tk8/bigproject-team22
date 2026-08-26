@@ -21,4 +21,12 @@ public record LoginMember(
     public boolean isAdmin() {
         return role == Role.ADMIN;
     }
+
+    /**
+     * 읽기 전용 데모 세션 여부. {@code DemoReadOnlyInterceptor} 가 이 값으로 쓰기 요청을 차단한다
+     * (역할 판정을 여기 한 곳에 모아, 호출부가 {@code Role} 을 직접 비교하지 않게 한다).
+     */
+    public boolean isDemo() {
+        return role == Role.DEMO;
+    }
 }
