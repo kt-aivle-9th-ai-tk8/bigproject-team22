@@ -81,6 +81,11 @@ public class AdminUserManagementService {
             if (command.role() == null) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT); // role 은 NN — 명시적 null 은 계약 위반
             }
+            if (command.role() == Role.DEMO) {
+                // DEMO 는 데모 진입(/auth/demo)에서 세션에만 부여되는 읽기 전용 role 이다.
+                // 관리자가 일반 계정에 부여하면 그 계정이 조용히 읽기 전용이 되므로 막는다.
+                throw new BusinessException(ErrorCode.INVALID_INPUT);
+            }
             if (command.role() != account.role()) {
                 account = userAdminPort.changeRole(userId, command.role());
                 eventPublisher.publishEvent(
