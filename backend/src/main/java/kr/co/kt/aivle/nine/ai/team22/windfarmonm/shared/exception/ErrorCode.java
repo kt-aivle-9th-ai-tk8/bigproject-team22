@@ -17,6 +17,8 @@ public enum ErrorCode {
     ACCOUNT_LOCKED(HttpStatus.UNAUTHORIZED, "A003", "로그인 실패 횟수 초과로 잠긴 계정입니다. 관리자에게 문의하세요."),
     ACCOUNT_PENDING(HttpStatus.FORBIDDEN, "A004", "회원가입 승인 대기 중입니다. 관리자 승인 후 이용할 수 있습니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "A005", "접근 권한이 없습니다."),
+    // 데모(읽기 전용) 세션이 쓰기(비 GET) 요청을 보낼 때. 데모는 조회만 허용한다.
+    DEMO_READ_ONLY(HttpStatus.FORBIDDEN, "A006", "데모 계정은 읽기 전용입니다."),
 
     // User
     DUPLICATE_EMPLOYEE_ID(HttpStatus.CONFLICT, "U001", "이미 존재하는 사번입니다."),
